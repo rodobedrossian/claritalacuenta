@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,6 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface AddTransactionDialogProps {
@@ -42,6 +50,7 @@ export const AddTransactionDialog = ({ onAdd, categories, users }: AddTransactio
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [userId, setUserId] = useState("");
+  const [date, setDate] = useState<Date>(new Date());
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +66,7 @@ export const AddTransactionDialog = ({ onAdd, categories, users }: AddTransactio
       currency: currency as "USD" | "ARS",
       category,
       description,
-      date: new Date().toISOString(),
+      date: date.toISOString(),
       user_id: userId,
     });
 
@@ -68,6 +77,7 @@ export const AddTransactionDialog = ({ onAdd, categories, users }: AddTransactio
     setCategory("");
     setDescription("");
     setUserId("");
+    setDate(new Date());
   };
 
   return (
@@ -155,6 +165,34 @@ export const AddTransactionDialog = ({ onAdd, categories, users }: AddTransactio
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date">Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="date"
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal bg-muted border-border",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? format(date, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-card border-border" align="start">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={(newDate) => newDate && setDate(newDate)}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="space-y-2">
