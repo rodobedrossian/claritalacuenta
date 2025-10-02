@@ -169,22 +169,6 @@ const Index = () => {
         setTransactions([typedTransaction, ...transactions]);
       }
 
-      // Update savings based on currency
-      const currencyField = transaction.currency === "USD" ? "usd_amount" : "ars_amount";
-      const currentAmount = transaction.currency === "USD" ? currentSavings.usd : currentSavings.ars;
-      const newAmount = transaction.type === "income" 
-        ? currentAmount + transaction.amount
-        : currentAmount - transaction.amount;
-
-      await supabase
-        .from("savings")
-        .update({ [currencyField]: newAmount })
-        .eq("id", (await supabase.from("savings").select("id").single()).data?.id);
-
-      setCurrentSavings({
-        ...currentSavings,
-        [transaction.currency === "USD" ? "usd" : "ars"]: newAmount,
-      });
       toast.success(`${transaction.type === "income" ? "Income" : "Expense"} added successfully`);
     } catch (error: any) {
       console.error("Error adding transaction:", error);
