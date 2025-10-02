@@ -28,22 +28,25 @@ interface AddTransactionDialogProps {
     category: string;
     description: string;
     date: string;
+    user_id: string;
   }) => void;
   categories: string[];
+  users: Array<{ id: string; full_name: string | null }>;
 }
 
-export const AddTransactionDialog = ({ onAdd, categories }: AddTransactionDialogProps) => {
+export const AddTransactionDialog = ({ onAdd, categories, users }: AddTransactionDialogProps) => {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"income" | "expense">("expense");
   const [currency, setCurrency] = useState<"USD" | "ARS" | "">("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
+  const [userId, setUserId] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!amount || !currency || !category || !description) {
+    if (!amount || !currency || !category || !description || !userId) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -55,6 +58,7 @@ export const AddTransactionDialog = ({ onAdd, categories }: AddTransactionDialog
       category,
       description,
       date: new Date().toISOString(),
+      user_id: userId,
     });
 
     toast.success(`${type === "income" ? "Income" : "Expense"} added successfully`);
@@ -63,6 +67,7 @@ export const AddTransactionDialog = ({ onAdd, categories }: AddTransactionDialog
     setAmount("");
     setCategory("");
     setDescription("");
+    setUserId("");
   };
 
   return (
@@ -130,6 +135,22 @@ export const AddTransactionDialog = ({ onAdd, categories }: AddTransactionDialog
                 {categories.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="owner">Owner</Label>
+            <Select value={userId} onValueChange={setUserId}>
+              <SelectTrigger id="owner" className="bg-muted border-border">
+                <SelectValue placeholder="Select owner" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.full_name || "Unknown User"}
                   </SelectItem>
                 ))}
               </SelectContent>

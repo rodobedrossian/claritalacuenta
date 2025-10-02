@@ -46,6 +46,7 @@ const Index = () => {
   const [currentSavings, setCurrentSavings] = useState({ usd: 0, ars: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [users, setUsers] = useState<Array<{ id: string; full_name: string | null }>>([]);
 
   useEffect(() => {
     // Check authentication
@@ -82,6 +83,16 @@ const Index = () => {
 
   const fetchData = async () => {
     try {
+      // Fetch users/profiles
+      const { data: usersData } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .order("full_name");
+      
+      if (usersData) {
+        setUsers(usersData);
+      }
+
       // Fetch categories
       const { data: categoriesData } = await supabase
         .from("categories")
@@ -126,7 +137,7 @@ const Index = () => {
     }
   };
 
-  const handleAddTransaction = async (transaction: Omit<Transaction, "id" | "user_id">) => {
+  const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
     if (!user) return;
 
     try {
@@ -139,7 +150,7 @@ const Index = () => {
           category: transaction.category,
           description: transaction.description,
           date: transaction.date,
-          user_id: user.id,
+          user_id: transaction.user_id,
         }])
         .select()
         .single();
@@ -253,7 +264,11 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <AddTransactionDialog onAdd={handleAddTransaction} categories={categories} />
+              <AddTransactionDialog 
+                onAdd={handleAddTransaction} 
+                categories={categories}
+                users={users}
+              />
               <Button
                 variant="ghost"
                 size="icon"
