@@ -24,6 +24,7 @@ interface AddTransactionDialogProps {
   onAdd: (transaction: {
     type: "income" | "expense";
     amount: number;
+    currency: "USD" | "ARS";
     category: string;
     description: string;
     date: string;
@@ -34,6 +35,7 @@ interface AddTransactionDialogProps {
 export const AddTransactionDialog = ({ onAdd, categories }: AddTransactionDialogProps) => {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"income" | "expense">("expense");
+  const [currency, setCurrency] = useState<"USD" | "ARS" | "">("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
@@ -41,7 +43,7 @@ export const AddTransactionDialog = ({ onAdd, categories }: AddTransactionDialog
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!amount || !category || !description) {
+    if (!amount || !currency || !category || !description) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -49,6 +51,7 @@ export const AddTransactionDialog = ({ onAdd, categories }: AddTransactionDialog
     onAdd({
       type,
       amount: parseFloat(amount),
+      currency: currency as "USD" | "ARS",
       category,
       description,
       date: new Date().toISOString(),
@@ -56,6 +59,7 @@ export const AddTransactionDialog = ({ onAdd, categories }: AddTransactionDialog
 
     toast.success(`${type === "income" ? "Income" : "Expense"} added successfully`);
     setOpen(false);
+    setCurrency("");
     setAmount("");
     setCategory("");
     setDescription("");
@@ -86,6 +90,19 @@ export const AddTransactionDialog = ({ onAdd, categories }: AddTransactionDialog
               <SelectContent className="bg-card border-border">
                 <SelectItem value="income">Income</SelectItem>
                 <SelectItem value="expense">Expense</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="currency">Currency</Label>
+            <Select value={currency} onValueChange={(value: "USD" | "ARS") => setCurrency(value)}>
+              <SelectTrigger id="currency" className="bg-muted border-border">
+                <SelectValue placeholder="Select currency" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="USD">USD ($)</SelectItem>
+                <SelectItem value="ARS">ARS ($)</SelectItem>
               </SelectContent>
             </Select>
           </div>

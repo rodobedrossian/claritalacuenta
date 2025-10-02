@@ -58,19 +58,22 @@ export type Database = {
       }
       savings: {
         Row: {
-          current_amount: number
+          ars_amount: number
           id: string
           updated_at: string
+          usd_amount: number
         }
         Insert: {
-          current_amount?: number
+          ars_amount?: number
           id?: string
           updated_at?: string
+          usd_amount?: number
         }
         Update: {
-          current_amount?: number
+          ars_amount?: number
           id?: string
           updated_at?: string
+          usd_amount?: number
         }
         Relationships: []
       }
@@ -79,6 +82,7 @@ export type Database = {
           amount: number
           category: string
           created_at: string
+          currency: string
           date: string
           description: string
           id: string
@@ -89,6 +93,7 @@ export type Database = {
           amount: number
           category: string
           created_at?: string
+          currency: string
           date?: string
           description: string
           id?: string
@@ -99,6 +104,7 @@ export type Database = {
           amount?: number
           category?: string
           created_at?: string
+          currency?: string
           date?: string
           description?: string
           id?: string

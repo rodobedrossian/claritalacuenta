@@ -13,6 +13,7 @@ interface Transaction {
   id: string;
   type: "income" | "expense";
   amount: number;
+  currency: "USD" | "ARS";
   category: string;
   description: string;
   date: string;
@@ -29,6 +30,7 @@ interface DbTransaction {
   id: string;
   type: string;
   amount: number;
+  currency: string;
   category: string;
   description: string;
   date: string;
@@ -41,7 +43,7 @@ const Index = () => {
   const [user, setUser] = useState<any>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [currentSavings, setCurrentSavings] = useState(0);
+  const [currentSavings, setCurrentSavings] = useState({ usd: 0, ars: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
 
@@ -100,6 +102,7 @@ const Index = () => {
         const typedTransactions: Transaction[] = (transactionsData as DbTransaction[]).map(t => ({
           ...t,
           type: t.type as "income" | "expense",
+          currency: t.currency as "USD" | "ARS",
           amount: typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount,
         }));
         setTransactions(typedTransactions);
@@ -108,13 +111,14 @@ const Index = () => {
       // Fetch savings
       const { data: savingsData } = await supabase
         .from("savings")
-        .select("current_amount")
+        .select("usd_amount, ars_amount")
         .single();
       
       if (savingsData) {
-        setCurrentSavings(typeof savingsData.current_amount === 'string' 
-          ? parseFloat(savingsData.current_amount) 
-          : savingsData.current_amount);
+        setCurrentSavings({
+          usd: typeof savingsData.usd_amount === 'string' ? parseFloat(savingsData.usd_amount) : savingsData.usd_amount,
+          ars: typeof savingsData.ars_amount === 'string' ? parseFloat(savingsData.ars_amount) : savingsData.ars_amount,
+        });
       }
     } catch (error: any) {
       console.error("Error fetching data:", error);
@@ -131,6 +135,7 @@ const Index = () => {
         .insert([{
           type: transaction.type,
           amount: transaction.amount,
+          currency: transaction.currency,
           category: transaction.category,
           description: transaction.description,
           date: transaction.date,
@@ -146,22 +151,28 @@ const Index = () => {
         const typedTransaction: Transaction = {
           ...data,
           type: data.type as "income" | "expense",
+          currency: data.currency as "USD" | "ARS",
           amount: typeof data.amount === 'string' ? parseFloat(data.amount) : data.amount,
         };
         setTransactions([typedTransaction, ...transactions]);
       }
 
-      // Update savings
-      const newSavings = transaction.type === "income" 
-        ? currentSavings + transaction.amount
-        : currentSavings - transaction.amount;
+      // Update savings based on currency
+      const currencyField = transaction.currency === "USD" ? "usd_amount" : "ars_amount";
+      const currentAmount = transaction.currency === "USD" ? currentSavings.usd : currentSavings.ars;
+      const newAmount = transaction.type === "income" 
+        ? currentAmount + transaction.amount
+        : currentAmount - transaction.amount;
 
       await supabase
         .from("savings")
-        .update({ current_amount: newSavings })
+        .update({ [currencyField]: newAmount })
         .eq("id", (await supabase.from("savings").select("id").single()).data?.id);
 
-      setCurrentSavings(newSavings);
+      setCurrentSavings({
+        ...currentSavings,
+        [transaction.currency === "USD" ? "usd" : "ars"]: newAmount,
+      });
       toast.success(`${transaction.type === "income" ? "Income" : "Expense"} added successfully`);
     } catch (error: any) {
       console.error("Error adding transaction:", error);
@@ -185,31 +196,40 @@ const Index = () => {
     );
   }
 
-  const totalIncome = transactions
-    .filter((t) => t.type === "income")
+  const totalIncomeUSD = transactions
+    .filter((t) => t.type === "income" && t.currency === "USD")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpenses = transactions
-    .filter((t) => t.type === "expense")
+  const totalIncomeARS = transactions
+    .filter((t) => t.type === "income" && t.currency === "ARS")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalExpensesUSD = transactions
+    .filter((t) => t.type === "expense" && t.currency === "USD")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalExpensesARS = transactions
+    .filter((t) => t.type === "expense" && t.currency === "ARS")
     .reduce((sum, t) => sum + t.amount, 0);
 
   const spendingByCategory = transactions
     .filter((t) => t.type === "expense")
     .reduce((acc, t) => {
-      const existing = acc.find((item) => item.category === t.category);
+      const key = `${t.category} (${t.currency})`;
+      const existing = acc.find((item) => item.category === key);
       if (existing) {
         existing.amount += t.amount;
       } else {
-        acc.push({ category: t.category, amount: t.amount });
+        acc.push({ category: key, amount: t.amount });
       }
       return acc;
     }, [] as Array<{ category: string; amount: number }>)
     .sort((a, b) => b.amount - a.amount);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
+  const formatCurrency = (amount: number, currency: "USD" | "ARS") => {
+    return new Intl.NumberFormat(currency === "USD" ? "en-US" : "es-AR", {
       style: "currency",
-      currency: "USD",
+      currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -253,26 +273,22 @@ const Index = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in">
           <StatCard
             title="Current Savings"
-            value={formatCurrency(currentSavings)}
+            value={`${formatCurrency(currentSavings.usd, "USD")} / ${formatCurrency(currentSavings.ars, "ARS")}`}
             icon={PiggyBank}
           />
           <StatCard
             title="Total Income"
-            value={formatCurrency(totalIncome)}
-            change="+12.5% from last month"
+            value={`${formatCurrency(totalIncomeUSD, "USD")} / ${formatCurrency(totalIncomeARS, "ARS")}`}
             icon={TrendingUp}
-            trend="up"
           />
           <StatCard
             title="Total Expenses"
-            value={formatCurrency(totalExpenses)}
-            change="-8.2% from last month"
+            value={`${formatCurrency(totalExpensesUSD, "USD")} / ${formatCurrency(totalExpensesARS, "ARS")}`}
             icon={TrendingDown}
-            trend="down"
           />
           <StatCard
             title="Net Balance"
-            value={formatCurrency(totalIncome - totalExpenses)}
+            value={`${formatCurrency(totalIncomeUSD - totalExpensesUSD, "USD")} / ${formatCurrency(totalIncomeARS - totalExpensesARS, "ARS")}`}
             icon={Wallet}
           />
         </div>

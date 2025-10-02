@@ -5,6 +5,7 @@ interface Transaction {
   id: string;
   type: "income" | "expense";
   amount: number;
+  currency: "USD" | "ARS";
   category: string;
   description: string;
   date: string;
@@ -20,10 +21,10 @@ export const TransactionsList = ({ transactions }: TransactionsListProps) => {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
+  const formatAmount = (amount: number, currency: "USD" | "ARS") => {
+    return new Intl.NumberFormat(currency === "USD" ? "en-US" : "es-AR", {
       style: "currency",
-      currency: "USD",
+      currency: currency,
     }).format(amount);
   };
 
@@ -68,7 +69,7 @@ export const TransactionsList = ({ transactions }: TransactionsListProps) => {
                 }`}
               >
                 {transaction.type === "income" ? "+" : "-"}
-                {formatAmount(transaction.amount)}
+                {formatAmount(transaction.amount, transaction.currency)}
               </p>
             </div>
           ))
