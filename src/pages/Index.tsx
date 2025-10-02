@@ -7,6 +7,7 @@ import { AddTransactionDialog } from "@/components/AddTransactionDialog";
 import { AddSavingsDialog } from "@/components/AddSavingsDialog";
 import { TransactionsList } from "@/components/TransactionsList";
 import { SpendingChart } from "@/components/SpendingChart";
+import { TimelineChart } from "@/components/TimelineChart";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -328,9 +329,12 @@ const Index = () => {
         </div>
 
         {/* Charts and Transactions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
-          <SpendingChart data={spendingByCategory} />
-          <TransactionsList transactions={transactions} />
+        <div className="space-y-6 animate-slide-up">
+          <TimelineChart transactions={transactions} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SpendingChart data={spendingByCategory} />
+            <TransactionsList transactions={transactions} />
+          </div>
         </div>
       </main>
     </div>
