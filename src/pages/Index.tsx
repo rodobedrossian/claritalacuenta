@@ -4,6 +4,7 @@ import { Wallet, TrendingUp, TrendingDown, PiggyBank, LogOut } from "lucide-reac
 import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "@/components/StatCard";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
+import { AddSavingsDialog } from "@/components/AddSavingsDialog";
 import { TransactionsList } from "@/components/TransactionsList";
 import { SpendingChart } from "@/components/SpendingChart";
 import { Button } from "@/components/ui/button";
@@ -191,6 +192,41 @@ const Index = () => {
     }
   };
 
+  const handleAddSavings = async (currency: "USD" | "ARS", amount: number) => {
+    try {
+      const currentAmount = currentSavings[currency === "USD" ? "usd" : "ars"];
+      const newAmount = currentAmount + amount;
+
+      const { data: savingsRecord } = await supabase
+        .from("savings")
+        .select("id")
+        .single();
+
+      if (!savingsRecord) throw new Error("Savings record not found");
+
+      const { error } = await supabase
+        .from("savings")
+        .update(
+          currency === "USD" 
+            ? { usd_amount: newAmount }
+            : { ars_amount: newAmount }
+        )
+        .eq("id", savingsRecord.id);
+
+      if (error) throw error;
+
+      setCurrentSavings(prev => ({
+        ...prev,
+        [currency === "USD" ? "usd" : "ars"]: newAmount
+      }));
+      
+      toast.success("Savings updated successfully");
+    } catch (error) {
+      console.error("Error updating savings:", error);
+      toast.error("Failed to update savings");
+    }
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
@@ -264,6 +300,7 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <AddSavingsDialog onAdd={handleAddSavings} />
               <AddTransactionDialog 
                 onAdd={handleAddTransaction} 
                 categories={categories}
