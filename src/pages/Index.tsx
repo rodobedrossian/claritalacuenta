@@ -274,12 +274,10 @@ const Index = () => {
     .sort((a, b) => b.amount - a.amount);
 
   const formatCurrency = (amount: number, currency: "USD" | "ARS") => {
-    return new Intl.NumberFormat(currency === "USD" ? "en-US" : "es-AR", {
-      style: "currency",
-      currency: currency,
+    return `${currency} ${new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(amount)}`;
   };
 
   return (

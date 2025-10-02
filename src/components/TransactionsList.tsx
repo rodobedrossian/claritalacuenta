@@ -22,10 +22,7 @@ export const TransactionsList = ({ transactions }: TransactionsListProps) => {
   };
 
   const formatAmount = (amount: number, currency: "USD" | "ARS") => {
-    return new Intl.NumberFormat(currency === "USD" ? "en-US" : "es-AR", {
-      style: "currency",
-      currency: currency,
-    }).format(amount);
+    return `${currency} ${new Intl.NumberFormat("en-US").format(amount)}`;
   };
 
   return (
