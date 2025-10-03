@@ -16,9 +16,11 @@ interface Transaction {
 interface TransactionsListProps {
   transactions: Transaction[];
   onEdit: (transaction: Transaction) => void;
+  showViewAll?: boolean;
+  onViewAll?: () => void;
 }
 
-export const TransactionsList = ({ transactions, onEdit }: TransactionsListProps) => {
+export const TransactionsList = ({ transactions, onEdit, showViewAll, onViewAll }: TransactionsListProps) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -30,7 +32,14 @@ export const TransactionsList = ({ transactions, onEdit }: TransactionsListProps
 
   return (
     <Card className="p-6 gradient-card border-border/50">
-      <h3 className="text-lg font-semibold mb-4">All Transactions</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold">Recent Transactions</h3>
+        {showViewAll && onViewAll && (
+          <Button variant="ghost" onClick={onViewAll} className="text-sm">
+            View All →
+          </Button>
+        )}
+      </div>
       <div className="space-y-3 max-h-[600px] overflow-y-auto">
         {transactions.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">
