@@ -75,7 +75,7 @@ const Auth = () => {
           <div className="p-2 rounded-lg gradient-primary">
             <Wallet className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-bold">FinanceFlow</h1>
+          <h1 className="text-3xl font-bold">Y si ahorramos?</h1>
         </div>
 
         <Card className="p-6 gradient-card border-border/50">
