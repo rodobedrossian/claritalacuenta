@@ -6,6 +6,7 @@ import { StatCard } from "@/components/StatCard";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
 import { AddSavingsDialog } from "@/components/AddSavingsDialog";
 import { TransactionsList } from "@/components/TransactionsList";
+import { EditTransactionDialog } from "@/components/EditTransactionDialog";
 import { SpendingChart } from "@/components/SpendingChart";
 import { TimelineChart } from "@/components/TimelineChart";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,8 @@ const Index = () => {
   const [exchangeRate, setExchangeRate] = useState<number>(1300);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [isRefreshingRate, setIsRefreshingRate] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   useEffect(() => {
     // Check authentication
     const {
@@ -169,6 +172,59 @@ const Index = () => {
       console.error("Error adding transaction:", error);
       toast.error("Failed to add transaction");
     }
+  };
+
+  const handleUpdateTransaction = async (id: string, transaction: Omit<Transaction, "id">) => {
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .update({
+          type: transaction.type,
+          amount: transaction.amount,
+          currency: transaction.currency,
+          category: transaction.category,
+          description: transaction.description,
+          date: transaction.date,
+          user_id: transaction.user_id
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Update local state
+      setTransactions(transactions.map(t => 
+        t.id === id 
+          ? { ...transaction, id } 
+          : t
+      ));
+      toast.success("Transaction updated successfully");
+    } catch (error: any) {
+      console.error("Error updating transaction:", error);
+      toast.error("Failed to update transaction");
+    }
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Update local state
+      setTransactions(transactions.filter(t => t.id !== id));
+      toast.success("Transaction deleted successfully");
+    } catch (error: any) {
+      console.error("Error deleting transaction:", error);
+      toast.error("Failed to delete transaction");
+    }
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setEditDialogOpen(true);
   };
   const handleAddSavings = async (currency: "USD" | "ARS", amount: number) => {
     try {
@@ -352,10 +408,23 @@ const Index = () => {
           <TimelineChart transactions={transactions} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <SpendingChart data={spendingByCategory} />
-            <TransactionsList transactions={transactions} />
+            <TransactionsList 
+              transactions={transactions} 
+              onEdit={handleEditTransaction}
+            />
           </div>
         </div>
       </main>
+
+      <EditTransactionDialog
+        transaction={editingTransaction}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onUpdate={handleUpdateTransaction}
+        onDelete={handleDeleteTransaction}
+        categories={categories}
+        users={users}
+      />
     </div>;
 };
 export default Index;
