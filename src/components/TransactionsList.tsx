@@ -40,7 +40,7 @@ export const TransactionsList = ({ transactions, onEdit, showViewAll, onViewAll 
           </Button>
         )}
       </div>
-      <div className="space-y-3 max-h-[600px] overflow-y-auto">
+      <div className="space-y-3">
         {transactions.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">
             No transactions yet. Add your first one!

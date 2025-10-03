@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Filter } from "lucide-react";
+import { ArrowLeft, Filter, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TransactionsList } from "@/components/TransactionsList";
 import { EditTransactionDialog } from "@/components/EditTransactionDialog";
@@ -32,14 +32,20 @@ interface DbTransaction {
   created_at: string;
 }
 
+const ITEMS_PER_PAGE = 20;
+
 const Transactions = () => {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [users, setUsers] = useState<Array<{ id: string; full_name: string | null }>>([]);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const observerTarget = useRef<HTMLDivElement>(null);
   
   // Filter states
   const [filterType, setFilterType] = useState<string>("all");
@@ -49,14 +55,18 @@ const Transactions = () => {
   const [filterEndDate, setFilterEndDate] = useState<string>("");
 
   useEffect(() => {
-    fetchData();
+    fetchInitialData();
   }, []);
 
   useEffect(() => {
-    applyFilters();
-  }, [transactions, filterType, filterCategory, filterUser, filterStartDate, filterEndDate]);
+    // Reset and refetch when filters change
+    setTransactions([]);
+    setPage(0);
+    setHasMore(true);
+    fetchTransactions(0);
+  }, [filterType, filterCategory, filterUser, filterStartDate, filterEndDate]);
 
-  const fetchData = async () => {
+  const fetchInitialData = async () => {
     try {
       // Fetch users/profiles
       const { data: usersData } = await supabase
@@ -76,11 +86,47 @@ const Transactions = () => {
         setCategories(categoriesData.map(c => c.name));
       }
 
-      // Fetch all transactions
-      const { data: transactionsData } = await supabase
+      // Fetch first page of transactions
+      await fetchTransactions(0);
+    } catch (error: any) {
+      console.error("Error fetching initial data:", error);
+      toast.error("Failed to load data");
+    }
+  };
+
+  const fetchTransactions = async (pageNum: number) => {
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    try {
+      let query = supabase
         .from("transactions")
-        .select("*")
+        .select("*", { count: "exact" })
         .order("date", { ascending: false });
+
+      // Apply filters
+      if (filterType !== "all") {
+        query = query.eq("type", filterType);
+      }
+      if (filterCategory !== "all") {
+        query = query.eq("category", filterCategory);
+      }
+      if (filterUser !== "all") {
+        query = query.eq("user_id", filterUser);
+      }
+      if (filterStartDate) {
+        query = query.gte("date", filterStartDate);
+      }
+      if (filterEndDate) {
+        query = query.lte("date", filterEndDate);
+      }
+
+      // Pagination
+      const from = pageNum * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+      query = query.range(from, to);
+
+      const { data: transactionsData, count } = await query;
       
       if (transactionsData) {
         const typedTransactions: Transaction[] = (transactionsData as DbTransaction[]).map(t => ({
@@ -89,42 +135,47 @@ const Transactions = () => {
           currency: t.currency as "USD" | "ARS",
           amount: typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount
         }));
-        setTransactions(typedTransactions);
+        
+        setTransactions(prev => pageNum === 0 ? typedTransactions : [...prev, ...typedTransactions]);
+        setTotalCount(count || 0);
+        setHasMore(typedTransactions.length === ITEMS_PER_PAGE);
+        setPage(pageNum);
       }
     } catch (error: any) {
-      console.error("Error fetching data:", error);
-      toast.error("Failed to load data");
+      console.error("Error fetching transactions:", error);
+      toast.error("Failed to load transactions");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...transactions];
+  const loadMore = useCallback(() => {
+    if (!isLoading && hasMore) {
+      fetchTransactions(page + 1);
+    }
+  }, [isLoading, hasMore, page]);
 
-    // Filter by type
-    if (filterType !== "all") {
-      filtered = filtered.filter(t => t.type === filterType);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
     }
 
-    // Filter by category
-    if (filterCategory !== "all") {
-      filtered = filtered.filter(t => t.category === filterCategory);
-    }
-
-    // Filter by user
-    if (filterUser !== "all") {
-      filtered = filtered.filter(t => t.user_id === filterUser);
-    }
-
-    // Filter by date range
-    if (filterStartDate) {
-      filtered = filtered.filter(t => new Date(t.date) >= new Date(filterStartDate));
-    }
-    if (filterEndDate) {
-      filtered = filtered.filter(t => new Date(t.date) <= new Date(filterEndDate));
-    }
-
-    setFilteredTransactions(filtered);
-  };
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [loadMore]);
 
   const handleUpdateTransaction = async (id: string, transaction: Omit<Transaction, "id">) => {
     try {
@@ -143,9 +194,8 @@ const Transactions = () => {
 
       if (error) throw error;
 
-      setTransactions(transactions.map(t => 
-        t.id === id ? { ...transaction, id } : t
-      ));
+      const updatedTransaction = { ...transaction, id };
+      handleTransactionUpdate(updatedTransaction);
       toast.success("Transaction updated successfully");
     } catch (error: any) {
       console.error("Error updating transaction:", error);
@@ -162,7 +212,7 @@ const Transactions = () => {
 
       if (error) throw error;
 
-      setTransactions(transactions.filter(t => t.id !== id));
+      handleTransactionDelete(id);
       toast.success("Transaction deleted successfully");
     } catch (error: any) {
       console.error("Error deleting transaction:", error);
@@ -181,6 +231,17 @@ const Transactions = () => {
     setFilterUser("all");
     setFilterStartDate("");
     setFilterEndDate("");
+  };
+
+  const handleTransactionUpdate = (updatedTransaction: Transaction) => {
+    setTransactions(transactions.map(t => 
+      t.id === updatedTransaction.id ? updatedTransaction : t
+    ));
+  };
+
+  const handleTransactionDelete = (id: string) => {
+    setTransactions(transactions.filter(t => t.id !== id));
+    setTotalCount(prev => prev - 1);
   };
 
   return (
@@ -279,7 +340,7 @@ const Transactions = () => {
 
           <div className="mt-4 flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              Showing {filteredTransactions.length} of {transactions.length} transactions
+              Showing {transactions.length} of {totalCount} transactions
             </p>
             <Button variant="outline" onClick={resetFilters}>
               Reset Filters
@@ -289,9 +350,19 @@ const Transactions = () => {
 
         {/* Transactions List */}
         <TransactionsList 
-          transactions={filteredTransactions} 
+          transactions={transactions} 
           onEdit={handleEditTransaction}
         />
+
+        {/* Infinite scroll trigger */}
+        <div ref={observerTarget} className="py-8 flex justify-center">
+          {isLoading && (
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          )}
+          {!hasMore && transactions.length > 0 && (
+            <p className="text-sm text-muted-foreground">No more transactions</p>
+          )}
+        </div>
       </main>
 
       <EditTransactionDialog
