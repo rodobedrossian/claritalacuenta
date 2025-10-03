@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Wallet, TrendingUp, TrendingDown, PiggyBank, LogOut } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, PiggyBank, LogOut, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "@/components/StatCard";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
@@ -51,6 +51,9 @@ const Index = () => {
     id: string;
     full_name: string | null;
   }>>([]);
+  const [exchangeRate, setExchangeRate] = useState<number>(1300);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [isRefreshingRate, setIsRefreshingRate] = useState(false);
   useEffect(() => {
     // Check authentication
     const {
@@ -82,6 +85,7 @@ const Index = () => {
   useEffect(() => {
     if (user) {
       fetchData();
+      fetchExchangeRate();
     }
   }, [user]);
   const fetchData = async () => {
@@ -192,6 +196,41 @@ const Index = () => {
       toast.error("Failed to update savings");
     }
   };
+  const fetchExchangeRate = async () => {
+    try {
+      setIsRefreshingRate(true);
+      
+      // Primero intentar obtener desde la DB
+      const { data: rateData } = await supabase
+        .from('exchange_rates')
+        .select('rate, updated_at')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (rateData) {
+        setExchangeRate(rateData.rate);
+        setLastUpdated(rateData.updated_at);
+      }
+
+      // Llamar al edge function para actualizar
+      const { data, error } = await supabase.functions.invoke('fetch-exchange-rate');
+      
+      if (error) throw error;
+      
+      if (data?.success && data?.rate) {
+        setExchangeRate(data.rate);
+        setLastUpdated(data.updated_at);
+        toast.success('Exchange rate updated');
+      }
+    } catch (error) {
+      console.error('Error fetching exchange rate:', error);
+      toast.error('Failed to update exchange rate');
+    } finally {
+      setIsRefreshingRate(false);
+    }
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
@@ -208,6 +247,11 @@ const Index = () => {
   const totalIncomeARS = transactions.filter(t => t.type === "income" && t.currency === "ARS").reduce((sum, t) => sum + t.amount, 0);
   const totalExpensesUSD = transactions.filter(t => t.type === "expense" && t.currency === "USD").reduce((sum, t) => sum + t.amount, 0);
   const totalExpensesARS = transactions.filter(t => t.type === "expense" && t.currency === "ARS").reduce((sum, t) => sum + t.amount, 0);
+
+  // Calcular valores globalizados en ARS
+  const globalIncomeARS = (totalIncomeUSD * exchangeRate) + totalIncomeARS;
+  const globalExpensesARS = (totalExpensesUSD * exchangeRate) + totalExpensesARS;
+  const globalNetBalanceARS = globalIncomeARS - globalExpensesARS;
   const spendingByCategory = transactions.filter(t => t.type === "expense").reduce((acc, t) => {
     const key = `${t.category} (${t.currency})`;
     const existing = acc.find(item => item.category === key);
@@ -244,6 +288,22 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">
                   Welcome back, {user?.user_metadata?.full_name || user?.email}
                 </p>
+                {lastUpdated && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-muted-foreground">
+                      USD/ARS: {exchangeRate.toFixed(2)}
+                    </span>
+                    <button
+                      onClick={fetchExchangeRate}
+                      disabled={isRefreshingRate}
+                      className="text-xs text-primary hover:underline disabled:opacity-50 flex items-center gap-1"
+                      title="Refresh exchange rate"
+                    >
+                      <RefreshCw className={`h-3 w-3 ${isRefreshingRate ? 'animate-spin' : ''}`} />
+                      {isRefreshingRate ? 'Updating...' : 'Refresh'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -261,10 +321,30 @@ const Index = () => {
       <main className="container mx-auto px-6 py-8">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in">
-          <StatCard title="Current Savings" value={`${formatCurrency(currentSavings.usd, "USD")} / ${formatCurrency(currentSavings.ars, "ARS")}`} icon={PiggyBank} />
-          <StatCard title="Total Income" value={`${formatCurrency(totalIncomeUSD, "USD")} / ${formatCurrency(totalIncomeARS, "ARS")}`} icon={TrendingUp} />
-          <StatCard title="Total Expenses" value={`${formatCurrency(totalExpensesUSD, "USD")} / ${formatCurrency(totalExpensesARS, "ARS")}`} icon={TrendingDown} />
-          <StatCard title="Net Balance" value={`${formatCurrency(totalIncomeUSD - totalExpensesUSD, "USD")} / ${formatCurrency(totalIncomeARS - totalExpensesARS, "ARS")}`} icon={Wallet} />
+          <StatCard 
+            title="Current Savings" 
+            value={`${formatCurrency(currentSavings.usd, "USD")} / ${formatCurrency(currentSavings.ars, "ARS")}`} 
+            icon={PiggyBank} 
+          />
+          <StatCard 
+            title="Total Income" 
+            value={formatCurrency(globalIncomeARS, "ARS")}
+            subtitle={`${formatCurrency(totalIncomeUSD, "USD")} / ${formatCurrency(totalIncomeARS, "ARS")}`}
+            icon={TrendingUp}
+            trend="up"
+          />
+          <StatCard 
+            title="Total Expenses" 
+            value={formatCurrency(globalExpensesARS, "ARS")}
+            subtitle={`${formatCurrency(totalExpensesUSD, "USD")} / ${formatCurrency(totalExpensesARS, "ARS")}`}
+            icon={TrendingDown}
+          />
+          <StatCard 
+            title="Net Balance" 
+            value={formatCurrency(globalNetBalanceARS, "ARS")}
+            icon={Wallet}
+            trend={globalNetBalanceARS >= 0 ? "up" : "down"}
+          />
         </div>
 
         {/* Charts and Transactions */}
