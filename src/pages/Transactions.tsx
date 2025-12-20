@@ -102,6 +102,7 @@ const Transactions = () => {
       let query = supabase
         .from("transactions")
         .select("*", { count: "exact" })
+        .eq("status", "confirmed")
         .order("date", { ascending: false });
 
       // Apply filters
