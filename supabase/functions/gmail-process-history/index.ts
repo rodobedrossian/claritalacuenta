@@ -276,7 +276,7 @@ serve(async (req) => {
             }
           }
 
-          // Create transaction
+          // Create transaction with pending status
           const { data: transaction, error: txError } = await supabase
             .from("transactions")
             .insert({
@@ -289,6 +289,7 @@ serve(async (req) => {
               date: transactionDate.toISOString(),
               source: "email",
               email_message_id: messageId,
+              status: "pending",
             })
             .select()
             .single();

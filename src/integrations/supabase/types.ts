@@ -241,6 +241,7 @@ export type Database = {
           email_message_id: string | null
           id: string
           source: string | null
+          status: string
           type: string
           user_id: string
         }
@@ -254,6 +255,7 @@ export type Database = {
           email_message_id?: string | null
           id?: string
           source?: string | null
+          status?: string
           type: string
           user_id: string
         }
@@ -267,6 +269,7 @@ export type Database = {
           email_message_id?: string | null
           id?: string
           source?: string | null
+          status?: string
           type?: string
           user_id?: string
         }
