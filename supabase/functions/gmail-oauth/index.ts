@@ -45,7 +45,11 @@ serve(async (req) => {
       }
 
       const redirectUri = `${SUPABASE_URL}/functions/v1/gmail-oauth?action=callback`;
-      const scope = encodeURIComponent("https://www.googleapis.com/auth/gmail.readonly");
+      const scope = encodeURIComponent(
+        "https://www.googleapis.com/auth/gmail.readonly " +
+        "https://www.googleapis.com/auth/userinfo.email " +
+        "openid"
+      );
       const state = encodeURIComponent(JSON.stringify({ userId: user.id }));
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -122,6 +126,14 @@ serve(async (req) => {
       const email = userInfo.email;
 
       console.log("Gmail email:", email);
+
+      if (!email) {
+        console.error("Could not retrieve email from Google userinfo");
+        return new Response(
+          `<html><body><script>window.close();</script>Error: Could not retrieve email from Google. Please try again.</body></html>`,
+          { headers: { "Content-Type": "text/html" } }
+        );
+      }
 
       // Calculate token expiration
       const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
