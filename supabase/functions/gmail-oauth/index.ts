@@ -162,6 +162,7 @@ serve(async (req) => {
 
       // Setup Gmail watch (Pub/Sub)
       try {
+        console.log("Setting up Gmail watch...");
         const watchResponse = await fetch(
           "https://gmail.googleapis.com/gmail/v1/users/me/watch",
           {
@@ -171,16 +172,18 @@ serve(async (req) => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              topicName: "projects/budget-manager-461810/topics/gmail-notifications",
+              topicName: "projects/lector-emails/topics/gmail-notify-topic",
               labelIds: ["INBOX"],
             }),
           }
         );
 
         const watchData = await watchResponse.json();
-        console.log("Watch setup response:", watchData);
+        console.log("Watch setup response status:", watchResponse.status);
+        console.log("Watch setup response data:", JSON.stringify(watchData));
 
-        if (watchData.historyId) {
+        if (watchResponse.ok && watchData.historyId) {
+          console.log("Watch created successfully! historyId:", watchData.historyId, "expiration:", watchData.expiration);
           await supabase
             .from("gmail_connections")
             .update({
@@ -189,10 +192,12 @@ serve(async (req) => {
             })
             .eq("user_id", userId)
             .eq("email", email);
+          console.log("Watch info saved to database");
+        } else {
+          console.error("Watch setup failed! Status:", watchResponse.status, "Error:", JSON.stringify(watchData));
         }
       } catch (watchError) {
-        console.error("Watch setup error:", watchError);
-        // Continue anyway, watch can be set up later
+        console.error("Watch setup exception:", watchError);
       }
 
       return new Response(
