@@ -61,6 +61,14 @@ const PARSER_TEMPLATES = [
     currency: "ARS",
     transaction_type: "expense",
   },
+  {
+    name: "Wise - Dinero recibido USD",
+    sender_email: "noreply@wise.com",
+    subject_pattern: "acaba de enviarte dinero",
+    amount_regex: "recibido\\s*([\\d.,]+)\\s*USD|Cantidad recibida:\\s*([\\d.,]+)\\s*USD",
+    currency: "USD",
+    transaction_type: "income",
+  },
 ];
 
 export default function Settings() {
