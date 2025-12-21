@@ -69,6 +69,38 @@ const PARSER_TEMPLATES = [
     currency: "USD",
     transaction_type: "income",
   },
+  {
+    name: "Galicia Mastercard - Resumen ARS",
+    sender_email: "e-resumen@bancogalicia.com.ar",
+    subject_pattern: "Resumen.*Tarjeta.*MasterCard|MasterCard",
+    amount_regex: "Total en pesos[:\\s]*([\\d.,]+)",
+    currency: "ARS",
+    transaction_type: "expense",
+  },
+  {
+    name: "Galicia Mastercard - Resumen USD",
+    sender_email: "e-resumen@bancogalicia.com.ar",
+    subject_pattern: "Resumen.*Tarjeta.*MasterCard|MasterCard",
+    amount_regex: "Total en d[óo]lares[:\\s]*([\\d.,]+)",
+    currency: "USD",
+    transaction_type: "expense",
+  },
+  {
+    name: "Galicia VISA - Resumen ARS",
+    sender_email: "e-resumen@mensajesgalicia.com.ar",
+    subject_pattern: "Resumen.*VISA|Cuenta VISA",
+    amount_regex: "Saldo en pesos[:\\s]*([\\d.,]+)",
+    currency: "ARS",
+    transaction_type: "expense",
+  },
+  {
+    name: "Galicia VISA - Resumen USD",
+    sender_email: "e-resumen@mensajesgalicia.com.ar",
+    subject_pattern: "Resumen.*VISA|Cuenta VISA",
+    amount_regex: "Saldo en d[óo]lares[:\\s]*([\\d.,]+)",
+    currency: "USD",
+    transaction_type: "expense",
+  },
 ];
 
 export default function Settings() {
