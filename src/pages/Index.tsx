@@ -295,15 +295,7 @@ const Index = () => {
     await supabase.auth.signOut();
     navigate("/auth");
   };
-  if (loading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
-        </div>
-      </div>;
-  }
-  // Filter transactions by active month
+  // Filter transactions by active month (hooks must be called before early returns)
   const monthStart = startOfMonth(activeMonth);
   const monthEnd = endOfMonth(activeMonth);
   
@@ -312,7 +304,16 @@ const Index = () => {
       const txDate = parseISO(t.date);
       return isWithinInterval(txDate, { start: monthStart, end: monthEnd });
     });
-  }, [transactions, monthStart, monthEnd]);
+  }, [transactions, activeMonth]);
+
+  if (loading) {
+    return <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>;
+  }
 
   const totalIncomeUSD = monthlyTransactions.filter(t => t.type === "income" && t.currency === "USD").reduce((sum, t) => sum + t.amount, 0);
   const totalIncomeARS = monthlyTransactions.filter(t => t.type === "income" && t.currency === "ARS").reduce((sum, t) => sum + t.amount, 0);
