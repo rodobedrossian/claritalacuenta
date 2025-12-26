@@ -41,6 +41,7 @@ export type Database = {
           category: string
           created_at: string | null
           currency: string | null
+          date_regex: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -54,6 +55,7 @@ export type Database = {
           category: string
           created_at?: string | null
           currency?: string | null
+          date_regex?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -67,6 +69,7 @@ export type Database = {
           category?: string
           created_at?: string | null
           currency?: string | null
+          date_regex?: string | null
           id?: string
           is_active?: boolean | null
           name?: string

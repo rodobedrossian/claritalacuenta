@@ -75,6 +75,37 @@ function extractAmount(text: string, regex: string): number | null {
   }
 }
 
+function extractDate(text: string, regex: string): Date | null {
+  try {
+    const pattern = new RegExp(regex, "i");
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      // Try to parse Argentine date format: DD/MM/YYYY or DD-MM-YYYY
+      const dateStr = match[1].trim();
+      const parts = dateStr.split(/[\/\-\.]/);
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // 0-indexed
+        const year = parseInt(parts[2], 10);
+        const fullYear = year < 100 ? 2000 + year : year;
+        const date = new Date(fullYear, month, day);
+        if (!isNaN(date.getTime())) {
+          return date;
+        }
+      }
+      // Try ISO format
+      const isoDate = new Date(dateStr);
+      if (!isNaN(isoDate.getTime())) {
+        return isoDate;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error("Date regex error:", error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -266,9 +297,19 @@ serve(async (req) => {
         console.log(`Extracted amount: ${amount}`);
 
         if (amount && amount > 0) {
-          // Parse date from email or use current
+          // Parse date: first try date_regex if defined, then fall back to email header
           let transactionDate = new Date();
-          if (dateHeader) {
+          
+          if (matchedParser.date_regex) {
+            const extractedDate = extractDate(fullText, matchedParser.date_regex);
+            if (extractedDate) {
+              transactionDate = extractedDate;
+              console.log(`Extracted date from regex: ${transactionDate.toISOString()}`);
+            }
+          }
+          
+          // Fall back to email header date if no date_regex or extraction failed
+          if (!matchedParser.date_regex && dateHeader) {
             try {
               transactionDate = new Date(dateHeader);
             } catch {
