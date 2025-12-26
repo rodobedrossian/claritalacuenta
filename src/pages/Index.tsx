@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Wallet, TrendingUp, TrendingDown, PiggyBank, LogOut, RefreshCw } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, PiggyBank, LogOut, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "@/components/StatCard";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
@@ -11,6 +11,9 @@ import { SpendingChart } from "@/components/SpendingChart";
 import { TimelineChart } from "@/components/TimelineChart";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, parseISO, isWithinInterval } from "date-fns";
+import { es } from "date-fns/locale";
+
 interface Transaction {
   id: string;
   type: "income" | "expense";
@@ -57,6 +60,7 @@ const Index = () => {
   const [isRefreshingRate, setIsRefreshingRate] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [activeMonth, setActiveMonth] = useState<Date>(new Date());
   useEffect(() => {
     // Check authentication
     const {
@@ -299,16 +303,28 @@ const Index = () => {
         </div>
       </div>;
   }
-  const totalIncomeUSD = transactions.filter(t => t.type === "income" && t.currency === "USD").reduce((sum, t) => sum + t.amount, 0);
-  const totalIncomeARS = transactions.filter(t => t.type === "income" && t.currency === "ARS").reduce((sum, t) => sum + t.amount, 0);
-  const totalExpensesUSD = transactions.filter(t => t.type === "expense" && t.currency === "USD").reduce((sum, t) => sum + t.amount, 0);
-  const totalExpensesARS = transactions.filter(t => t.type === "expense" && t.currency === "ARS").reduce((sum, t) => sum + t.amount, 0);
+  // Filter transactions by active month
+  const monthStart = startOfMonth(activeMonth);
+  const monthEnd = endOfMonth(activeMonth);
+  
+  const monthlyTransactions = useMemo(() => {
+    return transactions.filter(t => {
+      const txDate = parseISO(t.date);
+      return isWithinInterval(txDate, { start: monthStart, end: monthEnd });
+    });
+  }, [transactions, monthStart, monthEnd]);
+
+  const totalIncomeUSD = monthlyTransactions.filter(t => t.type === "income" && t.currency === "USD").reduce((sum, t) => sum + t.amount, 0);
+  const totalIncomeARS = monthlyTransactions.filter(t => t.type === "income" && t.currency === "ARS").reduce((sum, t) => sum + t.amount, 0);
+  const totalExpensesUSD = monthlyTransactions.filter(t => t.type === "expense" && t.currency === "USD").reduce((sum, t) => sum + t.amount, 0);
+  const totalExpensesARS = monthlyTransactions.filter(t => t.type === "expense" && t.currency === "ARS").reduce((sum, t) => sum + t.amount, 0);
 
   // Calcular valores globalizados en ARS
   const globalIncomeARS = (totalIncomeUSD * exchangeRate) + totalIncomeARS;
   const globalExpensesARS = (totalExpensesUSD * exchangeRate) + totalExpensesARS;
   const globalNetBalanceARS = globalIncomeARS - globalExpensesARS;
-  const spendingByCategory = transactions.filter(t => t.type === "expense").reduce((acc, t) => {
+  
+  const spendingByCategory = monthlyTransactions.filter(t => t.type === "expense").reduce((acc, t) => {
     const key = `${t.category} (${t.currency})`;
     const existing = acc.find(item => item.category === key);
     if (existing) {
@@ -324,12 +340,17 @@ const Index = () => {
     category: string;
     amount: number;
   }>).sort((a, b) => b.amount - a.amount);
+  
   const formatCurrency = (amount: number, currency: "USD" | "ARS") => {
     return `${currency} ${new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount)}`;
   };
+
+  const goToPreviousMonth = () => setActiveMonth(prev => subMonths(prev, 1));
+  const goToNextMonth = () => setActiveMonth(prev => addMonths(prev, 1));
+  const goToCurrentMonth = () => setActiveMonth(new Date());
   return <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
@@ -375,6 +396,22 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
+        {/* Month Selector */}
+        <div className="flex items-center justify-center gap-4 mb-6">
+          <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <button
+            onClick={goToCurrentMonth}
+            className="text-xl font-semibold capitalize min-w-[200px] text-center hover:text-primary transition-colors"
+          >
+            {format(activeMonth, "MMMM yyyy", { locale: es })}
+          </button>
+          <Button variant="ghost" size="icon" onClick={goToNextMonth}>
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in">
           <StatCard 
@@ -405,13 +442,13 @@ const Index = () => {
 
         {/* Charts and Transactions */}
         <div className="space-y-6 animate-slide-up">
-          <TimelineChart transactions={transactions} />
+          <TimelineChart transactions={monthlyTransactions} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <SpendingChart data={spendingByCategory} />
             <TransactionsList 
-              transactions={transactions.slice(0, 5)} 
+              transactions={monthlyTransactions.slice(0, 5)} 
               onEdit={handleEditTransaction}
-              showViewAll={transactions.length > 5}
+              showViewAll={monthlyTransactions.length > 5}
               onViewAll={() => navigate("/transactions")}
             />
           </div>
