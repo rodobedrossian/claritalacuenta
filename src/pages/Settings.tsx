@@ -76,7 +76,7 @@ const PARSER_TEMPLATES = [
     amount_regex: "Total en pesos[:\\s]*([\\d.,]+)",
     currency: "ARS",
     transaction_type: "expense",
-    date_regex: "Vencimiento[:\\s]*(\\d{2}[/\\-]\\d{2}[/\\-]\\d{2,4})",
+    date_regex: "Vencimiento[:\\s]*([\\d]{1,2}\\s+[A-Za-z]{3}\\s+\\d{2,4})",
   },
   {
     name: "Galicia Mastercard - Resumen USD",
@@ -85,7 +85,7 @@ const PARSER_TEMPLATES = [
     amount_regex: "Total en d[óo]lares[:\\s]*([\\d.,]+)",
     currency: "USD",
     transaction_type: "expense",
-    date_regex: "Vencimiento[:\\s]*(\\d{2}[/\\-]\\d{2}[/\\-]\\d{2,4})",
+    date_regex: "Vencimiento[:\\s]*([\\d]{1,2}\\s+[A-Za-z]{3}\\s+\\d{2,4})",
   },
   {
     name: "Galicia VISA - Resumen ARS",
@@ -94,7 +94,7 @@ const PARSER_TEMPLATES = [
     amount_regex: "Saldo en pesos[:\\s]*([\\d.,]+)",
     currency: "ARS",
     transaction_type: "expense",
-    date_regex: "Vencimiento[:\\s]*(\\d{2}[/\\-]\\d{2}[/\\-]\\d{2,4})",
+    date_regex: "Vencimiento[:\\s]*([\\d]{1,2}\\s+[A-Za-z]{3}\\s+\\d{2,4})",
   },
   {
     name: "Galicia VISA - Resumen USD",
@@ -103,7 +103,7 @@ const PARSER_TEMPLATES = [
     amount_regex: "Saldo en d[óo]lares[:\\s]*([\\d.,]+)",
     currency: "USD",
     transaction_type: "expense",
-    date_regex: "Vencimiento[:\\s]*(\\d{2}[/\\-]\\d{2}[/\\-]\\d{2,4})",
+    date_regex: "Vencimiento[:\\s]*([\\d]{1,2}\\s+[A-Za-z]{3}\\s+\\d{2,4})",
   },
 ];
 

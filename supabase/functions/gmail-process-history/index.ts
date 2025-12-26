@@ -75,13 +75,35 @@ function extractAmount(text: string, regex: string): number | null {
   }
 }
 
+// Spanish month names for parsing "05 Ene 26" format
+const monthsES: Record<string, number> = {
+  'ene': 0, 'feb': 1, 'mar': 2, 'abr': 3, 'may': 4, 'jun': 5,
+  'jul': 6, 'ago': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dic': 11
+};
+
 function extractDate(text: string, regex: string): Date | null {
   try {
     const pattern = new RegExp(regex, "i");
     const match = text.match(pattern);
     if (match && match[1]) {
-      // Try to parse Argentine date format: DD/MM/YYYY or DD-MM-YYYY
       const dateStr = match[1].trim();
+      
+      // Try Spanish format: "05 Ene 26" or "05 Ene 2026"
+      const esMatch = dateStr.match(/(\d{1,2})\s+([a-zA-Z]{3})\s+(\d{2,4})/i);
+      if (esMatch) {
+        const day = parseInt(esMatch[1], 10);
+        const month = monthsES[esMatch[2].toLowerCase()];
+        if (month !== undefined) {
+          let year = parseInt(esMatch[3], 10);
+          if (year < 100) year += 2000;
+          const date = new Date(year, month, day);
+          if (!isNaN(date.getTime())) {
+            return date;
+          }
+        }
+      }
+      
+      // Try Argentine date format: DD/MM/YYYY or DD-MM-YYYY
       const parts = dateStr.split(/[\/\-\.]/);
       if (parts.length === 3) {
         const day = parseInt(parts[0], 10);
@@ -93,6 +115,7 @@ function extractDate(text: string, regex: string): Date | null {
           return date;
         }
       }
+      
       // Try ISO format
       const isoDate = new Date(dateStr);
       if (!isNaN(isoDate.getTime())) {
@@ -104,6 +127,28 @@ function extractDate(text: string, regex: string): Date | null {
     console.error("Date regex error:", error);
     return null;
   }
+}
+
+// Recursive function to extract text from nested email parts
+function extractTextFromParts(parts: any[]): string {
+  let text = "";
+  for (const part of parts) {
+    if (part.body?.data) {
+      if (part.mimeType === "text/plain" || part.mimeType === "text/html") {
+        const decoded = atob(part.body.data.replace(/-/g, "+").replace(/_/g, "/"));
+        if (part.mimeType === "text/html") {
+          text += decoded.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
+        } else {
+          text += decoded;
+        }
+      }
+    }
+    // Recursively search nested parts (multipart/alternative, multipart/related, etc.)
+    if (part.parts) {
+      text += extractTextFromParts(part.parts);
+    }
+  }
+  return text;
 }
 
 serve(async (req) => {
@@ -233,26 +278,26 @@ serve(async (req) => {
 
       console.log(`Processing: From=${from}, Subject=${subject}`);
 
-      // Get body text
+      // Get body text using recursive extraction for nested parts
       let bodyText = "";
       const payload = msgData.payload;
       
       if (payload?.body?.data) {
-        bodyText = atob(payload.body.data.replace(/-/g, "+").replace(/_/g, "/"));
-      } else if (payload?.parts) {
-        for (const part of payload.parts) {
-          if (part.mimeType === "text/plain" && part.body?.data) {
-            bodyText += atob(part.body.data.replace(/-/g, "+").replace(/_/g, "/"));
-          } else if (part.mimeType === "text/html" && part.body?.data) {
-            const html = atob(part.body.data.replace(/-/g, "+").replace(/_/g, "/"));
-            // Strip HTML tags for text extraction
-            bodyText += html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
-          }
+        const decoded = atob(payload.body.data.replace(/-/g, "+").replace(/_/g, "/"));
+        if (payload.mimeType === "text/html") {
+          bodyText = decoded.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
+        } else {
+          bodyText = decoded;
         }
+      } else if (payload?.parts) {
+        bodyText = extractTextFromParts(payload.parts);
       }
 
       const snippet = msgData.snippet || "";
       const fullText = `${subject} ${snippet} ${bodyText}`;
+      
+      console.log(`Body text length: ${bodyText.length}`);
+      console.log(`Full text preview: ${fullText.substring(0, 500)}`);
 
       // Match against parsers
       let matchedParser = null;
