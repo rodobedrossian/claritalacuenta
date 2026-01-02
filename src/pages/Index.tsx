@@ -216,7 +216,8 @@ const Index = () => {
   // Calculate global values in ARS
   const globalIncomeARS = (totals.incomeUSD * exchangeRate) + totals.incomeARS;
   const globalExpensesARS = (totals.expensesUSD * exchangeRate) + totals.expensesARS;
-  const globalNetBalanceARS = globalIncomeARS - globalExpensesARS;
+  const globalSavingsTransfersARS = (totals.savingsTransfersUSD * exchangeRate) + totals.savingsTransfersARS;
+  const globalNetBalanceARS = globalIncomeARS - globalExpensesARS - globalSavingsTransfersARS;
 
   const formatCurrency = (amount: number, currency: "USD" | "ARS") => {
     return `${currency} ${new Intl.NumberFormat("en-US", {
