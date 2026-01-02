@@ -260,6 +260,84 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_history: {
+        Row: {
+          body: string
+          data: Json | null
+          id: string
+          read_at: string | null
+          sent_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          data?: Json | null
+          id?: string
+          read_at?: string | null
+          sent_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          data?: Json | null
+          id?: string
+          read_at?: string | null
+          sent_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_settings: {
+        Row: {
+          budget_exceeded_alert: boolean | null
+          created_at: string | null
+          evening_expense_reminder: boolean | null
+          evening_time: string | null
+          id: string
+          monthly_recurring_reminder: boolean | null
+          monthly_reminder_day: number | null
+          morning_budget_check: boolean | null
+          morning_time: string | null
+          timezone: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          budget_exceeded_alert?: boolean | null
+          created_at?: string | null
+          evening_expense_reminder?: boolean | null
+          evening_time?: string | null
+          id?: string
+          monthly_recurring_reminder?: boolean | null
+          monthly_reminder_day?: number | null
+          morning_budget_check?: boolean | null
+          morning_time?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          budget_exceeded_alert?: boolean | null
+          created_at?: string | null
+          evening_expense_reminder?: boolean | null
+          evening_time?: string | null
+          id?: string
+          monthly_recurring_reminder?: boolean | null
+          monthly_reminder_day?: number | null
+          morning_budget_check?: boolean | null
+          morning_time?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       processed_emails: {
         Row: {
           gmail_connection_id: string | null
@@ -329,6 +407,39 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth_key: string
+          created_at: string | null
+          device_name: string | null
+          endpoint: string
+          id: string
+          p256dh_key: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auth_key: string
+          created_at?: string | null
+          device_name?: string | null
+          endpoint: string
+          id?: string
+          p256dh_key: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auth_key?: string
+          created_at?: string | null
+          device_name?: string | null
+          endpoint?: string
+          id?: string
+          p256dh_key?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
