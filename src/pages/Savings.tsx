@@ -19,6 +19,7 @@ export interface SavingsEntry {
   amount: number;
   currency: "USD" | "ARS";
   entry_type: "deposit" | "withdrawal" | "interest";
+  savings_type: "cash" | "bank" | "other";
   notes: string | null;
   created_at: string;
 }
@@ -120,6 +121,7 @@ const Savings = () => {
           amount: Number(e.amount),
           currency: e.currency as "USD" | "ARS",
           entry_type: e.entry_type as "deposit" | "withdrawal" | "interest",
+          savings_type: (e.savings_type || "cash") as "cash" | "bank" | "other",
         })));
       }
 
@@ -200,6 +202,7 @@ const Savings = () => {
           amount: Number(data.amount),
           currency: data.currency as "USD" | "ARS",
           entry_type: data.entry_type as "deposit" | "withdrawal" | "interest",
+          savings_type: (data.savings_type || "cash") as "cash" | "bank" | "other",
         }, ...entries]);
       }
       

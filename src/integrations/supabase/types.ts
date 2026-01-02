@@ -272,21 +272,27 @@ export type Database = {
       savings: {
         Row: {
           ars_amount: number
+          ars_cash: number | null
           id: string
           updated_at: string
           usd_amount: number
+          usd_cash: number | null
         }
         Insert: {
           ars_amount?: number
+          ars_cash?: number | null
           id?: string
           updated_at?: string
           usd_amount?: number
+          usd_cash?: number | null
         }
         Update: {
           ars_amount?: number
+          ars_cash?: number | null
           id?: string
           updated_at?: string
           usd_amount?: number
+          usd_cash?: number | null
         }
         Relationships: []
       }
@@ -298,6 +304,7 @@ export type Database = {
           entry_type: string
           id: string
           notes: string | null
+          savings_type: string | null
           user_id: string
         }
         Insert: {
@@ -307,6 +314,7 @@ export type Database = {
           entry_type: string
           id?: string
           notes?: string | null
+          savings_type?: string | null
           user_id: string
         }
         Update: {
@@ -316,6 +324,7 @@ export type Database = {
           entry_type?: string
           id?: string
           notes?: string | null
+          savings_type?: string | null
           user_id?: string
         }
         Relationships: []
