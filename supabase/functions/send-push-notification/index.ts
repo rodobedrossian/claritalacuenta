@@ -108,14 +108,35 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
-    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
+    // Get and TRIM the VAPID keys - whitespace can cause issues
+    const vapidPublicKeyRaw = Deno.env.get("VAPID_PUBLIC_KEY");
+    const vapidPrivateKeyRaw = Deno.env.get("VAPID_PRIVATE_KEY");
 
-    if (!vapidPublicKey || !vapidPrivateKey) {
+    if (!vapidPublicKeyRaw || !vapidPrivateKeyRaw) {
       throw new Error("VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY environment variables are required");
     }
 
-    const vapidSubject = normalizeVapidSubject(Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@financeflow.app");
+    // Critical: Trim whitespace from keys
+    const vapidPublicKey = vapidPublicKeyRaw.trim();
+    const vapidPrivateKey = vapidPrivateKeyRaw.trim();
+
+    const vapidSubjectRaw = Deno.env.get("VAPID_SUBJECT") ?? "";
+    const vapidSubject = normalizeVapidSubject(vapidSubjectRaw);
+
+    // Detailed logging for debugging
+    console.log("=== VAPID Configuration Debug ===");
+    console.log("VAPID_SUBJECT raw:", JSON.stringify(vapidSubjectRaw));
+    console.log("VAPID_SUBJECT normalized:", vapidSubject);
+    console.log("VAPID_PUBLIC_KEY length:", vapidPublicKey.length, "first 20 chars:", vapidPublicKey.substring(0, 20));
+    console.log("VAPID_PRIVATE_KEY length:", vapidPrivateKey.length, "first 10 chars:", vapidPrivateKey.substring(0, 10));
+    
+    // Check for common issues
+    if (vapidPublicKeyRaw !== vapidPublicKey) {
+      console.warn("WARNING: VAPID_PUBLIC_KEY had leading/trailing whitespace that was trimmed!");
+    }
+    if (vapidPrivateKeyRaw !== vapidPrivateKey) {
+      console.warn("WARNING: VAPID_PRIVATE_KEY had leading/trailing whitespace that was trimmed!");
+    }
 
     // Validate subject format
     if (
@@ -123,14 +144,9 @@ serve(async (req) => {
       !vapidSubject.startsWith("https://") &&
       !vapidSubject.startsWith("http://")
     ) {
-      console.warn(`VAPID_SUBJECT should start with 'mailto:', 'https://', or 'http://'. Got: ${vapidSubject}`);
+      console.error(`VAPID_SUBJECT INVALID: should start with 'mailto:', 'https://', or 'http://'. Got: "${vapidSubject}"`);
+      throw new Error(`Invalid VAPID_SUBJECT format: "${vapidSubject}"`);
     }
-
-    console.log("VAPID Configuration:", {
-      subject: vapidSubject,
-      publicKeyLength: vapidPublicKey.length,
-      privateKeyLength: vapidPrivateKey.length,
-    });
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
