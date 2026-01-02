@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, CalendarIcon } from "lucide-react";
+import { Plus, CalendarIcon, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,12 +37,15 @@ interface AddTransactionDialogProps {
     description: string;
     date: string;
     user_id: string;
+    from_savings?: boolean;
+    savings_source?: string;
   }) => void;
   categories: string[];
   users: Array<{ id: string; full_name: string | null }>;
+  currentSavings?: { usd: number; ars: number };
 }
 
-export const AddTransactionDialog = ({ onAdd, categories, users }: AddTransactionDialogProps) => {
+export const AddTransactionDialog = ({ onAdd, categories, users, currentSavings }: AddTransactionDialogProps) => {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"income" | "expense">("expense");
   const [currency, setCurrency] = useState<"USD" | "ARS" | "">("");
@@ -51,26 +54,44 @@ export const AddTransactionDialog = ({ onAdd, categories, users }: AddTransactio
   const [description, setDescription] = useState("");
   const [userId, setUserId] = useState("");
   const [date, setDate] = useState<Date>(new Date());
+  const [fromSavings, setFromSavings] = useState(false);
+  const [savingsSource, setSavingsSource] = useState<"cash" | "bank" | "other" | "">("");
+
+  const availableSavings = currency && currentSavings 
+    ? (currency === "USD" ? currentSavings.usd : currentSavings.ars) 
+    : 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!amount || !currency || !category || !description || !userId) {
-      toast.error("Please fill in all fields");
+      toast.error("Completa todos los campos");
+      return;
+    }
+
+    if (fromSavings && !savingsSource) {
+      toast.error("Selecciona el tipo de ahorro");
+      return;
+    }
+
+    const amountNum = parseFloat(amount);
+    if (fromSavings && amountNum > availableSavings) {
+      toast.error(`No tienes suficientes ahorros. Disponible: ${currency} ${availableSavings.toLocaleString()}`);
       return;
     }
 
     onAdd({
       type,
-      amount: parseFloat(amount),
+      amount: amountNum,
       currency: currency as "USD" | "ARS",
       category,
       description,
       date: date.toISOString(),
       user_id: userId,
+      from_savings: fromSavings,
+      savings_source: fromSavings ? savingsSource : undefined,
     });
 
-    toast.success(`${type === "income" ? "Income" : "Expense"} added successfully`);
     setOpen(false);
     setCurrency("");
     setAmount("");
@@ -78,6 +99,8 @@ export const AddTransactionDialog = ({ onAdd, categories, users }: AddTransactio
     setDescription("");
     setUserId("");
     setDate(new Date());
+    setFromSavings(false);
+    setSavingsSource("");
   };
 
   return (
@@ -196,18 +219,61 @@ export const AddTransactionDialog = ({ onAdd, categories, users }: AddTransactio
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">Descripción</Label>
             <Input
               id="description"
-              placeholder="What was this for?"
+              placeholder="¿Para qué fue?"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="bg-muted border-border"
             />
           </div>
 
+          {/* From Savings Option - only for expenses */}
+          {type === "expense" && currency && (
+            <div className="space-y-3 p-3 rounded-lg bg-muted/50 border border-border/50">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="fromSavings"
+                  checked={fromSavings}
+                  onChange={(e) => {
+                    setFromSavings(e.target.checked);
+                    if (!e.target.checked) setSavingsSource("");
+                  }}
+                  className="h-4 w-4 rounded border-border"
+                />
+                <Label htmlFor="fromSavings" className="flex items-center gap-2 cursor-pointer">
+                  <Wallet className="h-4 w-4" />
+                  Sale de mis ahorros
+                </Label>
+              </div>
+              
+              {fromSavings && (
+                <>
+                  <div className="text-xs text-muted-foreground">
+                    Disponible: {currency} {availableSavings.toLocaleString()}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="savingsSource">Tipo de ahorro</Label>
+                    <Select value={savingsSource} onValueChange={(value: "cash" | "bank" | "other") => setSavingsSource(value)}>
+                      <SelectTrigger id="savingsSource" className="bg-muted border-border">
+                        <SelectValue placeholder="Seleccionar tipo" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border">
+                        <SelectItem value="cash">Efectivo</SelectItem>
+                        <SelectItem value="bank">Banco</SelectItem>
+                        <SelectItem value="other">Otro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           <Button type="submit" className="w-full gradient-primary hover:opacity-90">
-            Add Transaction
+            Agregar Transacción
           </Button>
         </form>
       </DialogContent>

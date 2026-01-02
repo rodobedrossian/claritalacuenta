@@ -1,4 +1,4 @@
-import { ArrowDownCircle, ArrowUpCircle, Pencil } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Pencil, PiggyBank } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -11,6 +11,8 @@ interface Transaction {
   description: string;
   date: string;
   user_id: string;
+  from_savings?: boolean;
+  savings_source?: string;
 }
 
 interface TransactionsListProps {
@@ -73,6 +75,15 @@ export const TransactionsList = ({ transactions, onEdit, showViewAll, onViewAll 
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                {transaction.from_savings && (
+                  <div 
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20"
+                    title={`Pagado desde ahorros (${transaction.savings_source === 'cash' ? 'efectivo' : transaction.savings_source === 'bank' ? 'banco' : 'otro'})`}
+                  >
+                    <PiggyBank className="h-3 w-3 text-primary" />
+                    <span className="text-xs text-primary">Ahorros</span>
+                  </div>
+                )}
                 <p
                   className={`font-semibold ${
                     transaction.type === "income" ? "text-success" : "text-destructive"
@@ -86,7 +97,7 @@ export const TransactionsList = ({ transactions, onEdit, showViewAll, onViewAll 
                   size="icon"
                   className="opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={() => onEdit(transaction)}
-                  title="Edit transaction"
+                  title="Editar transacción"
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>

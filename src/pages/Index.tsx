@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "@/components/StatCard";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
 import { AddSavingsDialog } from "@/components/AddSavingsDialog";
+import { TransferToSavingsDialog } from "@/components/TransferToSavingsDialog";
 import { TransactionsList } from "@/components/TransactionsList";
 import { EditTransactionDialog } from "@/components/EditTransactionDialog";
 import { SpendingChart } from "@/components/SpendingChart";
@@ -24,6 +25,8 @@ interface Transaction {
   description: string;
   date: string;
   user_id: string;
+  from_savings?: boolean;
+  savings_source?: string;
 }
 interface Category {
   id: string;
@@ -40,6 +43,8 @@ interface DbTransaction {
   date: string;
   user_id: string;
   created_at: string;
+  from_savings?: boolean;
+  savings_source?: string;
 }
 const Index = () => {
   const navigate = useNavigate();
@@ -125,15 +130,17 @@ const Index = () => {
           ...t,
           type: t.type as "income" | "expense",
           currency: t.currency as "USD" | "ARS",
-          amount: typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount
+          amount: typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount,
+          from_savings: t.from_savings || false,
+          savings_source: t.savings_source
         }));
         setTransactions(typedTransactions);
       }
 
-      // Fetch savings
+      // Fetch savings - use maybeSingle to avoid errors with multiple/no records
       const {
         data: savingsData
-      } = await supabase.from("savings").select("usd_amount, ars_amount").single();
+      } = await supabase.from("savings").select("usd_amount, ars_amount").limit(1).maybeSingle();
       if (savingsData) {
         setCurrentSavings({
           usd: typeof savingsData.usd_amount === 'string' ? parseFloat(savingsData.usd_amount) : savingsData.usd_amount,
@@ -158,9 +165,50 @@ const Index = () => {
         category: transaction.category,
         description: transaction.description,
         date: transaction.date,
-        user_id: transaction.user_id
+        user_id: transaction.user_id,
+        from_savings: transaction.from_savings || false,
+        savings_source: transaction.savings_source || null
       }]).select().single();
       if (error) throw error;
+
+      // If expense is from savings, deduct from savings and create withdrawal entry
+      if (transaction.type === "expense" && transaction.from_savings && transaction.savings_source) {
+        const savingsType = transaction.savings_source as "cash" | "bank" | "other";
+        
+        // Create savings withdrawal entry
+        await supabase.from("savings_entries").insert([{
+          user_id: user.id,
+          amount: transaction.amount,
+          currency: transaction.currency,
+          entry_type: "withdrawal",
+          savings_type: savingsType,
+          notes: `Gasto: ${transaction.description}`
+        }]);
+
+        // Update savings table
+        const { data: savingsRecord } = await supabase
+          .from("savings")
+          .select("id, usd_amount, ars_amount")
+          .limit(1)
+          .maybeSingle();
+
+        if (savingsRecord) {
+          const currentAmount = transaction.currency === "USD" 
+            ? (typeof savingsRecord.usd_amount === 'string' ? parseFloat(savingsRecord.usd_amount) : savingsRecord.usd_amount)
+            : (typeof savingsRecord.ars_amount === 'string' ? parseFloat(savingsRecord.ars_amount) : savingsRecord.ars_amount);
+          const newAmount = Math.max(0, currentAmount - transaction.amount);
+          
+          await supabase
+            .from("savings")
+            .update(transaction.currency === "USD" ? { usd_amount: newAmount } : { ars_amount: newAmount })
+            .eq("id", savingsRecord.id);
+
+          setCurrentSavings(prev => ({
+            ...prev,
+            [transaction.currency === "USD" ? "usd" : "ars"]: newAmount
+          }));
+        }
+      }
 
       // Update local state
       if (data) {
@@ -168,14 +216,16 @@ const Index = () => {
           ...data,
           type: data.type as "income" | "expense",
           currency: data.currency as "USD" | "ARS",
-          amount: typeof data.amount === 'string' ? parseFloat(data.amount) : data.amount
+          amount: typeof data.amount === 'string' ? parseFloat(data.amount) : data.amount,
+          from_savings: data.from_savings || false,
+          savings_source: data.savings_source
         };
         setTransactions([typedTransaction, ...transactions]);
       }
-      toast.success(`${transaction.type === "income" ? "Income" : "Expense"} added successfully`);
+      toast.success(`${transaction.type === "income" ? "Ingreso" : "Gasto"} registrado correctamente`);
     } catch (error: any) {
       console.error("Error adding transaction:", error);
-      toast.error("Failed to add transaction");
+      toast.error("Error al registrar transacción");
     }
   };
 
@@ -351,8 +401,13 @@ const Index = () => {
 
   const totalIncomeUSD = monthlyTransactions.filter(t => t.type === "income" && t.currency === "USD").reduce((sum, t) => sum + t.amount, 0);
   const totalIncomeARS = monthlyTransactions.filter(t => t.type === "income" && t.currency === "ARS").reduce((sum, t) => sum + t.amount, 0);
-  const totalExpensesUSD = monthlyTransactions.filter(t => t.type === "expense" && t.currency === "USD").reduce((sum, t) => sum + t.amount, 0);
-  const totalExpensesARS = monthlyTransactions.filter(t => t.type === "expense" && t.currency === "ARS").reduce((sum, t) => sum + t.amount, 0);
+  // For expenses, exclude from_savings transactions from the balance calculation (they don't affect monthly balance)
+  const totalExpensesUSD = monthlyTransactions.filter(t => t.type === "expense" && t.currency === "USD" && !t.from_savings).reduce((sum, t) => sum + t.amount, 0);
+  const totalExpensesARS = monthlyTransactions.filter(t => t.type === "expense" && t.currency === "ARS" && !t.from_savings).reduce((sum, t) => sum + t.amount, 0);
+
+  // Available balance per currency (for transfer to savings)
+  const availableBalanceUSD = Math.max(0, totalIncomeUSD - totalExpensesUSD);
+  const availableBalanceARS = Math.max(0, totalIncomeARS - totalExpensesARS);
 
   // Calcular valores globalizados en ARS
   const globalIncomeARS = (totalIncomeUSD * exchangeRate) + totalIncomeARS;
@@ -419,9 +474,14 @@ const Index = () => {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <TransferToSavingsDialog
+                  availableBalanceUSD={availableBalanceUSD}
+                  availableBalanceARS={availableBalanceARS}
+                  onTransfer={(currency, amount, savingsType, notes) => handleAddSavings(currency, amount, "deposit", savingsType, notes)}
+                />
                 <AddSavingsDialog onAdd={handleAddSavings} />
-                <AddTransactionDialog onAdd={handleAddTransaction} categories={categories} users={users} />
+                <AddTransactionDialog onAdd={handleAddTransaction} categories={categories} users={users} currentSavings={currentSavings} />
               </div>
             </div>
           </div>

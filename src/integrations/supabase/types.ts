@@ -374,7 +374,9 @@ export type Database = {
           date: string
           description: string
           email_message_id: string | null
+          from_savings: boolean | null
           id: string
+          savings_source: string | null
           source: string | null
           status: string
           type: string
@@ -388,7 +390,9 @@ export type Database = {
           date?: string
           description: string
           email_message_id?: string | null
+          from_savings?: boolean | null
           id?: string
+          savings_source?: string | null
           source?: string | null
           status?: string
           type: string
@@ -402,7 +406,9 @@ export type Database = {
           date?: string
           description?: string
           email_message_id?: string | null
+          from_savings?: boolean | null
           id?: string
+          savings_source?: string | null
           source?: string | null
           status?: string
           type?: string
