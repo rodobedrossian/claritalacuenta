@@ -23,3 +23,15 @@ verify_jwt = false
 
 [functions.gmail-sync]
 verify_jwt = false
+
+[functions.send-push-notification]
+verify_jwt = false
+
+[functions.daily-notifications]
+verify_jwt = false
+
+[functions.check-budget-alerts]
+verify_jwt = false
+
+[functions.monthly-recurring-reminder]
+verify_jwt = false

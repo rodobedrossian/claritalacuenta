@@ -13,6 +13,8 @@ import { AppLayout } from "@/components/AppLayout";
 import { BudgetProgress } from "@/components/budgets/BudgetProgress";
 import { CreditCardSummary } from "@/components/credit-cards/CreditCardSummary";
 import { ReconcileCreditCardDialog } from "@/components/credit-cards/ReconcileCreditCardDialog";
+import { NotificationSetupBanner } from "@/components/notifications/NotificationSetupBanner";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -60,6 +62,9 @@ const Index = () => {
     updateBudget,
     deleteBudget,
   } = useBudgetsData(user?.id, activeMonth, transactionsForBudgets);
+
+  // Push notifications hook
+  const pushNotifications = usePushNotifications(user?.id);
 
   useEffect(() => {
     // Check authentication
@@ -257,6 +262,18 @@ const Index = () => {
   return (
     <AppLayout>
       <div className="min-h-screen">
+        {/* Notification Banner */}
+        <div className="container mx-auto px-6 pt-4">
+          <NotificationSetupBanner
+            isSupported={pushNotifications.isSupported}
+            isPWA={pushNotifications.isPWA}
+            hasSubscription={pushNotifications.subscriptions.length > 0}
+            permission={pushNotifications.permission}
+            onSubscribe={pushNotifications.subscribe}
+            subscribing={pushNotifications.subscribing}
+          />
+        </div>
+
         {/* Header */}
         <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
           <div className="container mx-auto px-6 py-4">
