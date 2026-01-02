@@ -4,8 +4,7 @@ import { Wallet, TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, Ch
 import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "@/components/StatCard";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
-import { AddSavingsDialog } from "@/components/AddSavingsDialog";
-import { TransferToSavingsDialog } from "@/components/TransferToSavingsDialog";
+import { SavingsActionDropdown } from "@/components/SavingsActionDropdown";
 import { TransactionsList } from "@/components/TransactionsList";
 import { EditTransactionDialog } from "@/components/EditTransactionDialog";
 import { SpendingChart } from "@/components/SpendingChart";
@@ -475,12 +474,12 @@ const Index = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <TransferToSavingsDialog
+                <SavingsActionDropdown
                   availableBalanceUSD={availableBalanceUSD}
                   availableBalanceARS={availableBalanceARS}
-                  onTransfer={(currency, amount, savingsType, notes) => handleAddSavings(currency, amount, "deposit", savingsType, notes)}
+                  onTransferFromBalance={(currency, amount, savingsType, notes) => handleAddSavings(currency, amount, "deposit", savingsType, notes)}
+                  onAddSavings={handleAddSavings}
                 />
-                <AddSavingsDialog onAdd={handleAddSavings} />
                 <AddTransactionDialog onAdd={handleAddTransaction} categories={categories} users={users} currentSavings={currentSavings} />
               </div>
             </div>
