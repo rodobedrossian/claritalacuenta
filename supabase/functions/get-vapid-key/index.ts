@@ -11,9 +11,9 @@ serve(async (req) => {
   }
 
   try {
-    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
+    const vapidPublicKeyRaw = Deno.env.get("VAPID_PUBLIC_KEY");
 
-    if (!vapidPublicKey) {
+    if (!vapidPublicKeyRaw) {
       console.error("VAPID_PUBLIC_KEY not configured");
       return new Response(
         JSON.stringify({ error: "VAPID key not configured" }),
@@ -21,7 +21,15 @@ serve(async (req) => {
       );
     }
 
-    console.log("VAPID public key requested successfully");
+    // Critical: Trim any whitespace from the key
+    const vapidPublicKey = vapidPublicKeyRaw.trim();
+    
+    // Log for debugging - show first 20 chars to verify key format
+    console.log("VAPID public key requested. Length:", vapidPublicKey.length, "First 20 chars:", vapidPublicKey.substring(0, 20));
+    
+    if (vapidPublicKeyRaw !== vapidPublicKey) {
+      console.warn("WARNING: VAPID_PUBLIC_KEY had whitespace that was trimmed!");
+    }
 
     return new Response(
       JSON.stringify({ vapidPublicKey }),
