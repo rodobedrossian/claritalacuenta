@@ -231,10 +231,34 @@ const Index = () => {
     setEditingTransaction(transaction);
     setEditDialogOpen(true);
   };
-  const handleAddSavings = async (currency: "USD" | "ARS", amount: number) => {
+  const handleAddSavings = async (
+    currency: "USD" | "ARS", 
+    amount: number, 
+    entryType: "deposit" | "withdrawal",
+    savingsType: "cash" | "bank" | "other",
+    notes?: string
+  ) => {
+    if (!user) return;
+    
     try {
+      // Create savings_entries record
+      const { error: entryError } = await supabase
+        .from("savings_entries")
+        .insert([{
+          user_id: user.id,
+          amount,
+          currency,
+          entry_type: entryType,
+          savings_type: savingsType,
+          notes: notes || null
+        }]);
+      
+      if (entryError) throw entryError;
+
+      // Update aggregated savings table
+      const amountDelta = entryType === "deposit" ? amount : -amount;
       const currentAmount = currentSavings[currency === "USD" ? "usd" : "ars"];
-      const newAmount = currentAmount + amount;
+      const newAmount = Math.max(0, currentAmount + amountDelta);
       
       // Try to get existing record
       const { data: savingsRecord } = await supabase
@@ -254,8 +278,8 @@ const Index = () => {
         const { error } = await supabase
           .from("savings")
           .insert([{
-            usd_amount: currency === "USD" ? amount : 0,
-            ars_amount: currency === "ARS" ? amount : 0
+            usd_amount: currency === "USD" ? (entryType === "deposit" ? amount : 0) : 0,
+            ars_amount: currency === "ARS" ? (entryType === "deposit" ? amount : 0) : 0
           }]);
         if (error) throw error;
       }
@@ -264,10 +288,10 @@ const Index = () => {
         ...prev,
         [currency === "USD" ? "usd" : "ars"]: newAmount
       }));
-      toast.success("Savings updated successfully");
+      toast.success(entryType === "deposit" ? "Depósito registrado" : "Retiro registrado");
     } catch (error) {
       console.error("Error updating savings:", error);
-      toast.error("Failed to update savings");
+      toast.error("Error al registrar movimiento");
     }
   };
   const fetchExchangeRate = async () => {

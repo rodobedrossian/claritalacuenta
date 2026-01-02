@@ -18,31 +18,43 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 interface AddSavingsDialogProps {
-  onAdd: (currency: "USD" | "ARS", amount: number) => void;
+  onAdd: (currency: "USD" | "ARS", amount: number, entryType: "deposit" | "withdrawal", savingsType: "cash" | "bank" | "other", notes?: string) => void;
 }
 
 export const AddSavingsDialog = ({ onAdd }: AddSavingsDialogProps) => {
   const [open, setOpen] = useState(false);
   const [currency, setCurrency] = useState<"USD" | "ARS" | "">("");
   const [amount, setAmount] = useState("");
+  const [entryType, setEntryType] = useState<"deposit" | "withdrawal" | "">("");
+  const [savingsType, setSavingsType] = useState<"cash" | "bank" | "other" | "">("");
+  const [notes, setNotes] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!amount || !currency) {
-      toast.error("Please fill in all fields");
+    if (!amount || !currency || !entryType || !savingsType) {
+      toast.error("Por favor completa todos los campos obligatorios");
       return;
     }
 
-    onAdd(currency as "USD" | "ARS", parseFloat(amount));
+    onAdd(
+      currency as "USD" | "ARS", 
+      parseFloat(amount), 
+      entryType as "deposit" | "withdrawal",
+      savingsType as "cash" | "bank" | "other",
+      notes || undefined
+    );
 
-    toast.success(`Savings updated successfully`);
     setOpen(false);
     setCurrency("");
     setAmount("");
+    setEntryType("");
+    setSavingsType("");
+    setNotes("");
   };
 
   return (
@@ -50,22 +62,35 @@ export const AddSavingsDialog = ({ onAdd }: AddSavingsDialogProps) => {
       <DialogTrigger asChild>
         <Button variant="outline" className="border-primary/50 hover:bg-primary/10">
           <PiggyBank className="mr-2 h-4 w-4" />
-          Add Savings
+          Agregar Ahorro
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] bg-card border-border">
         <DialogHeader>
-          <DialogTitle>Add Savings</DialogTitle>
+          <DialogTitle>Registrar Movimiento de Ahorro</DialogTitle>
           <DialogDescription>
-            Add or update your savings in USD or ARS.
+            Registra un depósito o retiro de tus ahorros.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
-            <Label htmlFor="currency">Currency</Label>
+            <Label htmlFor="entryType">Tipo de Movimiento</Label>
+            <Select value={entryType} onValueChange={(value: "deposit" | "withdrawal") => setEntryType(value)}>
+              <SelectTrigger id="entryType" className="bg-muted border-border">
+                <SelectValue placeholder="Seleccionar tipo" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="deposit">Depósito</SelectItem>
+                <SelectItem value="withdrawal">Retiro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="currency">Moneda</Label>
             <Select value={currency} onValueChange={(value: "USD" | "ARS") => setCurrency(value)}>
               <SelectTrigger id="currency" className="bg-muted border-border">
-                <SelectValue placeholder="Select currency" />
+                <SelectValue placeholder="Seleccionar moneda" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
                 <SelectItem value="USD">USD ($)</SelectItem>
@@ -75,7 +100,7 @@ export const AddSavingsDialog = ({ onAdd }: AddSavingsDialogProps) => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount</Label>
+            <Label htmlFor="amount">Monto</Label>
             <Input
               id="amount"
               type="number"
@@ -87,8 +112,33 @@ export const AddSavingsDialog = ({ onAdd }: AddSavingsDialogProps) => {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="savingsType">Origen/Destino</Label>
+            <Select value={savingsType} onValueChange={(value: "cash" | "bank" | "other") => setSavingsType(value)}>
+              <SelectTrigger id="savingsType" className="bg-muted border-border">
+                <SelectValue placeholder="Seleccionar origen" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="cash">Efectivo</SelectItem>
+                <SelectItem value="bank">Banco</SelectItem>
+                <SelectItem value="other">Otro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notas (opcional)</Label>
+            <Textarea
+              id="notes"
+              placeholder="Agregar una nota..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="bg-muted border-border"
+            />
+          </div>
+
           <Button type="submit" className="w-full gradient-primary hover:opacity-90">
-            Add Savings
+            Guardar Movimiento
           </Button>
         </form>
       </DialogContent>
