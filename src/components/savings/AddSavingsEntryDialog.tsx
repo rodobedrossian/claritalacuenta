@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -29,6 +30,7 @@ export const AddSavingsEntryDialog = ({ onAdd }: AddSavingsEntryDialogProps) => 
   const [open, setOpen] = useState(false);
   const [entryType, setEntryType] = useState<SavingsEntry["entry_type"]>("deposit");
   const [currency, setCurrency] = useState<"USD" | "ARS">("ARS");
+  const [savingsType, setSavingsType] = useState<"cash" | "bank" | "other">("cash");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -46,6 +48,7 @@ export const AddSavingsEntryDialog = ({ onAdd }: AddSavingsEntryDialogProps) => 
       currency,
       amount: numAmount,
       notes: notes.trim() || null,
+      savings_type: savingsType,
     });
 
     // Reset form
@@ -53,6 +56,7 @@ export const AddSavingsEntryDialog = ({ onAdd }: AddSavingsEntryDialogProps) => 
     setNotes("");
     setEntryType("deposit");
     setCurrency("ARS");
+    setSavingsType("cash");
     setOpen(false);
   };
 
@@ -67,6 +71,9 @@ export const AddSavingsEntryDialog = ({ onAdd }: AddSavingsEntryDialogProps) => 
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Registrar Movimiento</DialogTitle>
+          <DialogDescription>
+            Registra depósitos, retiros o intereses ganados
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -83,17 +90,33 @@ export const AddSavingsEntryDialog = ({ onAdd }: AddSavingsEntryDialogProps) => 
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Moneda</Label>
-            <Select value={currency} onValueChange={(v) => setCurrency(v as "USD" | "ARS")}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ARS">ARS (Pesos)</SelectItem>
-                <SelectItem value="USD">USD (Dólares)</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Moneda</Label>
+              <Select value={currency} onValueChange={(v) => setCurrency(v as "USD" | "ARS")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ARS">ARS (Pesos)</SelectItem>
+                  <SelectItem value="USD">USD (Dólares)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tipo de Ahorro</Label>
+              <Select value={savingsType} onValueChange={(v) => setSavingsType(v as "cash" | "bank" | "other")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Efectivo</SelectItem>
+                  <SelectItem value="bank">Banco</SelectItem>
+                  <SelectItem value="other">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">

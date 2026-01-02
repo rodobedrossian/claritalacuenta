@@ -1,7 +1,8 @@
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowDownCircle, ArrowUpCircle, Percent } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Percent, Banknote, Building2, HelpCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { SavingsEntry } from "@/pages/Savings";
 
 interface SavingsEntriesListProps {
@@ -9,7 +10,7 @@ interface SavingsEntriesListProps {
 }
 
 export const SavingsEntriesList = ({ entries }: SavingsEntriesListProps) => {
-  const getIcon = (type: SavingsEntry["entry_type"]) => {
+  const getTypeIcon = (type: SavingsEntry["entry_type"]) => {
     switch (type) {
       case "deposit":
         return <ArrowDownCircle className="h-5 w-5 text-success" />;
@@ -20,7 +21,7 @@ export const SavingsEntriesList = ({ entries }: SavingsEntriesListProps) => {
     }
   };
 
-  const getLabel = (type: SavingsEntry["entry_type"]) => {
+  const getTypeLabel = (type: SavingsEntry["entry_type"]) => {
     switch (type) {
       case "deposit":
         return "Depósito";
@@ -28,6 +29,17 @@ export const SavingsEntriesList = ({ entries }: SavingsEntriesListProps) => {
         return "Retiro";
       case "interest":
         return "Interés";
+    }
+  };
+
+  const getSavingsTypeLabel = (type: SavingsEntry["savings_type"]) => {
+    switch (type) {
+      case "cash":
+        return { label: "Efectivo", icon: Banknote };
+      case "bank":
+        return { label: "Banco", icon: Building2 };
+      case "other":
+        return { label: "Otro", icon: HelpCircle };
     }
   };
 
@@ -58,33 +70,44 @@ export const SavingsEntriesList = ({ entries }: SavingsEntriesListProps) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {entries.map((entry) => (
-            <div
-              key={entry.id}
-              className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-            >
-              <div className="flex items-center gap-4">
-                {getIcon(entry.entry_type)}
-                <div>
-                  <p className="font-medium">{getLabel(entry.entry_type)}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {format(parseISO(entry.created_at), "d MMM yyyy, HH:mm", { locale: es })}
+          {entries.map((entry) => {
+            const savingsTypeInfo = getSavingsTypeLabel(entry.savings_type || "cash");
+            const SavingsIcon = savingsTypeInfo.icon;
+            
+            return (
+              <div
+                key={entry.id}
+                className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  {getTypeIcon(entry.entry_type)}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{getTypeLabel(entry.entry_type)}</p>
+                      <Badge variant="outline" className="text-xs">
+                        <SavingsIcon className="h-3 w-3 mr-1" />
+                        {savingsTypeInfo.label}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {format(parseISO(entry.created_at), "d MMM yyyy, HH:mm", { locale: es })}
+                    </p>
+                    {entry.notes && (
+                      <p className="text-sm text-muted-foreground mt-1">{entry.notes}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className={`font-semibold ${
+                    entry.entry_type === "withdrawal" ? "text-destructive" : "text-success"
+                  }`}>
+                    {entry.entry_type === "withdrawal" ? "-" : "+"}
+                    {formatCurrency(entry.amount, entry.currency)}
                   </p>
-                  {entry.notes && (
-                    <p className="text-sm text-muted-foreground mt-1">{entry.notes}</p>
-                  )}
                 </div>
               </div>
-              <div className="text-right">
-                <p className={`font-semibold ${
-                  entry.entry_type === "withdrawal" ? "text-destructive" : "text-success"
-                }`}>
-                  {entry.entry_type === "withdrawal" ? "-" : "+"}
-                  {formatCurrency(entry.amount, entry.currency)}
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>

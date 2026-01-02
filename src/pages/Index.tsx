@@ -234,18 +234,31 @@ const Index = () => {
     try {
       const currentAmount = currentSavings[currency === "USD" ? "usd" : "ars"];
       const newAmount = currentAmount + amount;
-      const {
-        data: savingsRecord
-      } = await supabase.from("savings").select("id").single();
-      if (!savingsRecord) throw new Error("Savings record not found");
-      const {
-        error
-      } = await supabase.from("savings").update(currency === "USD" ? {
-        usd_amount: newAmount
-      } : {
-        ars_amount: newAmount
-      }).eq("id", savingsRecord.id);
-      if (error) throw error;
+      
+      // Try to get existing record
+      const { data: savingsRecord } = await supabase
+        .from("savings")
+        .select("id")
+        .maybeSingle();
+      
+      if (savingsRecord) {
+        // Update existing record
+        const { error } = await supabase
+          .from("savings")
+          .update(currency === "USD" ? { usd_amount: newAmount } : { ars_amount: newAmount })
+          .eq("id", savingsRecord.id);
+        if (error) throw error;
+      } else {
+        // Create new record
+        const { error } = await supabase
+          .from("savings")
+          .insert([{
+            usd_amount: currency === "USD" ? amount : 0,
+            ars_amount: currency === "ARS" ? amount : 0
+          }]);
+        if (error) throw error;
+      }
+      
       setCurrentSavings(prev => ({
         ...prev,
         [currency === "USD" ? "usd" : "ars"]: newAmount
