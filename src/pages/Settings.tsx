@@ -10,14 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Mail, Plus, Trash2, RefreshCw, Loader2, CreditCard, Repeat } from "lucide-react";
+import { Mail, Plus, Trash2, RefreshCw, Loader2, CreditCard, Repeat, Bell } from "lucide-react";
 import { useCreditCardsData } from "@/hooks/useCreditCardsData";
 import { useRecurringExpensesData } from "@/hooks/useRecurringExpensesData";
 import { useCategoriesData } from "@/hooks/useCategoriesData";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { AddCreditCardDialog } from "@/components/credit-cards/AddCreditCardDialog";
 import { CreditCardsList } from "@/components/credit-cards/CreditCardsList";
 import { AddRecurringExpenseDialog } from "@/components/recurring/AddRecurringExpenseDialog";
 import { RecurringExpensesList } from "@/components/recurring/RecurringExpensesList";
+import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 
 interface GmailConnection {
   id: string;
@@ -140,6 +142,9 @@ export default function Settings() {
   
   // Categories hook
   const { categories: allCategories } = useCategoriesData();
+  
+  // Push notifications hook
+  const pushNotifications = usePushNotifications(userId);
   
   // Parser form state
   const [parserForm, setParserForm] = useState({
@@ -464,9 +469,10 @@ export default function Settings() {
           <h1 className="text-2xl font-bold mb-6">Configuración</h1>
 
         <Tabs defaultValue="recurring" className="space-y-6">
-          <TabsList>
+          <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="recurring">Gastos Recurrentes</TabsTrigger>
             <TabsTrigger value="credit-cards">Tarjetas de Crédito</TabsTrigger>
+            <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
             <TabsTrigger value="gmail">Gmail</TabsTrigger>
             <TabsTrigger value="parsers">Parsers</TabsTrigger>
           </TabsList>
@@ -514,6 +520,22 @@ export default function Settings() {
                 <CreditCardsList creditCards={creditCards} onDelete={deleteCreditCard} />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="notifications" className="space-y-4">
+            <NotificationSettings
+              isSupported={pushNotifications.isSupported}
+              isPWA={pushNotifications.isPWA}
+              permission={pushNotifications.permission}
+              subscriptions={pushNotifications.subscriptions}
+              settings={pushNotifications.settings}
+              loading={pushNotifications.loading}
+              subscribing={pushNotifications.subscribing}
+              onSubscribe={pushNotifications.subscribe}
+              onUnsubscribe={pushNotifications.unsubscribe}
+              onUpdateSettings={pushNotifications.updateSettings}
+              onSendTest={pushNotifications.sendTestNotification}
+            />
           </TabsContent>
 
           <TabsContent value="gmail" className="space-y-4">
