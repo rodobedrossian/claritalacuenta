@@ -1,11 +1,20 @@
+import { useState } from "react";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
-import { Trash2, Building2, TrendingUp, Calendar, Percent } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Investment } from "@/pages/Savings";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface InvestmentsListProps {
   investments: Investment[];
@@ -21,7 +30,13 @@ const investmentTypeLabels: Record<Investment["investment_type"], string> = {
   otro: "Otro",
 };
 
+type SortField = "name" | "type" | "principal" | "current" | "rate" | "end_date" | "progress";
+type SortDirection = "asc" | "desc";
+
 export const InvestmentsList = ({ investments, onDelete, exchangeRate }: InvestmentsListProps) => {
+  const [sortField, setSortField] = useState<SortField>("end_date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
   const formatCurrency = (amount: number, currency: "USD" | "ARS") => {
     return `${currency} ${new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 0,
@@ -38,7 +53,6 @@ export const InvestmentsList = ({ investments, onDelete, exchangeRate }: Investm
     const endDate = parseISO(investment.end_date);
     const days = differenceInDays(endDate, startDate);
     
-    // Simple interest: principal * (1 + TNA * days / 365)
     const estimatedAmount = investment.principal_amount * (1 + (investment.interest_rate / 100) * (days / 365));
     const profit = estimatedAmount - investment.principal_amount;
     
@@ -61,6 +75,54 @@ export const InvestmentsList = ({ investments, onDelete, exchangeRate }: Investm
     return { progress, remainingDays, totalDays };
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1" />;
+    return sortDirection === "asc" 
+      ? <ArrowUp className="h-4 w-4 ml-1" /> 
+      : <ArrowDown className="h-4 w-4 ml-1" />;
+  };
+
+  const sortedInvestments = [...investments].sort((a, b) => {
+    const multiplier = sortDirection === "asc" ? 1 : -1;
+    
+    switch (sortField) {
+      case "name":
+        return multiplier * a.name.localeCompare(b.name);
+      case "type":
+        return multiplier * a.investment_type.localeCompare(b.investment_type);
+      case "principal":
+        const aPrincipal = a.currency === "USD" ? a.principal_amount * exchangeRate : a.principal_amount;
+        const bPrincipal = b.currency === "USD" ? b.principal_amount * exchangeRate : b.principal_amount;
+        return multiplier * (aPrincipal - bPrincipal);
+      case "current":
+        const aCurrent = a.currency === "USD" ? a.current_amount * exchangeRate : a.current_amount;
+        const bCurrent = b.currency === "USD" ? b.current_amount * exchangeRate : b.current_amount;
+        return multiplier * (aCurrent - bCurrent);
+      case "rate":
+        return multiplier * ((a.interest_rate || 0) - (b.interest_rate || 0));
+      case "end_date":
+        if (!a.end_date && !b.end_date) return 0;
+        if (!a.end_date) return multiplier;
+        if (!b.end_date) return -multiplier;
+        return multiplier * (new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
+      case "progress":
+        const aProgress = getTimeProgress(a)?.progress || 0;
+        const bProgress = getTimeProgress(b)?.progress || 0;
+        return multiplier * (aProgress - bProgress);
+      default:
+        return 0;
+    }
+  });
+
   if (investments.length === 0) {
     return (
       <Card>
@@ -75,125 +137,123 @@ export const InvestmentsList = ({ investments, onDelete, exchangeRate }: Investm
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      {investments.map((investment) => {
-        const estimatedReturn = calculateEstimatedReturn(investment);
-        const timeProgress = getTimeProgress(investment);
-        
-        return (
-          <Card key={investment.id} className={!investment.is_active ? "opacity-60" : ""}>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{investment.name}</CardTitle>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline">
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>
+                <Button variant="ghost" className="p-0 h-auto font-medium hover:bg-transparent" onClick={() => handleSort("name")}>
+                  Nombre {getSortIcon("name")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" className="p-0 h-auto font-medium hover:bg-transparent" onClick={() => handleSort("type")}>
+                  Tipo {getSortIcon("type")}
+                </Button>
+              </TableHead>
+              <TableHead className="text-right">
+                <Button variant="ghost" className="p-0 h-auto font-medium hover:bg-transparent ml-auto" onClick={() => handleSort("principal")}>
+                  Capital {getSortIcon("principal")}
+                </Button>
+              </TableHead>
+              <TableHead className="text-right">
+                <Button variant="ghost" className="p-0 h-auto font-medium hover:bg-transparent ml-auto" onClick={() => handleSort("current")}>
+                  Actual {getSortIcon("current")}
+                </Button>
+              </TableHead>
+              <TableHead className="text-right">
+                <Button variant="ghost" className="p-0 h-auto font-medium hover:bg-transparent ml-auto" onClick={() => handleSort("rate")}>
+                  TNA {getSortIcon("rate")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" className="p-0 h-auto font-medium hover:bg-transparent" onClick={() => handleSort("end_date")}>
+                  Vencimiento {getSortIcon("end_date")}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" className="p-0 h-auto font-medium hover:bg-transparent" onClick={() => handleSort("progress")}>
+                  Progreso {getSortIcon("progress")}
+                </Button>
+              </TableHead>
+              <TableHead className="text-right">Estimado</TableHead>
+              <TableHead className="w-[50px]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedInvestments.map((investment) => {
+              const estimatedReturn = calculateEstimatedReturn(investment);
+              const timeProgress = getTimeProgress(investment);
+              
+              return (
+                <TableRow key={investment.id} className={!investment.is_active ? "opacity-60" : ""}>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{investment.name}</span>
+                      {investment.institution && (
+                        <span className="text-xs text-muted-foreground">{investment.institution}</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="whitespace-nowrap">
                       {investmentTypeLabels[investment.investment_type]}
                     </Badge>
-                    {!investment.is_active && (
-                      <Badge variant="secondary">Finalizada</Badge>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onDelete(investment.id)}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Principal and Current Amount */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Capital</p>
-                  <p className="font-semibold">
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
                     {formatCurrency(investment.principal_amount, investment.currency)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Monto Actual</p>
-                  <p className="font-semibold">
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
                     {formatCurrency(investment.current_amount, investment.currency)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Institution and Rate */}
-              <div className="flex flex-wrap gap-3 text-sm">
-                {investment.institution && (
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Building2 className="h-4 w-4" />
-                    {investment.institution}
-                  </div>
-                )}
-                {investment.interest_rate && (
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Percent className="h-4 w-4" />
-                    TNA {investment.interest_rate}%
-                  </div>
-                )}
-              </div>
-
-              {/* Dates */}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                <span>
-                  {format(parseISO(investment.start_date), "d MMM yyyy", { locale: es })}
-                  {investment.end_date && (
-                    <> → {format(parseISO(investment.end_date), "d MMM yyyy", { locale: es })}</>
-                  )}
-                </span>
-              </div>
-
-              {/* Time Progress for fixed-term investments */}
-              {timeProgress && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Progreso</span>
-                    <span className="text-muted-foreground">
-                      {timeProgress.remainingDays > 0 
-                        ? `${timeProgress.remainingDays} días restantes`
-                        : "Vencido"
-                      }
-                    </span>
-                  </div>
-                  <Progress value={timeProgress.progress} className="h-2" />
-                </div>
-              )}
-
-              {/* Estimated Return */}
-              {estimatedReturn && (
-                <div className="pt-2 border-t border-border">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-success" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Estimado al vencimiento ({estimatedReturn.days} días)
-                      </p>
-                      <p className="font-semibold text-success">
-                        {formatCurrency(estimatedReturn.estimatedAmount, investment.currency)}
-                        <span className="text-sm font-normal ml-2">
-                          (+{formatCurrency(estimatedReturn.profit, investment.currency)})
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {investment.interest_rate ? `${investment.interest_rate}%` : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {investment.end_date 
+                      ? format(parseISO(investment.end_date), "dd/MM/yy", { locale: es })
+                      : "-"
+                    }
+                  </TableCell>
+                  <TableCell>
+                    {timeProgress ? (
+                      <div className="flex items-center gap-2 min-w-[120px]">
+                        <Progress value={timeProgress.progress} className="h-2 flex-1" />
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {timeProgress.remainingDays > 0 ? `${timeProgress.remainingDays}d` : "Vencido"}
                         </span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {investment.notes && (
-                <p className="text-sm text-muted-foreground pt-2 border-t border-border">
-                  {investment.notes}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+                      </div>
+                    ) : "-"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {estimatedReturn ? (
+                      <div className="flex flex-col items-end">
+                        <span className="text-success font-medium">
+                          {formatCurrency(estimatedReturn.estimatedAmount, investment.currency)}
+                        </span>
+                        <span className="text-xs text-success">
+                          +{formatCurrency(estimatedReturn.profit, investment.currency)}
+                        </span>
+                      </div>
+                    ) : "-"}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(investment.id)}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 };
