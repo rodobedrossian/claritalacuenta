@@ -40,7 +40,7 @@ interface AddTransactionDialogProps {
     from_savings?: boolean;
     savings_source?: string;
   }) => void;
-  categories: string[];
+  categories: Array<{ id: string; name: string; type: string }>;
   users: Array<{ id: string; full_name: string | null }>;
   currentSavings?: { usd: number; ars: number };
 }
@@ -166,8 +166,8 @@ export const AddTransactionDialog = ({ onAdd, categories, users, currentSavings 
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
                 {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
+                  <SelectItem key={cat.id} value={cat.name}>
+                    {cat.name}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -23,7 +23,7 @@ interface EditTransactionDialogProps {
   onOpenChange: (open: boolean) => void;
   onUpdate: (id: string, transaction: Omit<Transaction, "id">) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  categories: string[];
+  categories: Array<{ id: string; name: string; type: string }>;
   users: Array<{ id: string; full_name: string | null }>;
 }
 
@@ -152,8 +152,8 @@ export const EditTransactionDialog = ({
               </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
+                  <SelectItem key={cat.id} value={cat.name}>
+                    {cat.name}
                   </SelectItem>
                 ))}
               </SelectContent>

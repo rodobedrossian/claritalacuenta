@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
     
     if (page === 0) {
       const [catRes, usrRes] = await Promise.all([
-        supabase.from("categories").select("name").order("name"),
+        supabase.from("categories").select("id, name, type").order("name"),
         supabase.from("profiles").select("id, full_name").order("full_name")
       ]);
       categoriesResult = catRes;

@@ -35,7 +35,7 @@ export interface DashboardData {
   };
   transactions: Transaction[];
   spendingByCategory: Array<{ category: string; amount: number }>;
-  categories: string[];
+  categories: Array<{ id: string; name: string; type: string }>;
   users: Array<{ id: string; full_name: string | null }>;
 }
 

@@ -25,7 +25,7 @@ export interface TransactionFilters {
 
 interface UseTransactionsDataReturn {
   transactions: Transaction[];
-  categories: string[];
+  categories: Array<{ id: string; name: string; type: string }>;
   users: Array<{ id: string; full_name: string | null }>;
   totalCount: number;
   hasMore: boolean;
@@ -45,7 +45,7 @@ export function useTransactionsData(
   userId: string | null
 ): UseTransactionsDataReturn {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; type: string }>>([]);
   const [users, setUsers] = useState<Array<{ id: string; full_name: string | null }>>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(true);
