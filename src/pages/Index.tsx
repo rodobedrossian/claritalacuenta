@@ -12,64 +12,31 @@ import { TimelineChart } from "@/components/TimelineChart";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { format, startOfMonth, endOfMonth, addMonths, subMonths, parseISO, isWithinInterval } from "date-fns";
+import { format, addMonths, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
+import { useDashboardData, Transaction } from "@/hooks/useDashboardData";
 
-interface Transaction {
-  id: string;
-  type: "income" | "expense";
-  amount: number;
-  currency: "USD" | "ARS";
-  category: string;
-  description: string;
-  date: string;
-  user_id: string;
-  from_savings?: boolean;
-  savings_source?: string;
-}
-interface Category {
-  id: string;
-  name: string;
-  type: string;
-}
-interface DbTransaction {
-  id: string;
-  type: string;
-  amount: number;
-  currency: string;
-  category: string;
-  description: string;
-  date: string;
-  user_id: string;
-  created_at: string;
-  from_savings?: boolean;
-  savings_source?: string;
-}
 const Index = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
-  const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [currentSavings, setCurrentSavings] = useState({
-    usd: 0,
-    ars: 0
-  });
-  const [monthlySavingsTransfers, setMonthlySavingsTransfers] = useState({
-    usd: 0,
-    ars: 0
-  });
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [users, setUsers] = useState<Array<{
-    id: string;
-    full_name: string | null;
-  }>>([]);
-  const [exchangeRate, setExchangeRate] = useState<number>(1300);
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [isRefreshingRate, setIsRefreshingRate] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeMonth, setActiveMonth] = useState<Date>(new Date());
+
+  // Use the new consolidated data hook
+  const { 
+    data: dashboardData, 
+    loading: dataLoading, 
+    refetch,
+    updateTransaction,
+    deleteTransaction,
+    addTransaction,
+    updateCurrentSavings,
+    updateSavingsTransfers
+  } = useDashboardData(activeMonth, user?.id);
+
   useEffect(() => {
     // Check authentication
     const {
@@ -77,18 +44,17 @@ const Index = () => {
         subscription
       }
     } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
       setUser(session?.user ?? null);
       if (!session) {
         navigate("/auth");
       }
     });
+
     supabase.auth.getSession().then(({
       data: {
         session
       }
     }) => {
-      setSession(session);
       setUser(session?.user ?? null);
       if (!session) {
         navigate("/auth");
@@ -96,235 +62,50 @@ const Index = () => {
         setLoading(false);
       }
     });
+
     return () => subscription.unsubscribe();
   }, [navigate]);
-  useEffect(() => {
-    if (user) {
-      fetchData();
-      fetchExchangeRate();
-    }
-  }, [user]);
 
-  // Fetch monthly savings transfers when month changes
-  useEffect(() => {
-    if (user) {
-      fetchMonthlySavingsTransfers();
-    }
-  }, [user, activeMonth]);
-  const fetchMonthlySavingsTransfers = async () => {
+  const fetchExchangeRate = async () => {
     try {
-      const monthStart = startOfMonth(activeMonth);
-      const monthEnd = endOfMonth(activeMonth);
+      setIsRefreshingRate(true);
       
-      // Fetch savings entries that are transfers from balance (deposits with specific notes)
-      const { data: entriesData } = await supabase
-        .from("savings_entries")
-        .select("amount, currency, notes")
-        .eq("entry_type", "deposit")
-        .gte("created_at", monthStart.toISOString())
-        .lte("created_at", monthEnd.toISOString());
+      // Call edge function to update
+      const { data, error } = await supabase.functions.invoke('fetch-exchange-rate');
       
-      if (entriesData) {
-        // Filter for transfers from balance (those with the specific note)
-        const transfers = entriesData.filter(e => 
-          e.notes?.includes("Transferencia desde balance")
-        );
-        
-        const usdTransfers = transfers
-          .filter(e => e.currency === "USD")
-          .reduce((sum, e) => sum + (typeof e.amount === 'string' ? parseFloat(e.amount) : e.amount), 0);
-        
-        const arsTransfers = transfers
-          .filter(e => e.currency === "ARS")
-          .reduce((sum, e) => sum + (typeof e.amount === 'string' ? parseFloat(e.amount) : e.amount), 0);
-        
-        setMonthlySavingsTransfers({ usd: usdTransfers, ars: arsTransfers });
+      if (error) throw error;
+      
+      if (data?.success && data?.rate) {
+        // Refetch dashboard data to get updated rate
+        await refetch();
+        toast.success('Tipo de cambio actualizado');
       }
     } catch (error) {
-      console.error("Error fetching monthly savings transfers:", error);
+      console.error('Error fetching exchange rate:', error);
+      toast.error('Error al actualizar tipo de cambio');
+    } finally {
+      setIsRefreshingRate(false);
     }
   };
 
-  const fetchData = async () => {
-    try {
-      // Fetch users/profiles
-      const {
-        data: usersData
-      } = await supabase.from("profiles").select("id, full_name").order("full_name");
-      if (usersData) {
-        setUsers(usersData);
-      }
-
-      // Fetch categories
-      const {
-        data: categoriesData
-      } = await supabase.from("categories").select("name").order("name");
-      if (categoriesData) {
-        setCategories(categoriesData.map(c => c.name));
-      }
-
-      // Fetch transactions
-      const {
-        data: transactionsData
-      } = await supabase.from("transactions").select("*").order("date", {
-        ascending: false
-      });
-      if (transactionsData) {
-        const typedTransactions: Transaction[] = (transactionsData as DbTransaction[]).map(t => ({
-          ...t,
-          type: t.type as "income" | "expense",
-          currency: t.currency as "USD" | "ARS",
-          amount: typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount,
-          from_savings: t.from_savings || false,
-          savings_source: t.savings_source
-        }));
-        setTransactions(typedTransactions);
-      }
-
-      // Fetch savings - use maybeSingle to avoid errors with multiple/no records
-      const {
-        data: savingsData
-      } = await supabase.from("savings").select("usd_amount, ars_amount").limit(1).maybeSingle();
-      if (savingsData) {
-        setCurrentSavings({
-          usd: typeof savingsData.usd_amount === 'string' ? parseFloat(savingsData.usd_amount) : savingsData.usd_amount,
-          ars: typeof savingsData.ars_amount === 'string' ? parseFloat(savingsData.ars_amount) : savingsData.ars_amount
-        });
-      }
-    } catch (error: any) {
-      console.error("Error fetching data:", error);
-      toast.error("Failed to load data");
-    }
-  };
   const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
     if (!user) return;
-    try {
-      const {
-        data,
-        error
-      } = await supabase.from("transactions").insert([{
-        type: transaction.type,
-        amount: transaction.amount,
-        currency: transaction.currency,
-        category: transaction.category,
-        description: transaction.description,
-        date: transaction.date,
-        user_id: transaction.user_id,
-        from_savings: transaction.from_savings || false,
-        savings_source: transaction.savings_source || null
-      }]).select().single();
-      if (error) throw error;
-
-      // If expense is from savings, deduct from savings and create withdrawal entry
-      if (transaction.type === "expense" && transaction.from_savings && transaction.savings_source) {
-        const savingsType = transaction.savings_source as "cash" | "bank" | "other";
-        
-        // Create savings withdrawal entry
-        await supabase.from("savings_entries").insert([{
-          user_id: user.id,
-          amount: transaction.amount,
-          currency: transaction.currency,
-          entry_type: "withdrawal",
-          savings_type: savingsType,
-          notes: `Gasto: ${transaction.description}`
-        }]);
-
-        // Update savings table
-        const { data: savingsRecord } = await supabase
-          .from("savings")
-          .select("id, usd_amount, ars_amount")
-          .limit(1)
-          .maybeSingle();
-
-        if (savingsRecord) {
-          const currentAmount = transaction.currency === "USD" 
-            ? (typeof savingsRecord.usd_amount === 'string' ? parseFloat(savingsRecord.usd_amount) : savingsRecord.usd_amount)
-            : (typeof savingsRecord.ars_amount === 'string' ? parseFloat(savingsRecord.ars_amount) : savingsRecord.ars_amount);
-          const newAmount = Math.max(0, currentAmount - transaction.amount);
-          
-          await supabase
-            .from("savings")
-            .update(transaction.currency === "USD" ? { usd_amount: newAmount } : { ars_amount: newAmount })
-            .eq("id", savingsRecord.id);
-
-          setCurrentSavings(prev => ({
-            ...prev,
-            [transaction.currency === "USD" ? "usd" : "ars"]: newAmount
-          }));
-        }
-      }
-
-      // Update local state
-      if (data) {
-        const typedTransaction: Transaction = {
-          ...data,
-          type: data.type as "income" | "expense",
-          currency: data.currency as "USD" | "ARS",
-          amount: typeof data.amount === 'string' ? parseFloat(data.amount) : data.amount,
-          from_savings: data.from_savings || false,
-          savings_source: data.savings_source
-        };
-        setTransactions([typedTransaction, ...transactions]);
-      }
-      toast.success(`${transaction.type === "income" ? "Ingreso" : "Gasto"} registrado correctamente`);
-    } catch (error: any) {
-      console.error("Error adding transaction:", error);
-      toast.error("Error al registrar transacción");
-    }
+    await addTransaction(transaction);
   };
 
   const handleUpdateTransaction = async (id: string, transaction: Omit<Transaction, "id">) => {
-    try {
-      const { error } = await supabase
-        .from("transactions")
-        .update({
-          type: transaction.type,
-          amount: transaction.amount,
-          currency: transaction.currency,
-          category: transaction.category,
-          description: transaction.description,
-          date: transaction.date,
-          user_id: transaction.user_id
-        })
-        .eq("id", id);
-
-      if (error) throw error;
-
-      // Update local state
-      setTransactions(transactions.map(t => 
-        t.id === id 
-          ? { ...transaction, id } 
-          : t
-      ));
-      toast.success("Transaction updated successfully");
-    } catch (error: any) {
-      console.error("Error updating transaction:", error);
-      toast.error("Failed to update transaction");
-    }
+    await updateTransaction(id, transaction);
   };
 
   const handleDeleteTransaction = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from("transactions")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-
-      // Update local state
-      setTransactions(transactions.filter(t => t.id !== id));
-      toast.success("Transaction deleted successfully");
-    } catch (error: any) {
-      console.error("Error deleting transaction:", error);
-      toast.error("Failed to delete transaction");
-    }
+    await deleteTransaction(id);
   };
 
   const handleEditTransaction = (transaction: Transaction) => {
     setEditingTransaction(transaction);
     setEditDialogOpen(true);
   };
+
   const handleAddSavings = async (
     currency: "USD" | "ARS", 
     amount: number, 
@@ -351,7 +132,7 @@ const Index = () => {
 
       // Update aggregated savings table
       const amountDelta = entryType === "deposit" ? amount : -amount;
-      const currentAmount = currentSavings[currency === "USD" ? "usd" : "ars"];
+      const currentAmount = dashboardData?.currentSavings[currency === "USD" ? "usd" : "ars"] || 0;
       const newAmount = Math.max(0, currentAmount + amountDelta);
       
       // Try to get existing record
@@ -378,17 +159,15 @@ const Index = () => {
         if (error) throw error;
       }
       
-      setCurrentSavings(prev => ({
-        ...prev,
+      // Update local state
+      updateCurrentSavings({
+        ...dashboardData?.currentSavings || { usd: 0, ars: 0 },
         [currency === "USD" ? "usd" : "ars"]: newAmount
-      }));
+      });
       
-      // If this is a transfer from balance, update monthly transfers state
+      // If this is a transfer from balance, update savings transfers
       if (notes?.includes("Transferencia desde balance") && entryType === "deposit") {
-        setMonthlySavingsTransfers(prev => ({
-          ...prev,
-          [currency === "USD" ? "usd" : "ars"]: prev[currency === "USD" ? "usd" : "ars"] + amount
-        }));
+        updateSavingsTransfers(currency, amount);
       }
       
       toast.success(entryType === "deposit" ? "Depósito registrado" : "Retiro registrado");
@@ -397,93 +176,48 @@ const Index = () => {
       toast.error("Error al registrar movimiento");
     }
   };
-  const fetchExchangeRate = async () => {
-    try {
-      setIsRefreshingRate(true);
-      
-      // Primero intentar obtener desde la DB
-      const { data: rateData } = await supabase
-        .from('exchange_rates')
-        .select('rate, updated_at')
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
 
-      if (rateData) {
-        setExchangeRate(rateData.rate);
-        setLastUpdated(rateData.updated_at);
-      }
+  const goToPreviousMonth = () => setActiveMonth(prev => subMonths(prev, 1));
+  const goToNextMonth = () => setActiveMonth(prev => addMonths(prev, 1));
+  const goToCurrentMonth = () => setActiveMonth(new Date());
 
-      // Llamar al edge function para actualizar
-      const { data, error } = await supabase.functions.invoke('fetch-exchange-rate');
-      
-      if (error) throw error;
-      
-      if (data?.success && data?.rate) {
-        setExchangeRate(data.rate);
-        setLastUpdated(data.updated_at);
-        toast.success('Exchange rate updated');
-      }
-    } catch (error) {
-      console.error('Error fetching exchange rate:', error);
-      toast.error('Failed to update exchange rate');
-    } finally {
-      setIsRefreshingRate(false);
-    }
-  };
-
-  // Filter transactions by active month (hooks must be called before early returns)
-  const monthStart = startOfMonth(activeMonth);
-  const monthEnd = endOfMonth(activeMonth);
-  
-  const monthlyTransactions = useMemo(() => {
-    return transactions.filter(t => {
-      const txDate = parseISO(t.date);
-      return isWithinInterval(txDate, { start: monthStart, end: monthEnd });
-    });
-  }, [transactions, activeMonth]);
-
-  if (loading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center">
+  if (loading || dataLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
+          <p className="mt-4 text-muted-foreground">Cargando...</p>
         </div>
-      </div>;
+      </div>
+    );
   }
 
-  const totalIncomeUSD = monthlyTransactions.filter(t => t.type === "income" && t.currency === "USD").reduce((sum, t) => sum + t.amount, 0);
-  const totalIncomeARS = monthlyTransactions.filter(t => t.type === "income" && t.currency === "ARS").reduce((sum, t) => sum + t.amount, 0);
-  // For expenses, exclude from_savings transactions from the balance calculation (they don't affect monthly balance)
-  const totalExpensesUSD = monthlyTransactions.filter(t => t.type === "expense" && t.currency === "USD" && !t.from_savings).reduce((sum, t) => sum + t.amount, 0);
-  const totalExpensesARS = monthlyTransactions.filter(t => t.type === "expense" && t.currency === "ARS" && !t.from_savings).reduce((sum, t) => sum + t.amount, 0);
+  // Extract data from dashboard hook
+  const currentSavings = dashboardData?.currentSavings || { usd: 0, ars: 0 };
+  const exchangeRate = dashboardData?.exchangeRate.rate || 1300;
+  const lastUpdated = dashboardData?.exchangeRate.updatedAt;
+  const transactions = dashboardData?.transactions || [];
+  const categories = dashboardData?.categories || [];
+  const users = dashboardData?.users || [];
+  const totals = dashboardData?.totals || {
+    incomeUSD: 0,
+    incomeARS: 0,
+    expensesUSD: 0,
+    expensesARS: 0,
+    savingsTransfersUSD: 0,
+    savingsTransfersARS: 0
+  };
+  const spendingByCategory = dashboardData?.spendingByCategory || [];
 
-  // Available balance per currency (for transfer to savings) - subtract already transferred amounts
-  const availableBalanceUSD = Math.max(0, totalIncomeUSD - totalExpensesUSD - monthlySavingsTransfers.usd);
-  const availableBalanceARS = Math.max(0, totalIncomeARS - totalExpensesARS - monthlySavingsTransfers.ars);
+  // Calculate available balance (income - expenses - transfers)
+  const availableBalanceUSD = Math.max(0, totals.incomeUSD - totals.expensesUSD - totals.savingsTransfersUSD);
+  const availableBalanceARS = Math.max(0, totals.incomeARS - totals.expensesARS - totals.savingsTransfersARS);
 
-  // Calcular valores globalizados en ARS
-  const globalIncomeARS = (totalIncomeUSD * exchangeRate) + totalIncomeARS;
-  const globalExpensesARS = (totalExpensesUSD * exchangeRate) + totalExpensesARS;
+  // Calculate global values in ARS
+  const globalIncomeARS = (totals.incomeUSD * exchangeRate) + totals.incomeARS;
+  const globalExpensesARS = (totals.expensesUSD * exchangeRate) + totals.expensesARS;
   const globalNetBalanceARS = globalIncomeARS - globalExpensesARS;
-  
-  const spendingByCategory = monthlyTransactions.filter(t => t.type === "expense").reduce((acc, t) => {
-    const key = `${t.category} (${t.currency})`;
-    const existing = acc.find(item => item.category === key);
-    if (existing) {
-      existing.amount += t.amount;
-    } else {
-      acc.push({
-        category: key,
-        amount: t.amount
-      });
-    }
-    return acc;
-  }, [] as Array<{
-    category: string;
-    amount: number;
-  }>).sort((a, b) => b.amount - a.amount);
-  
+
   const formatCurrency = (amount: number, currency: "USD" | "ARS") => {
     return `${currency} ${new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 0,
@@ -491,9 +225,6 @@ const Index = () => {
     }).format(amount)}`;
   };
 
-  const goToPreviousMonth = () => setActiveMonth(prev => subMonths(prev, 1));
-  const goToNextMonth = () => setActiveMonth(prev => addMonths(prev, 1));
-  const goToCurrentMonth = () => setActiveMonth(new Date());
   return (
     <AppLayout>
       <div className="min-h-screen">
@@ -569,14 +300,14 @@ const Index = () => {
             <StatCard 
               title="Ingresos Totales" 
               value={formatCurrency(globalIncomeARS, "ARS")}
-              subtitle={`${formatCurrency(totalIncomeUSD, "USD")} / ${formatCurrency(totalIncomeARS, "ARS")}`}
+              subtitle={`${formatCurrency(totals.incomeUSD, "USD")} / ${formatCurrency(totals.incomeARS, "ARS")}`}
               icon={TrendingUp}
               trend="up"
             />
             <StatCard 
               title="Gastos Totales" 
               value={formatCurrency(globalExpensesARS, "ARS")}
-              subtitle={`${formatCurrency(totalExpensesUSD, "USD")} / ${formatCurrency(totalExpensesARS, "ARS")}`}
+              subtitle={`${formatCurrency(totals.expensesUSD, "USD")} / ${formatCurrency(totals.expensesARS, "ARS")}`}
               icon={TrendingDown}
             />
             <StatCard 
@@ -589,13 +320,13 @@ const Index = () => {
 
           {/* Charts and Transactions */}
           <div className="space-y-6 animate-slide-up">
-            <TimelineChart transactions={monthlyTransactions} />
+            <TimelineChart transactions={transactions} />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <SpendingChart data={spendingByCategory} />
               <TransactionsList 
-                transactions={monthlyTransactions.slice(0, 5)} 
+                transactions={transactions.slice(0, 5)} 
                 onEdit={handleEditTransaction}
-                showViewAll={monthlyTransactions.length > 5}
+                showViewAll={transactions.length > 5}
                 onViewAll={() => navigate("/transactions")}
               />
             </div>
@@ -615,4 +346,5 @@ const Index = () => {
     </AppLayout>
   );
 };
+
 export default Index;

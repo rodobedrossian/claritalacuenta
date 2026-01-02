@@ -3,6 +3,9 @@ project_id = "vxqrvepgtvdraqjavxsz"
 [functions.fetch-exchange-rate]
 verify_jwt = false
 
+[functions.get-dashboard-data]
+verify_jwt = false
+
 [functions.gmail-oauth]
 verify_jwt = false
 
