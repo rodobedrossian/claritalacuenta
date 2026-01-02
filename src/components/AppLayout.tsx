@@ -67,9 +67,14 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-6 border-b border-border/50">
-            <h1 className="text-xl font-bold gradient-primary bg-clip-text text-transparent">
-              Y si ahorramos?
-            </h1>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg gradient-primary">
+                <PiggyBank className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <h1 className="text-lg font-bold text-foreground">
+                ¿Y si ahorramos?
+              </h1>
+            </div>
           </div>
 
           {/* Navigation */}
