@@ -20,6 +20,9 @@ interface Transaction {
   user_id: string;
   from_savings: boolean;
   savings_source: string | null;
+  payment_method: string;
+  is_projected: boolean;
+  credit_card_id: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -70,12 +73,13 @@ Deno.serve(async (req) => {
       exchangeRateResult,
       categoriesResult,
       usersResult,
-      savingsEntriesResult
+      savingsEntriesResult,
+      creditCardsResult
     ] = await Promise.all([
       // Transactions for the month
       supabase
         .from("transactions")
-        .select("id, type, amount, currency, category, description, date, user_id, from_savings, savings_source")
+        .select("id, type, amount, currency, category, description, date, user_id, from_savings, savings_source, payment_method, is_projected, credit_card_id")
         .gte("date", monthStart.toISOString())
         .lte("date", monthEnd.toISOString())
         .order("date", { ascending: false }),
@@ -98,7 +102,7 @@ Deno.serve(async (req) => {
       // Categories
       supabase
         .from("categories")
-        .select("name")
+        .select("id, name, type")
         .order("name"),
       
       // Users/profiles
@@ -113,7 +117,13 @@ Deno.serve(async (req) => {
         .select("amount, currency, notes, entry_type")
         .eq("entry_type", "deposit")
         .gte("created_at", monthStart.toISOString())
-        .lte("created_at", monthEnd.toISOString())
+        .lte("created_at", monthEnd.toISOString()),
+      
+      // Credit cards
+      supabase
+        .from("credit_cards")
+        .select("id, name, bank, closing_day")
+        .order("name")
     ]);
 
     // Log any errors
@@ -123,19 +133,25 @@ Deno.serve(async (req) => {
     if (categoriesResult.error) console.error("Categories error:", categoriesResult.error);
     if (usersResult.error) console.error("Users error:", usersResult.error);
     if (savingsEntriesResult.error) console.error("Savings entries error:", savingsEntriesResult.error);
+    if (creditCardsResult.error) console.error("Credit cards error:", creditCardsResult.error);
 
     const transactions: Transaction[] = (transactionsResult.data || []).map((t: any) => ({
       ...t,
       amount: typeof t.amount === "string" ? parseFloat(t.amount) : t.amount,
-      from_savings: t.from_savings || false
+      from_savings: t.from_savings || false,
+      payment_method: t.payment_method || "cash",
+      is_projected: t.is_projected || false
     }));
 
     // Calculate totals server-side
+    // Separate effective expenses (impact balance) from projected expenses (credit card, only for budgets)
     let totals = {
       incomeUSD: 0,
       incomeARS: 0,
-      expensesUSD: 0,
-      expensesARS: 0,
+      expensesUSD: 0,          // Effective expenses (cash/debit)
+      expensesARS: 0,          // Effective expenses (cash/debit)
+      projectedExpensesUSD: 0, // Credit card expenses (projected)
+      projectedExpensesARS: 0, // Credit card expenses (projected)
       savingsTransfersUSD: 0,
       savingsTransfersARS: 0
     };
@@ -145,9 +161,16 @@ Deno.serve(async (req) => {
         if (t.currency === "USD") totals.incomeUSD += t.amount;
         else totals.incomeARS += t.amount;
       } else if (t.type === "expense" && !t.from_savings) {
-        // Exclude from_savings from expense calculation
-        if (t.currency === "USD") totals.expensesUSD += t.amount;
-        else totals.expensesARS += t.amount;
+        // Separate effective vs projected expenses
+        if (t.is_projected) {
+          // Projected (credit card) - doesn't impact balance, but counts for budgets
+          if (t.currency === "USD") totals.projectedExpensesUSD += t.amount;
+          else totals.projectedExpensesARS += t.amount;
+        } else {
+          // Effective (cash/debit) - impacts balance
+          if (t.currency === "USD") totals.expensesUSD += t.amount;
+          else totals.expensesARS += t.amount;
+        }
       }
     }
 
@@ -163,7 +186,7 @@ Deno.serve(async (req) => {
       else totals.savingsTransfersARS += amount;
     }
 
-    // Calculate spending by category
+    // Calculate spending by category (includes ALL expenses for budget tracking)
     const spendingMap = new Map<string, number>();
     for (const t of transactions) {
       if (t.type === "expense") {
@@ -174,6 +197,21 @@ Deno.serve(async (req) => {
     const spendingByCategory = Array.from(spendingMap.entries())
       .map(([category, amount]) => ({ category, amount }))
       .sort((a, b) => b.amount - a.amount);
+
+    // Calculate projected spending by credit card
+    const projectedByCard = new Map<string, { usd: number; ars: number }>();
+    for (const t of transactions) {
+      if (t.type === "expense" && t.is_projected && t.credit_card_id) {
+        const cardData = projectedByCard.get(t.credit_card_id) || { usd: 0, ars: 0 };
+        if (t.currency === "USD") cardData.usd += t.amount;
+        else cardData.ars += t.amount;
+        projectedByCard.set(t.credit_card_id, cardData);
+      }
+    }
+    const projectedByCardArray = Array.from(projectedByCard.entries()).map(([cardId, amounts]) => ({
+      credit_card_id: cardId,
+      ...amounts
+    }));
 
     // Format current savings
     const currentSavings = {
@@ -205,8 +243,10 @@ Deno.serve(async (req) => {
       exchangeRate,
       transactions,
       spendingByCategory,
+      projectedByCard: projectedByCardArray,
       categories: (categoriesResult.data || []).map((c: any) => ({ id: c.id, name: c.name, type: c.type })),
-      users: usersResult.data || []
+      users: usersResult.data || [],
+      creditCards: creditCardsResult.data || []
     };
 
     console.log(`Dashboard data fetched successfully. Transactions: ${transactions.length}`);

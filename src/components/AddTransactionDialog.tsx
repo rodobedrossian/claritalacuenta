@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, CalendarIcon, Wallet } from "lucide-react";
+import { Plus, CalendarIcon, Wallet, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +28,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+interface CreditCardOption {
+  id: string;
+  name: string;
+  bank: string | null;
+}
+
 interface AddTransactionDialogProps {
   onAdd: (transaction: {
     type: "income" | "expense";
@@ -39,13 +45,17 @@ interface AddTransactionDialogProps {
     user_id: string;
     from_savings?: boolean;
     savings_source?: string;
+    payment_method?: string;
+    is_projected?: boolean;
+    credit_card_id?: string;
   }) => void;
   categories: Array<{ id: string; name: string; type: string }>;
   users: Array<{ id: string; full_name: string | null }>;
   currentSavings?: { usd: number; ars: number };
+  creditCards?: CreditCardOption[];
 }
 
-export const AddTransactionDialog = ({ onAdd, categories, users, currentSavings }: AddTransactionDialogProps) => {
+export const AddTransactionDialog = ({ onAdd, categories, users, currentSavings, creditCards = [] }: AddTransactionDialogProps) => {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"income" | "expense">("expense");
   const [currency, setCurrency] = useState<"USD" | "ARS" | "">("");
@@ -56,6 +66,8 @@ export const AddTransactionDialog = ({ onAdd, categories, users, currentSavings 
   const [date, setDate] = useState<Date>(new Date());
   const [fromSavings, setFromSavings] = useState(false);
   const [savingsSource, setSavingsSource] = useState<"cash" | "bank" | "other" | "">("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "debit" | "credit_card">("cash");
+  const [creditCardId, setCreditCardId] = useState("");
 
   const availableSavings = currency && currentSavings 
     ? (currency === "USD" ? currentSavings.usd : currentSavings.ars) 
@@ -74,11 +86,19 @@ export const AddTransactionDialog = ({ onAdd, categories, users, currentSavings 
       return;
     }
 
+    if (paymentMethod === "credit_card" && !creditCardId && creditCards.length > 0) {
+      toast.error("Selecciona una tarjeta de crédito");
+      return;
+    }
+
     const amountNum = parseFloat(amount);
     if (fromSavings && amountNum > availableSavings) {
       toast.error(`No tienes suficientes ahorros. Disponible: ${currency} ${availableSavings.toLocaleString()}`);
       return;
     }
+
+    // Credit card expenses are projected (don't impact balance until reconciled)
+    const isProjected = paymentMethod === "credit_card";
 
     onAdd({
       type,
@@ -90,6 +110,9 @@ export const AddTransactionDialog = ({ onAdd, categories, users, currentSavings 
       user_id: userId,
       from_savings: fromSavings,
       savings_source: fromSavings ? savingsSource : undefined,
+      payment_method: paymentMethod,
+      is_projected: isProjected,
+      credit_card_id: paymentMethod === "credit_card" ? creditCardId : undefined,
     });
 
     setOpen(false);
@@ -101,6 +124,8 @@ export const AddTransactionDialog = ({ onAdd, categories, users, currentSavings 
     setDate(new Date());
     setFromSavings(false);
     setSavingsSource("");
+    setPaymentMethod("cash");
+    setCreditCardId("");
   };
 
   return (
@@ -111,7 +136,7 @@ export const AddTransactionDialog = ({ onAdd, categories, users, currentSavings 
           Add Transaction
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] bg-card border-border">
+      <DialogContent className="sm:max-w-[425px] bg-card border-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Transaction</DialogTitle>
           <DialogDescription>
@@ -121,7 +146,14 @@ export const AddTransactionDialog = ({ onAdd, categories, users, currentSavings 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
             <Label htmlFor="type">Type</Label>
-            <Select value={type} onValueChange={(value: "income" | "expense") => setType(value)}>
+            <Select value={type} onValueChange={(value: "income" | "expense") => {
+              setType(value);
+              // Reset payment method for income
+              if (value === "income") {
+                setPaymentMethod("cash");
+                setFromSavings(false);
+              }
+            }}>
               <SelectTrigger id="type" className="bg-muted border-border">
                 <SelectValue />
               </SelectTrigger>
@@ -229,8 +261,68 @@ export const AddTransactionDialog = ({ onAdd, categories, users, currentSavings 
             />
           </div>
 
-          {/* From Savings Option - only for expenses */}
-          {type === "expense" && currency && (
+          {/* Payment Method - only for expenses */}
+          {type === "expense" && (
+            <div className="space-y-3 p-3 rounded-lg bg-muted/50 border border-border/50">
+              <div className="space-y-2">
+                <Label htmlFor="paymentMethod" className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Método de pago
+                </Label>
+                <Select 
+                  value={paymentMethod} 
+                  onValueChange={(value: "cash" | "debit" | "credit_card") => {
+                    setPaymentMethod(value);
+                    // Clear from savings if using credit card
+                    if (value === "credit_card") {
+                      setFromSavings(false);
+                      setSavingsSource("");
+                    }
+                  }}
+                >
+                  <SelectTrigger id="paymentMethod" className="bg-muted border-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border">
+                    <SelectItem value="cash">Efectivo</SelectItem>
+                    <SelectItem value="debit">Débito</SelectItem>
+                    <SelectItem value="credit_card">Tarjeta de Crédito</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Credit Card Selector */}
+              {paymentMethod === "credit_card" && creditCards.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="creditCard">Tarjeta</Label>
+                  <Select value={creditCardId} onValueChange={setCreditCardId}>
+                    <SelectTrigger id="creditCard" className="bg-muted border-border">
+                      <SelectValue placeholder="Seleccionar tarjeta" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {creditCards.map((card) => (
+                        <SelectItem key={card.id} value={card.id}>
+                          {card.name} {card.bank && `(${card.bank})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Este gasto se registrará como proyectado y no impactará tu balance hasta que pagues el resumen
+                  </p>
+                </div>
+              )}
+
+              {paymentMethod === "credit_card" && creditCards.length === 0 && (
+                <p className="text-xs text-warning">
+                  No tienes tarjetas registradas. Agrega una en Configuración → Tarjetas de Crédito
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* From Savings Option - only for expenses NOT paid with credit card */}
+          {type === "expense" && currency && paymentMethod !== "credit_card" && (
             <div className="space-y-3 p-3 rounded-lg bg-muted/50 border border-border/50">
               <div className="flex items-center gap-2">
                 <input

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Wallet, TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,13 +11,15 @@ import { SpendingChart } from "@/components/SpendingChart";
 import { TimelineChart } from "@/components/TimelineChart";
 import { AppLayout } from "@/components/AppLayout";
 import { BudgetProgress } from "@/components/budgets/BudgetProgress";
+import { CreditCardSummary } from "@/components/credit-cards/CreditCardSummary";
+import { ReconcileCreditCardDialog } from "@/components/credit-cards/ReconcileCreditCardDialog";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { format, addMonths, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
-import { useDashboardData, Transaction } from "@/hooks/useDashboardData";
+import { useDashboardData, Transaction, CreditCard } from "@/hooks/useDashboardData";
 import { useBudgetsData } from "@/hooks/useBudgetsData";
 
 const Index = () => {
@@ -28,6 +30,8 @@ const Index = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeMonth, setActiveMonth] = useState<Date>(new Date());
+  const [reconcileCardId, setReconcileCardId] = useState<string | null>(null);
+  const [reconcileDialogOpen, setReconcileDialogOpen] = useState(false);
 
   // Use the new consolidated data hook
   const { 
@@ -219,21 +223,25 @@ const Index = () => {
   const transactions = dashboardData?.transactions || [];
   const categories = dashboardData?.categories || [];
   const users = dashboardData?.users || [];
+  const creditCards = dashboardData?.creditCards || [];
+  const projectedByCard = dashboardData?.projectedByCard || [];
   const totals = dashboardData?.totals || {
     incomeUSD: 0,
     incomeARS: 0,
     expensesUSD: 0,
     expensesARS: 0,
+    projectedExpensesUSD: 0,
+    projectedExpensesARS: 0,
     savingsTransfersUSD: 0,
     savingsTransfersARS: 0
   };
   const spendingByCategory = dashboardData?.spendingByCategory || [];
 
-  // Calculate available balance (income - expenses - transfers)
+  // Calculate available balance (income - expenses - transfers) - projected expenses don't impact balance
   const availableBalanceUSD = Math.max(0, totals.incomeUSD - totals.expensesUSD - totals.savingsTransfersUSD);
   const availableBalanceARS = Math.max(0, totals.incomeARS - totals.expensesARS - totals.savingsTransfersARS);
 
-  // Calculate global values in ARS
+  // Calculate global values in ARS (effective expenses only)
   const globalIncomeARS = (totals.incomeUSD * exchangeRate) + totals.incomeARS;
   const globalExpensesARS = (totals.expensesUSD * exchangeRate) + totals.expensesARS;
   const globalSavingsTransfersARS = (totals.savingsTransfersUSD * exchangeRate) + totals.savingsTransfersARS;
@@ -286,7 +294,7 @@ const Index = () => {
                   onTransferFromBalance={(currency, amount, savingsType, notes) => handleAddSavings(currency, amount, "deposit", savingsType, notes)}
                   onAddSavings={handleAddSavings}
                 />
-                <AddTransactionDialog onAdd={handleAddTransaction} categories={categories} users={users} currentSavings={currentSavings} />
+                <AddTransactionDialog onAdd={handleAddTransaction} categories={categories} users={users} currentSavings={currentSavings} creditCards={creditCards} />
               </div>
             </div>
           </div>
@@ -340,11 +348,29 @@ const Index = () => {
             />
           </div>
 
+          {/* Credit Card Summary */}
+          {(totals.projectedExpensesUSD > 0 || totals.projectedExpensesARS > 0) && (
+            <div className="mb-6 animate-fade-in">
+              <CreditCardSummary
+                creditCards={creditCards}
+                projectedByCard={projectedByCard}
+                projectedExpensesUSD={totals.projectedExpensesUSD}
+                projectedExpensesARS={totals.projectedExpensesARS}
+                onReconcile={(cardId) => {
+                  setReconcileCardId(cardId);
+                  setReconcileDialogOpen(true);
+                }}
+              />
+            </div>
+          )}
+
           {/* Budget Progress */}
-          <div className="animate-fade-in">
+          <div className="animate-fade-in mb-6">
             {budgetsWithSpending.length > 0 ? (
               <BudgetProgress
                 budgets={budgetsWithSpending}
+                projectedExpensesUSD={totals.projectedExpensesUSD}
+                projectedExpensesARS={totals.projectedExpensesARS}
                 onManageBudgets={() => navigate("/budgets")}
               />
             ) : (
@@ -390,6 +416,14 @@ const Index = () => {
           onDelete={handleDeleteTransaction}
           categories={categories}
           users={users}
+        />
+
+        <ReconcileCreditCardDialog
+          open={reconcileDialogOpen}
+          onOpenChange={setReconcileDialogOpen}
+          creditCard={creditCards.find(c => c.id === reconcileCardId) || null}
+          activeMonth={activeMonth}
+          onReconcileComplete={refetch}
         />
 
       </div>
