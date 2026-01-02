@@ -13,6 +13,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { BudgetProgress } from "@/components/budgets/BudgetProgress";
 import { ManageBudgetsDialog } from "@/components/budgets/ManageBudgetsDialog";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { format, addMonths, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
@@ -341,14 +342,31 @@ const Index = () => {
           </div>
 
           {/* Budget Progress */}
-          {budgetsWithSpending.length > 0 && (
-            <div className="animate-fade-in">
+          <div className="animate-fade-in">
+            {budgetsWithSpending.length > 0 ? (
               <BudgetProgress
                 budgets={budgetsWithSpending}
                 onManageBudgets={() => setManageBudgetsOpen(true)}
               />
-            </div>
-          )}
+            ) : (
+              <Card className="p-6 gradient-card border-border/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold">Presupuestos del Mes</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Configura límites de gasto por categoría para controlar tus finanzas
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => setManageBudgetsOpen(true)}
+                    className="gradient-primary"
+                  >
+                    Crear Presupuesto
+                  </Button>
+                </div>
+              </Card>
+            )}
+          </div>
 
           {/* Charts and Transactions */}
           <div className="space-y-6 animate-slide-up">
