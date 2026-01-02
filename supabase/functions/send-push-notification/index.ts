@@ -136,11 +136,16 @@ async function sendWebPush(
   
   // Send empty push (without encrypted payload for now)
   // This tells the browser to wake up the service worker
+  // Note: Some push services (incl. Apple) expect the public key in Crypto-Key as well.
   const response = await fetch(subscription.endpoint, {
     method: "POST",
     headers: {
+      // VAPID (RFC 8292)
       "Authorization": `vapid t=${jwt}, k=${vapidPublicKey}`,
+      // Compatibility: provide the public key in Crypto-Key too
+      "Crypto-Key": `p256ecdsa=${vapidPublicKey}`,
       "TTL": "86400",
+      "Content-Type": "application/octet-stream",
       "Content-Length": "0",
     },
   });
