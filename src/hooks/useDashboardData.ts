@@ -14,6 +14,16 @@ export interface Transaction {
   user_id: string;
   from_savings?: boolean;
   savings_source?: string | null;
+  payment_method?: string;
+  is_projected?: boolean;
+  credit_card_id?: string | null;
+}
+
+export interface CreditCard {
+  id: string;
+  name: string;
+  bank: string | null;
+  closing_day: number | null;
 }
 
 export interface DashboardData {
@@ -22,6 +32,8 @@ export interface DashboardData {
     incomeARS: number;
     expensesUSD: number;
     expensesARS: number;
+    projectedExpensesUSD: number;
+    projectedExpensesARS: number;
     savingsTransfersUSD: number;
     savingsTransfersARS: number;
   };
@@ -35,8 +47,10 @@ export interface DashboardData {
   };
   transactions: Transaction[];
   spendingByCategory: Array<{ category: string; amount: number }>;
+  projectedByCard: Array<{ credit_card_id: string; usd: number; ars: number }>;
   categories: Array<{ id: string; name: string; type: string }>;
   users: Array<{ id: string; full_name: string | null }>;
+  creditCards: CreditCard[];
 }
 
 interface UseDashboardDataReturn {
@@ -88,12 +102,21 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
         ...t,
         type: t.type as "income" | "expense",
         currency: t.currency as "USD" | "ARS",
-        from_savings: t.from_savings || false
+        from_savings: t.from_savings || false,
+        payment_method: t.payment_method || "cash",
+        is_projected: t.is_projected || false
       }));
 
       setData({
         ...responseData,
-        transactions: typedTransactions
+        transactions: typedTransactions,
+        totals: {
+          ...responseData.totals,
+          projectedExpensesUSD: responseData.totals.projectedExpensesUSD || 0,
+          projectedExpensesARS: responseData.totals.projectedExpensesARS || 0
+        },
+        projectedByCard: responseData.projectedByCard || [],
+        creditCards: responseData.creditCards || []
       });
 
       console.log(`Dashboard data loaded: ${typedTransactions.length} transactions`);
@@ -121,7 +144,10 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
           category: transaction.category,
           description: transaction.description,
           date: transaction.date,
-          user_id: transaction.user_id
+          user_id: transaction.user_id,
+          payment_method: transaction.payment_method || "cash",
+          is_projected: transaction.is_projected || false,
+          credit_card_id: transaction.credit_card_id || null
         })
         .eq("id", id);
 
@@ -185,7 +211,10 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
           date: transaction.date,
           user_id: transaction.user_id,
           from_savings: transaction.from_savings || false,
-          savings_source: transaction.savings_source || null
+          savings_source: transaction.savings_source || null,
+          payment_method: transaction.payment_method || "cash",
+          is_projected: transaction.is_projected || false,
+          credit_card_id: transaction.credit_card_id || null
         }])
         .select()
         .single();
@@ -248,7 +277,10 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
         currency: newTransaction.currency as "USD" | "ARS",
         amount: typeof newTransaction.amount === "string" ? parseFloat(newTransaction.amount) : newTransaction.amount,
         from_savings: newTransaction.from_savings || false,
-        savings_source: newTransaction.savings_source
+        savings_source: newTransaction.savings_source,
+        payment_method: newTransaction.payment_method || "cash",
+        is_projected: newTransaction.is_projected || false,
+        credit_card_id: newTransaction.credit_card_id
       };
 
       setData(prev => {

@@ -68,6 +68,36 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_cards: {
+        Row: {
+          bank: string | null
+          closing_day: number | null
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          bank?: string | null
+          closing_day?: number | null
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          bank?: string | null
+          closing_day?: number | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_parsers: {
         Row: {
           amount_regex: string
@@ -403,12 +433,15 @@ export type Database = {
           amount: number
           category: string
           created_at: string
+          credit_card_id: string | null
           currency: string
           date: string
           description: string
           email_message_id: string | null
           from_savings: boolean | null
           id: string
+          is_projected: boolean
+          payment_method: string
           savings_source: string | null
           source: string | null
           status: string
@@ -419,12 +452,15 @@ export type Database = {
           amount: number
           category: string
           created_at?: string
+          credit_card_id?: string | null
           currency: string
           date?: string
           description: string
           email_message_id?: string | null
           from_savings?: boolean | null
           id?: string
+          is_projected?: boolean
+          payment_method?: string
           savings_source?: string | null
           source?: string | null
           status?: string
@@ -435,12 +471,15 @@ export type Database = {
           amount?: number
           category?: string
           created_at?: string
+          credit_card_id?: string | null
           currency?: string
           date?: string
           description?: string
           email_message_id?: string | null
           from_savings?: boolean | null
           id?: string
+          is_projected?: boolean
+          payment_method?: string
           savings_source?: string | null
           source?: string | null
           status?: string
@@ -448,6 +487,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "transactions_credit_card_id_fkey"
+            columns: ["credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_user_id_fkey"
             columns: ["user_id"]

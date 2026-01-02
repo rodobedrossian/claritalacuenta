@@ -7,10 +7,12 @@ import { BudgetWithSpending } from "@/hooks/useBudgetsData";
 
 interface BudgetProgressProps {
   budgets: BudgetWithSpending[];
+  projectedExpensesUSD?: number;
+  projectedExpensesARS?: number;
   onManageBudgets?: () => void;
 }
 
-export const BudgetProgress = ({ budgets, onManageBudgets }: BudgetProgressProps) => {
+export const BudgetProgress = ({ budgets, projectedExpensesUSD = 0, projectedExpensesARS = 0, onManageBudgets }: BudgetProgressProps) => {
   const alertedBudgetsRef = useRef<Set<string>>(new Set());
 
   // Show alerts when reaching thresholds
@@ -68,10 +70,19 @@ export const BudgetProgress = ({ budgets, onManageBudgets }: BudgetProgressProps
     return <CheckCircle className="h-4 w-4 text-primary" />;
   };
 
+  const hasProjectedExpenses = projectedExpensesUSD > 0 || projectedExpensesARS > 0;
+
   return (
     <Card className="p-6 gradient-card border-border/50">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Presupuestos del Mes</h3>
+        <div>
+          <h3 className="text-lg font-semibold">Presupuestos del Mes</h3>
+          {hasProjectedExpenses && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Incluye gastos proyectados de TC
+            </p>
+          )}
+        </div>
         {onManageBudgets && (
           <button
             onClick={onManageBudgets}

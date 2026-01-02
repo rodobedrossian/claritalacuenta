@@ -10,7 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Mail, Plus, Trash2, RefreshCw, Loader2 } from "lucide-react";
+import { Mail, Plus, Trash2, RefreshCw, Loader2, CreditCard } from "lucide-react";
+import { useCreditCardsData } from "@/hooks/useCreditCardsData";
+import { AddCreditCardDialog } from "@/components/credit-cards/AddCreditCardDialog";
+import { CreditCardsList } from "@/components/credit-cards/CreditCardsList";
 
 interface GmailConnection {
   id: string;
@@ -117,6 +120,10 @@ export default function Settings() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [showParserForm, setShowParserForm] = useState(false);
   const [editingParser, setEditingParser] = useState<EmailParser | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  
+  // Credit cards hook
+  const { creditCards, addCreditCard, deleteCreditCard } = useCreditCardsData(userId);
   
   // Parser form state
   const [parserForm, setParserForm] = useState({
@@ -131,6 +138,11 @@ export default function Settings() {
   });
 
   useEffect(() => {
+    // Get user ID
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id || null);
+    });
+    
     fetchData();
     
     // Listen for Gmail connection messages
@@ -435,11 +447,30 @@ export default function Settings() {
         <div className="max-w-4xl mx-auto p-6">
           <h1 className="text-2xl font-bold mb-6">Configuración</h1>
 
-        <Tabs defaultValue="gmail" className="space-y-6">
+        <Tabs defaultValue="credit-cards" className="space-y-6">
           <TabsList>
+            <TabsTrigger value="credit-cards">Tarjetas de Crédito</TabsTrigger>
             <TabsTrigger value="gmail">Gmail</TabsTrigger>
             <TabsTrigger value="parsers">Parsers</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="credit-cards" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Tarjetas de Crédito
+                </CardTitle>
+                <CardDescription>
+                  Registra tus tarjetas de crédito para hacer seguimiento de gastos proyectados
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <AddCreditCardDialog onAdd={addCreditCard} />
+                <CreditCardsList creditCards={creditCards} onDelete={deleteCreditCard} />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="gmail" className="space-y-4">
             <Card>
