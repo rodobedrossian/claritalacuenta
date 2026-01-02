@@ -10,6 +10,7 @@ import { GoalsList } from "@/components/savings/GoalsList";
 import { AddSavingsEntryDialog } from "@/components/savings/AddSavingsEntryDialog";
 import { AddInvestmentDialog } from "@/components/savings/AddInvestmentDialog";
 import { AddGoalDialog } from "@/components/savings/AddGoalDialog";
+import { EditSavingsEntryDialog } from "@/components/savings/EditSavingsEntryDialog";
 import { StatCard } from "@/components/StatCard";
 import { AppLayout } from "@/components/AppLayout";
 
@@ -64,6 +65,8 @@ const Savings = () => {
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [currentSavings, setCurrentSavings] = useState({ usd: 0, ars: 0 });
   const [exchangeRate, setExchangeRate] = useState(1300);
+  const [editingEntry, setEditingEntry] = useState<SavingsEntry | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -322,6 +325,112 @@ const Savings = () => {
     }
   };
 
+  const handleEditEntry = (entry: SavingsEntry) => {
+    setEditingEntry(entry);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateEntry = async (id: string, updatedData: Omit<SavingsEntry, "id" | "user_id" | "created_at">) => {
+    try {
+      const originalEntry = entries.find(e => e.id === id);
+      if (!originalEntry) return;
+
+      const { error } = await supabase
+        .from("savings_entries")
+        .update({
+          amount: updatedData.amount,
+          currency: updatedData.currency,
+          entry_type: updatedData.entry_type,
+          savings_type: updatedData.savings_type,
+          notes: updatedData.notes,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Update savings totals - reverse the original and apply the new
+      const { data: savingsRecord } = await supabase
+        .from("savings")
+        .select("id, usd_amount, ars_amount")
+        .maybeSingle();
+
+      if (savingsRecord) {
+        // Calculate adjustment for original entry
+        const originalField = originalEntry.currency === "USD" ? "usd_amount" : "ars_amount";
+        const originalAdjustment = originalEntry.entry_type === "withdrawal" ? originalEntry.amount : -originalEntry.amount;
+        
+        // Calculate adjustment for new entry
+        const newField = updatedData.currency === "USD" ? "usd_amount" : "ars_amount";
+        const newAdjustment = updatedData.entry_type === "withdrawal" ? -updatedData.amount : updatedData.amount;
+
+        const updates: Record<string, number> = {};
+        
+        if (originalField === newField) {
+          // Same currency
+          updates[originalField] = Number(savingsRecord[originalField]) + originalAdjustment + newAdjustment;
+        } else {
+          // Different currencies
+          updates[originalField] = Number(savingsRecord[originalField]) + originalAdjustment;
+          updates[newField] = Number(savingsRecord[newField]) + newAdjustment;
+        }
+
+        await supabase.from("savings").update(updates).eq("id", savingsRecord.id);
+
+        setCurrentSavings(prev => ({
+          usd: updates.usd_amount !== undefined ? updates.usd_amount : prev.usd,
+          ars: updates.ars_amount !== undefined ? updates.ars_amount : prev.ars,
+        }));
+      }
+
+      setEntries(entries.map(e => e.id === id ? { ...e, ...updatedData } : e));
+      toast.success("Movimiento actualizado");
+    } catch (error) {
+      console.error("Error updating entry:", error);
+      toast.error("Error al actualizar movimiento");
+    }
+  };
+
+  const handleDeleteEntry = async (id: string) => {
+    try {
+      const entry = entries.find(e => e.id === id);
+      if (!entry) return;
+
+      const { error } = await supabase
+        .from("savings_entries")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Update savings totals
+      const { data: savingsRecord } = await supabase
+        .from("savings")
+        .select("id, usd_amount, ars_amount")
+        .maybeSingle();
+
+      if (savingsRecord) {
+        const field = entry.currency === "USD" ? "usd_amount" : "ars_amount";
+        const adjustment = entry.entry_type === "withdrawal" ? entry.amount : -entry.amount;
+        
+        await supabase
+          .from("savings")
+          .update({ [field]: Number(savingsRecord[field]) + adjustment })
+          .eq("id", savingsRecord.id);
+
+        setCurrentSavings(prev => ({
+          ...prev,
+          [entry.currency === "USD" ? "usd" : "ars"]: Number(savingsRecord[field]) + adjustment,
+        }));
+      }
+
+      setEntries(entries.filter(e => e.id !== id));
+      toast.success("Movimiento eliminado");
+    } catch (error) {
+      console.error("Error deleting entry:", error);
+      toast.error("Error al eliminar movimiento");
+    }
+  };
+
   const formatCurrency = (amount: number, currency: "USD" | "ARS") => {
     return `${currency} ${new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 0,
@@ -420,7 +529,7 @@ const Savings = () => {
           </div>
 
           <TabsContent value="historial">
-            <SavingsEntriesList entries={entries} />
+            <SavingsEntriesList entries={entries} onEdit={handleEditEntry} />
           </TabsContent>
 
           <TabsContent value="inversiones">
@@ -442,6 +551,14 @@ const Savings = () => {
             />
           </TabsContent>
         </Tabs>
+
+        <EditSavingsEntryDialog
+          entry={editingEntry}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onUpdate={handleUpdateEntry}
+          onDelete={handleDeleteEntry}
+        />
       </main>
     </div>
     </AppLayout>

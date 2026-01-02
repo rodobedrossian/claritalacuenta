@@ -1,15 +1,17 @@
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowDownCircle, ArrowUpCircle, Percent, Banknote, Building2, HelpCircle } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Percent, Banknote, Building2, HelpCircle, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { SavingsEntry } from "@/pages/Savings";
 
 interface SavingsEntriesListProps {
   entries: SavingsEntry[];
+  onEdit: (entry: SavingsEntry) => void;
 }
 
-export const SavingsEntriesList = ({ entries }: SavingsEntriesListProps) => {
+export const SavingsEntriesList = ({ entries, onEdit }: SavingsEntriesListProps) => {
   const getTypeIcon = (type: SavingsEntry["entry_type"]) => {
     switch (type) {
       case "deposit":
@@ -77,7 +79,7 @@ export const SavingsEntriesList = ({ entries }: SavingsEntriesListProps) => {
             return (
               <div
                 key={entry.id}
-                className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
               >
                 <div className="flex items-center gap-4">
                   {getTypeIcon(entry.entry_type)}
@@ -97,13 +99,23 @@ export const SavingsEntriesList = ({ entries }: SavingsEntriesListProps) => {
                     )}
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={`font-semibold ${
-                    entry.entry_type === "withdrawal" ? "text-destructive" : "text-success"
-                  }`}>
-                    {entry.entry_type === "withdrawal" ? "-" : "+"}
-                    {formatCurrency(entry.amount, entry.currency)}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className={`font-semibold ${
+                      entry.entry_type === "withdrawal" ? "text-destructive" : "text-success"
+                    }`}>
+                      {entry.entry_type === "withdrawal" ? "-" : "+"}
+                      {formatCurrency(entry.amount, entry.currency)}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => onEdit(entry)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             );
