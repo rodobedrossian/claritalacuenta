@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { SavingsGoal } from "@/pages/Savings";
+import { SavingsGoal } from "@/hooks/useSavingsData";
 import {
   Table,
   TableBody,

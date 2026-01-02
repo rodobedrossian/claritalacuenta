@@ -4,7 +4,7 @@ import { ArrowDownCircle, ArrowUpCircle, Percent, Banknote, Building2, HelpCircl
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { SavingsEntry } from "@/pages/Savings";
+import { SavingsEntry } from "@/hooks/useSavingsData";
 
 interface SavingsEntriesListProps {
   entries: SavingsEntry[];
