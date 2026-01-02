@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Filter, Loader2 } from "lucide-react";
+import { Filter, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TransactionsList } from "@/components/TransactionsList";
 import { EditTransactionDialog } from "@/components/EditTransactionDialog";
+import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -246,136 +247,128 @@ const Transactions = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/")}
-              title="Back to dashboard"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-2xl font-bold">All Transactions</h1>
+    <AppLayout>
+      <div className="min-h-screen">
+        <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="container mx-auto px-6 py-4">
+            <h1 className="text-2xl font-bold">Transacciones</h1>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="container mx-auto px-6 py-8">
-        {/* Filters Section */}
-        <div className="mb-6 p-6 rounded-lg bg-card border border-border/50">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="h-5 w-5 text-muted-foreground" />
-            <h2 className="text-lg font-semibold">Filters</h2>
+        <main className="container mx-auto px-6 py-8">
+          {/* Filters Section */}
+          <div className="mb-6 p-6 rounded-lg bg-card border border-border/50">
+            <div className="flex items-center gap-2 mb-4">
+              <Filter className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold">Filtros</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Tipo</label>
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="income">Ingreso</SelectItem>
+                    <SelectItem value="expense">Gasto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Categoría</label>
+                <Select value={filterCategory} onValueChange={setFilterCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Dueño</label>
+                <Select value={filterUser} onValueChange={setFilterUser}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {users.map(user => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.full_name || "Desconocido"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Desde</label>
+                <Input
+                  type="date"
+                  value={filterStartDate}
+                  onChange={(e) => setFilterStartDate(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Hasta</label>
+                <Input
+                  type="date"
+                  value={filterEndDate}
+                  onChange={(e) => setFilterEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-between items-center">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {transactions.length} de {totalCount} transacciones
+              </p>
+              <Button variant="outline" onClick={resetFilters}>
+                Limpiar Filtros
+              </Button>
+            </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Type</label>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  <SelectItem value="income">Income</SelectItem>
-                  <SelectItem value="expense">Expense</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
-            <div>
-              <label className="text-sm font-medium mb-2 block">Category</label>
-              <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Transactions List */}
+          <TransactionsList 
+            transactions={transactions} 
+            onEdit={handleEditTransaction}
+          />
 
-            <div>
-              <label className="text-sm font-medium mb-2 block">Owner</label>
-              <Select value={filterUser} onValueChange={setFilterUser}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All owners" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All owners</SelectItem>
-                  {users.map(user => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.full_name || "Unknown"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Start Date</label>
-              <Input
-                type="date"
-                value={filterStartDate}
-                onChange={(e) => setFilterStartDate(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">End Date</label>
-              <Input
-                type="date"
-                value={filterEndDate}
-                onChange={(e) => setFilterEndDate(e.target.value)}
-              />
-            </div>
+          {/* Infinite scroll trigger */}
+          <div ref={observerTarget} className="py-8 flex justify-center">
+            {isLoading && (
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            )}
+            {!hasMore && transactions.length > 0 && (
+              <p className="text-sm text-muted-foreground">No hay más transacciones</p>
+            )}
           </div>
+        </main>
 
-          <div className="mt-4 flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">
-              Showing {transactions.length} of {totalCount} transactions
-            </p>
-            <Button variant="outline" onClick={resetFilters}>
-              Reset Filters
-            </Button>
-          </div>
-        </div>
-
-        {/* Transactions List */}
-        <TransactionsList 
-          transactions={transactions} 
-          onEdit={handleEditTransaction}
+        <EditTransactionDialog
+          transaction={editingTransaction}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onUpdate={handleUpdateTransaction}
+          onDelete={handleDeleteTransaction}
+          categories={categories}
+          users={users}
         />
-
-        {/* Infinite scroll trigger */}
-        <div ref={observerTarget} className="py-8 flex justify-center">
-          {isLoading && (
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          )}
-          {!hasMore && transactions.length > 0 && (
-            <p className="text-sm text-muted-foreground">No more transactions</p>
-          )}
-        </div>
-      </main>
-
-      <EditTransactionDialog
-        transaction={editingTransaction}
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        onUpdate={handleUpdateTransaction}
-        onDelete={handleDeleteTransaction}
-        categories={categories}
-        users={users}
-      />
-    </div>
+      </div>
+    </AppLayout>
   );
 };
 

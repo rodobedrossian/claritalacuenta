@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Wallet, TrendingUp, TrendingDown, PiggyBank, LogOut, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "@/components/StatCard";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
@@ -9,6 +9,7 @@ import { TransactionsList } from "@/components/TransactionsList";
 import { EditTransactionDialog } from "@/components/EditTransactionDialog";
 import { SpendingChart } from "@/components/SpendingChart";
 import { TimelineChart } from "@/components/TimelineChart";
+import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, parseISO, isWithinInterval } from "date-fns";
@@ -304,10 +305,6 @@ const Index = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
-  };
   // Filter transactions by active month (hooks must be called before early returns)
   const monthStart = startOfMonth(activeMonth);
   const monthEnd = endOfMonth(activeMonth);
@@ -365,120 +362,120 @@ const Index = () => {
   const goToPreviousMonth = () => setActiveMonth(prev => subMonths(prev, 1));
   const goToNextMonth = () => setActiveMonth(prev => addMonths(prev, 1));
   const goToCurrentMonth = () => setActiveMonth(new Date());
-  return <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg gradient-primary">
-                <Wallet className="h-6 w-6 text-primary-foreground" />
+  return (
+    <AppLayout>
+      <div className="min-h-screen">
+        {/* Header */}
+        <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="container mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg gradient-primary md:hidden">
+                  <Wallet className="h-6 w-6 text-primary-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Bienvenido, {user?.user_metadata?.full_name || user?.email}
+                  </p>
+                  {lastUpdated && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-muted-foreground">
+                        USD/ARS: {exchangeRate.toFixed(2)}
+                      </span>
+                      <button
+                        onClick={fetchExchangeRate}
+                        disabled={isRefreshingRate}
+                        className="text-xs text-primary hover:underline disabled:opacity-50 flex items-center gap-1"
+                        title="Actualizar tipo de cambio"
+                      >
+                        <RefreshCw className={`h-3 w-3 ${isRefreshingRate ? 'animate-spin' : ''}`} />
+                        {isRefreshingRate ? 'Actualizando...' : 'Actualizar'}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold">Y si ahorramos?</h1>
-                <p className="text-sm text-muted-foreground">
-                  Welcome back, {user?.user_metadata?.full_name || user?.email}
-                </p>
-                {lastUpdated && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-muted-foreground">
-                      USD/ARS: {exchangeRate.toFixed(2)}
-                    </span>
-                    <button
-                      onClick={fetchExchangeRate}
-                      disabled={isRefreshingRate}
-                      className="text-xs text-primary hover:underline disabled:opacity-50 flex items-center gap-1"
-                      title="Refresh exchange rate"
-                    >
-                      <RefreshCw className={`h-3 w-3 ${isRefreshingRate ? 'animate-spin' : ''}`} />
-                      {isRefreshingRate ? 'Updating...' : 'Refresh'}
-                    </button>
-                  </div>
-                )}
+              <div className="flex items-center gap-3">
+                <AddSavingsDialog onAdd={handleAddSavings} />
+                <AddTransactionDialog onAdd={handleAddTransaction} categories={categories} users={users} />
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <AddSavingsDialog onAdd={handleAddSavings} />
-              <AddTransactionDialog onAdd={handleAddTransaction} categories={categories} users={users} />
-              <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sign out">
-                <LogOut className="h-5 w-5" />
-              </Button>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-6 py-8">
-        {/* Month Selector */}
-        <div className="flex items-center justify-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <button
-            onClick={goToCurrentMonth}
-            className="text-xl font-semibold capitalize min-w-[200px] text-center hover:text-primary transition-colors"
-          >
-            {format(activeMonth, "MMMM yyyy", { locale: es })}
-          </button>
-          <Button variant="ghost" size="icon" onClick={goToNextMonth}>
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        </div>
+        {/* Main Content */}
+        <main className="container mx-auto px-6 py-8">
+          {/* Month Selector */}
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <button
+              onClick={goToCurrentMonth}
+              className="text-xl font-semibold capitalize min-w-[200px] text-center hover:text-primary transition-colors"
+            >
+              {format(activeMonth, "MMMM yyyy", { locale: es })}
+            </button>
+            <Button variant="ghost" size="icon" onClick={goToNextMonth}>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in">
-          <StatCard 
-            title="Current Savings" 
-            value={`${formatCurrency(currentSavings.usd, "USD")} / ${formatCurrency(currentSavings.ars, "ARS")}`} 
-            icon={PiggyBank}
-            onClick={() => navigate("/savings")}
-          />
-          <StatCard 
-            title="Total Income" 
-            value={formatCurrency(globalIncomeARS, "ARS")}
-            subtitle={`${formatCurrency(totalIncomeUSD, "USD")} / ${formatCurrency(totalIncomeARS, "ARS")}`}
-            icon={TrendingUp}
-            trend="up"
-          />
-          <StatCard 
-            title="Total Expenses" 
-            value={formatCurrency(globalExpensesARS, "ARS")}
-            subtitle={`${formatCurrency(totalExpensesUSD, "USD")} / ${formatCurrency(totalExpensesARS, "ARS")}`}
-            icon={TrendingDown}
-          />
-          <StatCard 
-            title="Net Balance" 
-            value={formatCurrency(globalNetBalanceARS, "ARS")}
-            icon={Wallet}
-            trend={globalNetBalanceARS >= 0 ? "up" : "down"}
-          />
-        </div>
-
-        {/* Charts and Transactions */}
-        <div className="space-y-6 animate-slide-up">
-          <TimelineChart transactions={monthlyTransactions} />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <SpendingChart data={spendingByCategory} />
-            <TransactionsList 
-              transactions={monthlyTransactions.slice(0, 5)} 
-              onEdit={handleEditTransaction}
-              showViewAll={monthlyTransactions.length > 5}
-              onViewAll={() => navigate("/transactions")}
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in">
+            <StatCard 
+              title="Ahorros Actuales" 
+              value={`${formatCurrency(currentSavings.usd, "USD")} / ${formatCurrency(currentSavings.ars, "ARS")}`} 
+              icon={PiggyBank}
+              onClick={() => navigate("/savings")}
+            />
+            <StatCard 
+              title="Ingresos Totales" 
+              value={formatCurrency(globalIncomeARS, "ARS")}
+              subtitle={`${formatCurrency(totalIncomeUSD, "USD")} / ${formatCurrency(totalIncomeARS, "ARS")}`}
+              icon={TrendingUp}
+              trend="up"
+            />
+            <StatCard 
+              title="Gastos Totales" 
+              value={formatCurrency(globalExpensesARS, "ARS")}
+              subtitle={`${formatCurrency(totalExpensesUSD, "USD")} / ${formatCurrency(totalExpensesARS, "ARS")}`}
+              icon={TrendingDown}
+            />
+            <StatCard 
+              title="Balance Neto" 
+              value={formatCurrency(globalNetBalanceARS, "ARS")}
+              icon={Wallet}
+              trend={globalNetBalanceARS >= 0 ? "up" : "down"}
             />
           </div>
-        </div>
-      </main>
 
-      <EditTransactionDialog
-        transaction={editingTransaction}
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        onUpdate={handleUpdateTransaction}
-        onDelete={handleDeleteTransaction}
-        categories={categories}
-        users={users}
-      />
-    </div>;
+          {/* Charts and Transactions */}
+          <div className="space-y-6 animate-slide-up">
+            <TimelineChart transactions={monthlyTransactions} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <SpendingChart data={spendingByCategory} />
+              <TransactionsList 
+                transactions={monthlyTransactions.slice(0, 5)} 
+                onEdit={handleEditTransaction}
+                showViewAll={monthlyTransactions.length > 5}
+                onViewAll={() => navigate("/transactions")}
+              />
+            </div>
+          </div>
+        </main>
+
+        <EditTransactionDialog
+          transaction={editingTransaction}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onUpdate={handleUpdateTransaction}
+          onDelete={handleDeleteTransaction}
+          categories={categories}
+          users={users}
+        />
+      </div>
+    </AppLayout>
+  );
 };
 export default Index;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Mail, Plus, Trash2, RefreshCw, Loader2 } from "lucide-react";
+import { Mail, Plus, Trash2, RefreshCw, Loader2 } from "lucide-react";
 
 interface GmailConnection {
   id: string;
@@ -429,14 +430,10 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-2xl font-bold">Configuración</h1>
-        </div>
+    <AppLayout>
+      <div className="min-h-screen">
+        <div className="max-w-4xl mx-auto p-6">
+          <h1 className="text-2xl font-bold mb-6">Configuración</h1>
 
         <Tabs defaultValue="gmail" className="space-y-6">
           <TabsList>
@@ -748,5 +745,6 @@ export default function Settings() {
         </Tabs>
       </div>
     </div>
+    </AppLayout>
   );
 }

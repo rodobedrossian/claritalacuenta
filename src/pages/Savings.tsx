@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, PiggyBank, TrendingUp, Target, Plus, Wallet } from "lucide-react";
+import { PiggyBank, TrendingUp, Target, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { SavingsEntriesList } from "@/components/savings/SavingsEntriesList";
@@ -12,6 +11,7 @@ import { AddSavingsEntryDialog } from "@/components/savings/AddSavingsEntryDialo
 import { AddInvestmentDialog } from "@/components/savings/AddInvestmentDialog";
 import { AddGoalDialog } from "@/components/savings/AddGoalDialog";
 import { StatCard } from "@/components/StatCard";
+import { AppLayout } from "@/components/AppLayout";
 
 export interface SavingsEntry {
   id: string;
@@ -354,16 +354,13 @@ const Savings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+    <AppLayout>
+      <div className="min-h-screen">
+        {/* Header */}
+        <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="container mx-auto px-6 py-4">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="p-2 rounded-lg gradient-primary">
+              <div className="p-2 rounded-lg gradient-primary md:hidden">
                 <PiggyBank className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
@@ -374,8 +371,7 @@ const Savings = () => {
               </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
@@ -448,6 +444,7 @@ const Savings = () => {
         </Tabs>
       </main>
     </div>
+    </AppLayout>
   );
 };
 
