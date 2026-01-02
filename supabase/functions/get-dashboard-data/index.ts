@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
       exchangeRate,
       transactions,
       spendingByCategory,
-      categories: (categoriesResult.data || []).map((c: any) => c.name),
+      categories: (categoriesResult.data || []).map((c: any) => ({ id: c.id, name: c.name, type: c.type })),
       users: usersResult.data || []
     };
 

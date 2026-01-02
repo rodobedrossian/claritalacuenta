@@ -10,11 +10,14 @@ import { EditTransactionDialog } from "@/components/EditTransactionDialog";
 import { SpendingChart } from "@/components/SpendingChart";
 import { TimelineChart } from "@/components/TimelineChart";
 import { AppLayout } from "@/components/AppLayout";
+import { BudgetProgress } from "@/components/budgets/BudgetProgress";
+import { ManageBudgetsDialog } from "@/components/budgets/ManageBudgetsDialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format, addMonths, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { useDashboardData, Transaction } from "@/hooks/useDashboardData";
+import { useBudgetsData } from "@/hooks/useBudgetsData";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -24,6 +27,7 @@ const Index = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeMonth, setActiveMonth] = useState<Date>(new Date());
+  const [manageBudgetsOpen, setManageBudgetsOpen] = useState(false);
 
   // Use the new consolidated data hook
   const { 
@@ -36,6 +40,22 @@ const Index = () => {
     updateCurrentSavings,
     updateSavingsTransfers
   } = useDashboardData(activeMonth, user?.id);
+
+  // Budget data
+  const transactionsForBudgets = dashboardData?.transactions.map(t => ({
+    category: t.category,
+    currency: t.currency,
+    amount: t.amount,
+    type: t.type
+  })) || [];
+
+  const {
+    budgets,
+    budgetsWithSpending,
+    addBudget,
+    updateBudget,
+    deleteBudget,
+  } = useBudgetsData(user?.id, activeMonth, transactionsForBudgets);
 
   useEffect(() => {
     // Check authentication
@@ -320,6 +340,16 @@ const Index = () => {
             />
           </div>
 
+          {/* Budget Progress */}
+          {budgetsWithSpending.length > 0 && (
+            <div className="animate-fade-in">
+              <BudgetProgress
+                budgets={budgetsWithSpending}
+                onManageBudgets={() => setManageBudgetsOpen(true)}
+              />
+            </div>
+          )}
+
           {/* Charts and Transactions */}
           <div className="space-y-6 animate-slide-up">
             <TimelineChart transactions={transactions} />
@@ -343,6 +373,16 @@ const Index = () => {
           onDelete={handleDeleteTransaction}
           categories={categories}
           users={users}
+        />
+
+        <ManageBudgetsDialog
+          open={manageBudgetsOpen}
+          onOpenChange={setManageBudgetsOpen}
+          budgets={budgets}
+          categories={categories}
+          onAdd={addBudget}
+          onUpdate={updateBudget}
+          onDelete={deleteBudget}
         />
       </div>
     </AppLayout>
