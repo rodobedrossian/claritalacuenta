@@ -314,6 +314,7 @@ const Index = () => {
             <StatCard 
               title="Balance Neto" 
               value={formatCurrency(globalNetBalanceARS, "ARS")}
+              subtitle={`Gastos: ${formatCurrency(globalExpensesARS, "ARS")} | Ahorros: ${formatCurrency(globalSavingsTransfersARS, "ARS")}`}
               icon={Wallet}
               trend={globalNetBalanceARS >= 0 ? "up" : "down"}
             />
