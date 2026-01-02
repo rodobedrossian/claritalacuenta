@@ -104,20 +104,18 @@ const Budgets = () => {
       <div className="min-h-screen">
         {/* Header */}
         <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-          <div className="container mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold">Presupuestos</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {format(activeMonth, "MMMM yyyy", { locale: es })}
-                </p>
-              </div>
+          <div className="container mx-auto px-4 md:px-6 py-4 pl-14 md:pl-6">
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold">Presupuestos</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {format(activeMonth, "MMMM yyyy", { locale: es })}
+              </p>
             </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="container mx-auto px-6 py-8">
+        <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <Card className="p-4 gradient-card border-border/50">

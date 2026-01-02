@@ -465,17 +465,21 @@ export default function Settings() {
   return (
     <AppLayout>
       <div className="min-h-screen">
-        <div className="max-w-4xl mx-auto p-6">
-          <h1 className="text-2xl font-bold mb-6">Configuración</h1>
-
-        <Tabs defaultValue="recurring" className="space-y-6">
-          <TabsList className="flex-wrap h-auto">
-            <TabsTrigger value="recurring">Gastos Recurrentes</TabsTrigger>
-            <TabsTrigger value="credit-cards">Tarjetas de Crédito</TabsTrigger>
-            <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
-            <TabsTrigger value="gmail">Gmail</TabsTrigger>
-            <TabsTrigger value="parsers">Parsers</TabsTrigger>
-          </TabsList>
+        <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="container mx-auto px-4 md:px-6 py-4 pl-14 md:pl-6">
+            <h1 className="text-xl md:text-2xl font-bold">Configuración</h1>
+          </div>
+        </header>
+        
+        <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
+          <Tabs defaultValue="recurring" className="space-y-6">
+            <TabsList className="flex-wrap h-auto gap-1">
+              <TabsTrigger value="recurring" className="text-sm">Recurrentes</TabsTrigger>
+              <TabsTrigger value="credit-cards" className="text-sm">Tarjetas</TabsTrigger>
+              <TabsTrigger value="notifications" className="text-sm">Notificaciones</TabsTrigger>
+              <TabsTrigger value="gmail" className="text-sm">Gmail</TabsTrigger>
+              <TabsTrigger value="parsers" className="text-sm">Parsers</TabsTrigger>
+            </TabsList>
 
           <TabsContent value="recurring" className="space-y-4">
             <Card>
@@ -840,8 +844,8 @@ export default function Settings() {
             </Card>
           </TabsContent>
         </Tabs>
+        </main>
       </div>
-    </div>
     </AppLayout>
   );
 }
