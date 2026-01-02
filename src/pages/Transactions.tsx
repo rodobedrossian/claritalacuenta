@@ -8,159 +8,55 @@ import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-
-interface Transaction {
-  id: string;
-  type: "income" | "expense";
-  amount: number;
-  currency: "USD" | "ARS";
-  category: string;
-  description: string;
-  date: string;
-  user_id: string;
-}
-
-interface DbTransaction {
-  id: string;
-  type: string;
-  amount: number;
-  currency: string;
-  category: string;
-  description: string;
-  date: string;
-  user_id: string;
-  created_at: string;
-}
-
-const ITEMS_PER_PAGE = 20;
+import { useTransactionsData, Transaction, TransactionFilters } from "@/hooks/useTransactionsData";
 
 const Transactions = () => {
   const navigate = useNavigate();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [users, setUsers] = useState<Array<{ id: string; full_name: string | null }>>([]);
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
   const observerTarget = useRef<HTMLDivElement>(null);
   
   // Filter states
-  const [filterType, setFilterType] = useState<string>("all");
-  const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [filterUser, setFilterUser] = useState<string>("all");
-  const [filterStartDate, setFilterStartDate] = useState<string>("");
-  const [filterEndDate, setFilterEndDate] = useState<string>("");
+  const [filters, setFilters] = useState<TransactionFilters>({
+    type: "all",
+    category: "all",
+    userId: "all",
+    startDate: "",
+    endDate: ""
+  });
+
+  // Use the new hook
+  const {
+    transactions,
+    categories,
+    users,
+    totalCount,
+    hasMore,
+    loading,
+    loadingMore,
+    loadMore,
+    updateTransaction,
+    deleteTransaction
+  } = useTransactionsData(filters, user?.id);
 
   useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  useEffect(() => {
-    // Reset and refetch when filters change
-    setTransactions([]);
-    setPage(0);
-    setHasMore(true);
-    fetchTransactions(0);
-  }, [filterType, filterCategory, filterUser, filterStartDate, filterEndDate]);
-
-  const fetchInitialData = async () => {
-    try {
-      // Fetch users/profiles
-      const { data: usersData } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .order("full_name");
-      if (usersData) {
-        setUsers(usersData);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        navigate("/auth");
+      } else {
+        setUser(session.user);
+        setAuthLoading(false);
       }
+    });
+  }, [navigate]);
 
-      // Fetch categories
-      const { data: categoriesData } = await supabase
-        .from("categories")
-        .select("name")
-        .order("name");
-      if (categoriesData) {
-        setCategories(categoriesData.map(c => c.name));
-      }
-
-      // Fetch first page of transactions
-      await fetchTransactions(0);
-    } catch (error: any) {
-      console.error("Error fetching initial data:", error);
-      toast.error("Failed to load data");
-    }
-  };
-
-  const fetchTransactions = async (pageNum: number) => {
-    if (isLoading) return;
-    
-    setIsLoading(true);
-    try {
-      let query = supabase
-        .from("transactions")
-        .select("*", { count: "exact" })
-        .eq("status", "confirmed")
-        .order("date", { ascending: false });
-
-      // Apply filters
-      if (filterType !== "all") {
-        query = query.eq("type", filterType);
-      }
-      if (filterCategory !== "all") {
-        query = query.eq("category", filterCategory);
-      }
-      if (filterUser !== "all") {
-        query = query.eq("user_id", filterUser);
-      }
-      if (filterStartDate) {
-        query = query.gte("date", filterStartDate);
-      }
-      if (filterEndDate) {
-        query = query.lte("date", filterEndDate);
-      }
-
-      // Pagination
-      const from = pageNum * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-      query = query.range(from, to);
-
-      const { data: transactionsData, count } = await query;
-      
-      if (transactionsData) {
-        const typedTransactions: Transaction[] = (transactionsData as DbTransaction[]).map(t => ({
-          ...t,
-          type: t.type as "income" | "expense",
-          currency: t.currency as "USD" | "ARS",
-          amount: typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount
-        }));
-        
-        setTransactions(prev => pageNum === 0 ? typedTransactions : [...prev, ...typedTransactions]);
-        setTotalCount(count || 0);
-        setHasMore(typedTransactions.length === ITEMS_PER_PAGE);
-        setPage(pageNum);
-      }
-    } catch (error: any) {
-      console.error("Error fetching transactions:", error);
-      toast.error("Failed to load transactions");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadMore = useCallback(() => {
-    if (!isLoading && hasMore) {
-      fetchTransactions(page + 1);
-    }
-  }, [isLoading, hasMore, page]);
-
+  // Intersection observer for infinite scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
+        if (entries[0].isIntersecting && !loadingMore && hasMore) {
           loadMore();
         }
       },
@@ -177,74 +73,37 @@ const Transactions = () => {
         observer.unobserve(currentTarget);
       }
     };
-  }, [loadMore]);
-
-  const handleUpdateTransaction = async (id: string, transaction: Omit<Transaction, "id">) => {
-    try {
-      const { error } = await supabase
-        .from("transactions")
-        .update({
-          type: transaction.type,
-          amount: transaction.amount,
-          currency: transaction.currency,
-          category: transaction.category,
-          description: transaction.description,
-          date: transaction.date,
-          user_id: transaction.user_id
-        })
-        .eq("id", id);
-
-      if (error) throw error;
-
-      const updatedTransaction = { ...transaction, id };
-      handleTransactionUpdate(updatedTransaction);
-      toast.success("Transaction updated successfully");
-    } catch (error: any) {
-      console.error("Error updating transaction:", error);
-      toast.error("Failed to update transaction");
-    }
-  };
-
-  const handleDeleteTransaction = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from("transactions")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-
-      handleTransactionDelete(id);
-      toast.success("Transaction deleted successfully");
-    } catch (error: any) {
-      console.error("Error deleting transaction:", error);
-      toast.error("Failed to delete transaction");
-    }
-  };
+  }, [loadMore, loadingMore, hasMore]);
 
   const handleEditTransaction = (transaction: Transaction) => {
     setEditingTransaction(transaction);
     setEditDialogOpen(true);
   };
 
+  const handleUpdateFilter = (key: keyof TransactionFilters, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
   const resetFilters = () => {
-    setFilterType("all");
-    setFilterCategory("all");
-    setFilterUser("all");
-    setFilterStartDate("");
-    setFilterEndDate("");
+    setFilters({
+      type: "all",
+      category: "all",
+      userId: "all",
+      startDate: "",
+      endDate: ""
+    });
   };
 
-  const handleTransactionUpdate = (updatedTransaction: Transaction) => {
-    setTransactions(transactions.map(t => 
-      t.id === updatedTransaction.id ? updatedTransaction : t
-    ));
-  };
-
-  const handleTransactionDelete = (id: string) => {
-    setTransactions(transactions.filter(t => t.id !== id));
-    setTotalCount(prev => prev - 1);
-  };
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" />
+          <p className="mt-4 text-muted-foreground">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AppLayout>
@@ -266,7 +125,7 @@ const Transactions = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">Tipo</label>
-                <Select value={filterType} onValueChange={setFilterType}>
+                <Select value={filters.type} onValueChange={(v) => handleUpdateFilter("type", v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
@@ -280,7 +139,7 @@ const Transactions = () => {
 
               <div>
                 <label className="text-sm font-medium mb-2 block">Categoría</label>
-                <Select value={filterCategory} onValueChange={setFilterCategory}>
+                <Select value={filters.category} onValueChange={(v) => handleUpdateFilter("category", v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todas" />
                   </SelectTrigger>
@@ -297,7 +156,7 @@ const Transactions = () => {
 
               <div>
                 <label className="text-sm font-medium mb-2 block">Dueño</label>
-                <Select value={filterUser} onValueChange={setFilterUser}>
+                <Select value={filters.userId} onValueChange={(v) => handleUpdateFilter("userId", v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
@@ -316,8 +175,8 @@ const Transactions = () => {
                 <label className="text-sm font-medium mb-2 block">Desde</label>
                 <Input
                   type="date"
-                  value={filterStartDate}
-                  onChange={(e) => setFilterStartDate(e.target.value)}
+                  value={filters.startDate}
+                  onChange={(e) => handleUpdateFilter("startDate", e.target.value)}
                 />
               </div>
 
@@ -325,8 +184,8 @@ const Transactions = () => {
                 <label className="text-sm font-medium mb-2 block">Hasta</label>
                 <Input
                   type="date"
-                  value={filterEndDate}
-                  onChange={(e) => setFilterEndDate(e.target.value)}
+                  value={filters.endDate}
+                  onChange={(e) => handleUpdateFilter("endDate", e.target.value)}
                 />
               </div>
             </div>
@@ -341,29 +200,38 @@ const Transactions = () => {
             </div>
           </div>
 
-          {/* Transactions List */}
-          <TransactionsList 
-            transactions={transactions} 
-            onEdit={handleEditTransaction}
-          />
+          {/* Loading state for initial load */}
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              {/* Transactions List */}
+              <TransactionsList 
+                transactions={transactions} 
+                onEdit={handleEditTransaction}
+              />
 
-          {/* Infinite scroll trigger */}
-          <div ref={observerTarget} className="py-8 flex justify-center">
-            {isLoading && (
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            )}
-            {!hasMore && transactions.length > 0 && (
-              <p className="text-sm text-muted-foreground">No hay más transacciones</p>
-            )}
-          </div>
+              {/* Infinite scroll trigger */}
+              <div ref={observerTarget} className="py-8 flex justify-center">
+                {loadingMore && (
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                )}
+                {!hasMore && transactions.length > 0 && (
+                  <p className="text-sm text-muted-foreground">No hay más transacciones</p>
+                )}
+              </div>
+            </>
+          )}
         </main>
 
         <EditTransactionDialog
           transaction={editingTransaction}
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
-          onUpdate={handleUpdateTransaction}
-          onDelete={handleDeleteTransaction}
+          onUpdate={updateTransaction}
+          onDelete={deleteTransaction}
           categories={categories}
           users={users}
         />
