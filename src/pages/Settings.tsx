@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Mail, Plus, Trash2, RefreshCw, Loader2, CreditCard, Repeat, Bell } from "lucide-react";
+import { Mail, Plus, Trash2, RefreshCw, Loader2, CreditCard, Repeat, Bell, Smartphone } from "lucide-react";
 import { useCreditCardsData } from "@/hooks/useCreditCardsData";
 import { useRecurringExpensesData } from "@/hooks/useRecurringExpensesData";
 import { useCategoriesData } from "@/hooks/useCategoriesData";
@@ -20,6 +20,7 @@ import { CreditCardsList } from "@/components/credit-cards/CreditCardsList";
 import { AddRecurringExpenseDialog } from "@/components/recurring/AddRecurringExpenseDialog";
 import { RecurringExpensesList } from "@/components/recurring/RecurringExpensesList";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
+import { PWAInstallInstructions } from "@/components/pwa/PWAInstallInstructions";
 
 interface GmailConnection {
   id: string;
@@ -472,14 +473,22 @@ export default function Settings() {
         </header>
         
         <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
-          <Tabs defaultValue="recurring" className="space-y-6">
+          <Tabs defaultValue="install" className="space-y-6">
             <TabsList className="flex-wrap h-auto gap-1">
+              <TabsTrigger value="install" className="text-sm">
+                <Smartphone className="h-4 w-4 mr-1" />
+                Instalar
+              </TabsTrigger>
               <TabsTrigger value="recurring" className="text-sm">Recurrentes</TabsTrigger>
               <TabsTrigger value="credit-cards" className="text-sm">Tarjetas</TabsTrigger>
               <TabsTrigger value="notifications" className="text-sm">Notificaciones</TabsTrigger>
               <TabsTrigger value="gmail" className="text-sm">Gmail</TabsTrigger>
               <TabsTrigger value="parsers" className="text-sm">Parsers</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="install">
+              <PWAInstallInstructions />
+            </TabsContent>
 
           <TabsContent value="recurring" className="space-y-4">
             <Card>
