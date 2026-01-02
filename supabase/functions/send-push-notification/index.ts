@@ -16,58 +16,59 @@ interface PushPayload {
 }
 
 // Base64URL encode
-function base64UrlEncode(data: Uint8Array | string): string {
-  const str = typeof data === "string" ? data : String.fromCharCode(...data);
-  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+function base64UrlEncode(input: Uint8Array | ArrayBuffer): string {
+  const bytes = input instanceof ArrayBuffer ? new Uint8Array(input) : input;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 // Base64URL decode
 function base64UrlDecode(str: string): Uint8Array {
-  // Add padding if needed
-  const padding = "=".repeat((4 - (str.length % 4)) % 4);
-  const base64 = (str + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; i++) {
-    outputArray[i] = rawData.charCodeAt(i);
+  // Add padding
+  let base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (base64.length % 4) {
+    base64 += "=";
   }
-  return outputArray;
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
 }
 
 // Create VAPID JWT token
 async function createVapidJwt(
   audience: string,
   subject: string,
-  publicKey: string,
-  privateKey: string
+  publicKeyB64: string,
+  privateKeyB64: string
 ): Promise<string> {
-  const encoder = new TextEncoder();
+  // Decode keys
+  const publicKeyBytes = base64UrlDecode(publicKeyB64);
+  const privateKeyBytes = base64UrlDecode(privateKeyB64);
   
-  // JWT Header
-  const header = { typ: "JWT", alg: "ES256" };
-  const headerB64 = base64UrlEncode(JSON.stringify(header));
+  console.log("Public key length:", publicKeyBytes.length);
+  console.log("Private key length:", privateKeyBytes.length);
   
-  // JWT Claims
-  const now = Math.floor(Date.now() / 1000);
-  const claims = {
-    aud: audience,
-    exp: now + 12 * 60 * 60, // 12 hours
-    sub: subject,
-  };
-  const claimsB64 = base64UrlEncode(JSON.stringify(claims));
+  // Public key should be 65 bytes (uncompressed point: 0x04 + 32 bytes X + 32 bytes Y)
+  if (publicKeyBytes.length !== 65) {
+    throw new Error(`Invalid public key length: ${publicKeyBytes.length}, expected 65`);
+  }
   
-  // Unsigned token
-  const unsignedToken = `${headerB64}.${claimsB64}`;
+  // Private key should be 32 bytes (raw scalar)
+  if (privateKeyBytes.length !== 32) {
+    throw new Error(`Invalid private key length: ${privateKeyBytes.length}, expected 32`);
+  }
   
-  // Decode the raw private key (32 bytes for P-256)
-  const privateKeyBytes = base64UrlDecode(privateKey);
-  const publicKeyBytes = base64UrlDecode(publicKey);
-  
-  // Import private key as JWK (P-256 curve)
-  // The public key is 65 bytes: 0x04 + 32 bytes X + 32 bytes Y
+  // Extract X and Y coordinates (skip the 0x04 prefix)
   const x = publicKeyBytes.slice(1, 33);
   const y = publicKeyBytes.slice(33, 65);
   
+  // Create JWK for private key
   const jwk = {
     kty: "EC",
     crv: "P-256",
@@ -76,6 +77,9 @@ async function createVapidJwt(
     d: base64UrlEncode(privateKeyBytes),
   };
   
+  console.log("JWK created:", { kty: jwk.kty, crv: jwk.crv, xLen: jwk.x.length, yLen: jwk.y.length, dLen: jwk.d.length });
+  
+  // Import private key
   const cryptoKey = await crypto.subtle.importKey(
     "jwk",
     jwk,
@@ -84,58 +88,58 @@ async function createVapidJwt(
     ["sign"]
   );
   
-  // Sign the token
+  // JWT Header
+  const header = { typ: "JWT", alg: "ES256" };
+  const headerB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
+  
+  // JWT Claims
+  const now = Math.floor(Date.now() / 1000);
+  const claims = {
+    aud: audience,
+    exp: now + 12 * 60 * 60,
+    sub: subject,
+  };
+  const claimsB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(claims)));
+  
+  // Unsigned token
+  const unsignedToken = `${headerB64}.${claimsB64}`;
+  
+  // Sign
   const signature = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" },
+    { name: "ECDSA", hash: { name: "SHA-256" } },
     cryptoKey,
-    encoder.encode(unsignedToken)
+    new TextEncoder().encode(unsignedToken)
   );
   
-  // Convert DER signature to raw format (r || s, each 32 bytes)
-  const signatureBytes = new Uint8Array(signature);
-  let r: Uint8Array, s: Uint8Array;
+  const signatureB64 = base64UrlEncode(signature);
   
-  if (signatureBytes.length === 64) {
-    // Already in raw format
-    r = signatureBytes.slice(0, 32);
-    s = signatureBytes.slice(32, 64);
-  } else {
-    // DER format, need to parse
-    r = signatureBytes.slice(0, 32);
-    s = signatureBytes.slice(32);
-  }
-  
-  // Ensure r and s are 32 bytes each
-  const rawSignature = new Uint8Array(64);
-  rawSignature.set(r.length > 32 ? r.slice(r.length - 32) : r, 32 - Math.min(r.length, 32));
-  rawSignature.set(s.length > 32 ? s.slice(s.length - 32) : s, 64 - Math.min(s.length, 32));
-  
-  const signatureB64 = base64UrlEncode(rawSignature);
+  console.log("JWT signed, signature length:", new Uint8Array(signature).length);
   
   return `${unsignedToken}.${signatureB64}`;
 }
 
-// Send Web Push notification (simplified - without payload encryption for now)
+// Send Web Push notification
 async function sendWebPush(
   subscription: { endpoint: string; p256dh_key: string; auth_key: string },
-  payload: string,
+  _payload: string,
   vapidPublicKey: string,
   vapidPrivateKey: string,
   vapidSubject: string
 ): Promise<Response> {
   const audience = new URL(subscription.endpoint).origin;
   
-  // Create VAPID authorization
+  // Create VAPID JWT
   const jwt = await createVapidJwt(audience, vapidSubject, vapidPublicKey, vapidPrivateKey);
   
-  // Send the request
-  // Note: For full RFC 8291 compliance, payload should be encrypted using ECDH + HKDF + AES-GCM
-  // This is a simplified version that works with some push services
+  console.log("Sending to endpoint:", subscription.endpoint);
+  console.log("Authorization header created");
+  
+  // Send empty push (without encrypted payload for now)
+  // This tells the browser to wake up the service worker
   const response = await fetch(subscription.endpoint, {
     method: "POST",
     headers: {
       "Authorization": `vapid t=${jwt}, k=${vapidPublicKey}`,
-      "Content-Type": "application/octet-stream",
       "TTL": "86400",
       "Content-Length": "0",
     },
@@ -155,6 +159,8 @@ serve(async (req) => {
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
     const vapidSubject = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@financeflow.app";
+
+    console.log("VAPID keys loaded, public key length:", vapidPublicKey.length);
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -204,7 +210,7 @@ serve(async (req) => {
 
     for (const subscription of subscriptions) {
       try {
-        console.log("Sending to subscription:", subscription.id, subscription.device_name);
+        console.log("Processing subscription:", subscription.id, subscription.device_name);
         
         const response = await sendWebPush(
           {
@@ -218,20 +224,19 @@ serve(async (req) => {
           vapidSubject
         );
 
-        console.log("Push response status:", response.status);
+        const responseText = await response.text();
+        console.log("Push response:", response.status, responseText);
         
         if (response.ok || response.status === 201) {
           sentCount++;
           console.log("Push sent successfully to:", subscription.device_name || subscription.endpoint.slice(-20));
         } else if (response.status === 404 || response.status === 410) {
-          // Subscription expired or invalid - remove it
           console.log("Removing expired subscription:", subscription.id);
           await supabase.from("push_subscriptions").delete().eq("id", subscription.id);
           errors.push(`${subscription.id}: subscription expired`);
         } else {
-          const errorText = await response.text();
-          console.error("Push failed:", response.status, errorText);
-          errors.push(`${subscription.id}: ${response.status} - ${errorText}`);
+          console.error("Push failed:", response.status, responseText);
+          errors.push(`${subscription.id}: ${response.status} - ${responseText}`);
         }
       } catch (err: unknown) {
         console.error("Error sending push:", err);
@@ -248,7 +253,7 @@ serve(async (req) => {
       data: payload.data,
     });
 
-    console.log(`Push notification sent: ${sentCount}/${subscriptions.length}`, errors.length > 0 ? errors : "");
+    console.log(`Push notification result: ${sentCount}/${subscriptions.length}`, errors.length > 0 ? errors : "no errors");
 
     return new Response(
       JSON.stringify({ 
