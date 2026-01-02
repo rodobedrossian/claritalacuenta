@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Investment } from "@/pages/Savings";
+import { Investment } from "@/hooks/useSavingsData";
 import { toast } from "sonner";
 
 interface AddInvestmentDialogProps {

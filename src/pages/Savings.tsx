@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { PiggyBank, TrendingUp, Target, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
 import { SavingsEntriesList } from "@/components/savings/SavingsEntriesList";
 import { InvestmentsList } from "@/components/savings/InvestmentsList";
 import { GoalsList } from "@/components/savings/GoalsList";
@@ -13,60 +12,28 @@ import { AddGoalDialog } from "@/components/savings/AddGoalDialog";
 import { EditSavingsEntryDialog } from "@/components/savings/EditSavingsEntryDialog";
 import { StatCard } from "@/components/StatCard";
 import { AppLayout } from "@/components/AppLayout";
-
-export interface SavingsEntry {
-  id: string;
-  user_id: string;
-  amount: number;
-  currency: "USD" | "ARS";
-  entry_type: "deposit" | "withdrawal" | "interest";
-  savings_type: "cash" | "bank" | "other";
-  notes: string | null;
-  created_at: string;
-}
-
-export interface Investment {
-  id: string;
-  user_id: string;
-  name: string;
-  investment_type: "plazo_fijo" | "fci" | "cedear" | "cripto" | "otro";
-  currency: "USD" | "ARS";
-  principal_amount: number;
-  current_amount: number;
-  interest_rate: number | null;
-  rate_type: "fixed" | "variable" | "none" | null;
-  institution: string | null;
-  start_date: string;
-  end_date: string | null;
-  is_active: boolean;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface SavingsGoal {
-  id: string;
-  user_id: string;
-  name: string;
-  target_amount: number;
-  currency: "USD" | "ARS";
-  target_date: string | null;
-  is_completed: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { useSavingsData, SavingsEntry } from "@/hooks/useSavingsData";
 
 const Savings = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [entries, setEntries] = useState<SavingsEntry[]>([]);
-  const [investments, setInvestments] = useState<Investment[]>([]);
-  const [goals, setGoals] = useState<SavingsGoal[]>([]);
-  const [currentSavings, setCurrentSavings] = useState({ usd: 0, ars: 0 });
-  const [exchangeRate, setExchangeRate] = useState(1300);
   const [editingEntry, setEditingEntry] = useState<SavingsEntry | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  // Use the new consolidated data hook
+  const {
+    data: savingsData,
+    loading: dataLoading,
+    addEntry,
+    updateEntry,
+    deleteEntry,
+    addInvestment,
+    deleteInvestment,
+    addGoal,
+    toggleGoalComplete,
+    deleteGoal
+  } = useSavingsData(user?.id);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -79,398 +46,9 @@ const Savings = () => {
     });
   }, [navigate]);
 
-  useEffect(() => {
-    if (user) {
-      fetchAllData();
-    }
-  }, [user]);
-
-  const fetchAllData = async () => {
-    try {
-      // Fetch savings (single aggregated row)
-      const { data: savingsData } = await supabase
-        .from("savings")
-        .select("usd_amount, ars_amount")
-        .maybeSingle();
-
-      if (savingsData) {
-        setCurrentSavings({
-          usd: Number(savingsData.usd_amount),
-          ars: Number(savingsData.ars_amount),
-        });
-      }
-
-      // Fetch exchange rate
-      const { data: rateData } = await supabase
-        .from("exchange_rates")
-        .select("rate")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (rateData) {
-        setExchangeRate(Number(rateData.rate));
-      }
-
-      // Fetch entries
-      const { data: entriesData } = await supabase
-        .from("savings_entries")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      const mappedEntries = entriesData
-        ? entriesData.map((e) => ({
-            ...e,
-            amount: Number(e.amount),
-            currency: e.currency as "USD" | "ARS",
-            entry_type: e.entry_type as "deposit" | "withdrawal" | "interest",
-            savings_type: (e.savings_type || "cash") as "cash" | "bank" | "other",
-          }))
-        : [];
-
-      setEntries(mappedEntries);
-
-      // If the aggregated row is missing, rebuild it from entries once (so goals/stats reflect reality)
-      if (!savingsData && mappedEntries.length > 0) {
-        const rebuilt = mappedEntries.reduce(
-          (acc, e) => {
-            const delta = e.entry_type === "withdrawal" ? -e.amount : e.amount;
-            if (e.currency === "USD") acc.usd += delta;
-            else acc.ars += delta;
-            return acc;
-          },
-          { usd: 0, ars: 0 }
-        );
-
-        rebuilt.usd = Math.max(0, rebuilt.usd);
-        rebuilt.ars = Math.max(0, rebuilt.ars);
-
-        await supabase.from("savings").insert([
-          {
-            usd_amount: rebuilt.usd,
-            ars_amount: rebuilt.ars,
-          },
-        ]);
-
-        setCurrentSavings(rebuilt);
-      }
-
-      // Fetch investments
-      const { data: investmentsData } = await supabase
-        .from("investments")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (investmentsData) {
-        setInvestments(
-          investmentsData.map((i) => ({
-            ...i,
-            principal_amount: Number(i.principal_amount),
-            current_amount: Number(i.current_amount),
-            interest_rate: i.interest_rate ? Number(i.interest_rate) : null,
-            currency: i.currency as "USD" | "ARS",
-            investment_type: i.investment_type as Investment["investment_type"],
-            rate_type: i.rate_type as Investment["rate_type"],
-          }))
-        );
-      }
-
-      // Fetch goals
-      const { data: goalsData } = await supabase
-        .from("savings_goals")
-        .select("*")
-        .order("created_at", { ascending: false });
-      
-      if (goalsData) {
-        setGoals(goalsData.map(g => ({
-          ...g,
-          target_amount: Number(g.target_amount),
-          currency: g.currency as "USD" | "ARS",
-        })));
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      toast.error("Error al cargar datos");
-    }
-  };
-
-  const handleAddEntry = async (entry: Omit<SavingsEntry, "id" | "user_id" | "created_at">) => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from("savings_entries")
-        .insert([{ ...entry, user_id: user.id }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Update aggregated savings table (create the single row if missing)
-      const { data: savingsRecord } = await supabase
-        .from("savings")
-        .select("id, usd_amount, ars_amount")
-        .maybeSingle();
-
-      const field = entry.currency === "USD" ? "usd_amount" : "ars_amount";
-      const currentAmount = Number(savingsRecord?.[field] ?? 0);
-      const adjustment = entry.entry_type === "withdrawal" ? -entry.amount : entry.amount;
-      const newAmount = Math.max(0, currentAmount + adjustment);
-
-      if (savingsRecord) {
-        const { error: updateError } = await supabase
-          .from("savings")
-          .update({ [field]: newAmount })
-          .eq("id", savingsRecord.id);
-        if (updateError) throw updateError;
-      } else {
-        const insertPayload = {
-          usd_amount: entry.currency === "USD" ? newAmount : 0,
-          ars_amount: entry.currency === "ARS" ? newAmount : 0,
-        };
-
-        const { error: insertError } = await supabase.from("savings").insert([insertPayload]);
-        if (insertError) throw insertError;
-      }
-
-      setCurrentSavings((prev) => ({
-        ...prev,
-        [entry.currency === "USD" ? "usd" : "ars"]: newAmount,
-      }));
-
-      if (data) {
-        setEntries([
-          {
-            ...data,
-            amount: Number(data.amount),
-            currency: data.currency as "USD" | "ARS",
-            entry_type: data.entry_type as "deposit" | "withdrawal" | "interest",
-            savings_type: (data.savings_type || "cash") as "cash" | "bank" | "other",
-          },
-          ...entries,
-        ]);
-      }
-
-      toast.success("Movimiento registrado");
-    } catch (error) {
-      console.error("Error adding entry:", error);
-      toast.error("Error al registrar movimiento");
-    }
-  };
-
-  const handleAddInvestment = async (investment: Omit<Investment, "id" | "user_id" | "created_at" | "updated_at">) => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from("investments")
-        .insert([{ ...investment, user_id: user.id }])
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      if (data) {
-        setInvestments([{
-          ...data,
-          principal_amount: Number(data.principal_amount),
-          current_amount: Number(data.current_amount),
-          interest_rate: data.interest_rate ? Number(data.interest_rate) : null,
-          currency: data.currency as "USD" | "ARS",
-          investment_type: data.investment_type as Investment["investment_type"],
-          rate_type: data.rate_type as Investment["rate_type"],
-        }, ...investments]);
-      }
-      
-      toast.success("Inversión registrada");
-    } catch (error) {
-      console.error("Error adding investment:", error);
-      toast.error("Error al registrar inversión");
-    }
-  };
-
-  const handleAddGoal = async (goal: Omit<SavingsGoal, "id" | "user_id" | "created_at" | "updated_at" | "is_completed">) => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from("savings_goals")
-        .insert([{ ...goal, user_id: user.id }])
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      if (data) {
-        setGoals([{
-          ...data,
-          target_amount: Number(data.target_amount),
-          currency: data.currency as "USD" | "ARS",
-        }, ...goals]);
-      }
-      
-      toast.success("Objetivo creado");
-    } catch (error) {
-      console.error("Error adding goal:", error);
-      toast.error("Error al crear objetivo");
-    }
-  };
-
-  const handleToggleGoalComplete = async (goalId: string, completed: boolean) => {
-    try {
-      const { error } = await supabase
-        .from("savings_goals")
-        .update({ is_completed: completed })
-        .eq("id", goalId);
-      
-      if (error) throw error;
-      
-      setGoals(goals.map(g => g.id === goalId ? { ...g, is_completed: completed } : g));
-      toast.success(completed ? "¡Objetivo completado!" : "Objetivo reabierto");
-    } catch (error) {
-      console.error("Error updating goal:", error);
-      toast.error("Error al actualizar objetivo");
-    }
-  };
-
-  const handleDeleteGoal = async (goalId: string) => {
-    try {
-      const { error } = await supabase
-        .from("savings_goals")
-        .delete()
-        .eq("id", goalId);
-      
-      if (error) throw error;
-      
-      setGoals(goals.filter(g => g.id !== goalId));
-      toast.success("Objetivo eliminado");
-    } catch (error) {
-      console.error("Error deleting goal:", error);
-      toast.error("Error al eliminar objetivo");
-    }
-  };
-
-  const handleDeleteInvestment = async (investmentId: string) => {
-    try {
-      const { error } = await supabase
-        .from("investments")
-        .delete()
-        .eq("id", investmentId);
-      
-      if (error) throw error;
-      
-      setInvestments(investments.filter(i => i.id !== investmentId));
-      toast.success("Inversión eliminada");
-    } catch (error) {
-      console.error("Error deleting investment:", error);
-      toast.error("Error al eliminar inversión");
-    }
-  };
-
   const handleEditEntry = (entry: SavingsEntry) => {
     setEditingEntry(entry);
     setEditDialogOpen(true);
-  };
-
-  const handleUpdateEntry = async (id: string, updatedData: Omit<SavingsEntry, "id" | "user_id" | "created_at">) => {
-    try {
-      const originalEntry = entries.find(e => e.id === id);
-      if (!originalEntry) return;
-
-      const { error } = await supabase
-        .from("savings_entries")
-        .update({
-          amount: updatedData.amount,
-          currency: updatedData.currency,
-          entry_type: updatedData.entry_type,
-          savings_type: updatedData.savings_type,
-          notes: updatedData.notes,
-        })
-        .eq("id", id);
-
-      if (error) throw error;
-
-      // Update savings totals - reverse the original and apply the new
-      const { data: savingsRecord } = await supabase
-        .from("savings")
-        .select("id, usd_amount, ars_amount")
-        .maybeSingle();
-
-      if (savingsRecord) {
-        // Calculate adjustment for original entry
-        const originalField = originalEntry.currency === "USD" ? "usd_amount" : "ars_amount";
-        const originalAdjustment = originalEntry.entry_type === "withdrawal" ? originalEntry.amount : -originalEntry.amount;
-        
-        // Calculate adjustment for new entry
-        const newField = updatedData.currency === "USD" ? "usd_amount" : "ars_amount";
-        const newAdjustment = updatedData.entry_type === "withdrawal" ? -updatedData.amount : updatedData.amount;
-
-        const updates: Record<string, number> = {};
-        
-        if (originalField === newField) {
-          // Same currency
-          updates[originalField] = Number(savingsRecord[originalField]) + originalAdjustment + newAdjustment;
-        } else {
-          // Different currencies
-          updates[originalField] = Number(savingsRecord[originalField]) + originalAdjustment;
-          updates[newField] = Number(savingsRecord[newField]) + newAdjustment;
-        }
-
-        await supabase.from("savings").update(updates).eq("id", savingsRecord.id);
-
-        setCurrentSavings(prev => ({
-          usd: updates.usd_amount !== undefined ? updates.usd_amount : prev.usd,
-          ars: updates.ars_amount !== undefined ? updates.ars_amount : prev.ars,
-        }));
-      }
-
-      setEntries(entries.map(e => e.id === id ? { ...e, ...updatedData } : e));
-      toast.success("Movimiento actualizado");
-    } catch (error) {
-      console.error("Error updating entry:", error);
-      toast.error("Error al actualizar movimiento");
-    }
-  };
-
-  const handleDeleteEntry = async (id: string) => {
-    try {
-      const entry = entries.find(e => e.id === id);
-      if (!entry) return;
-
-      const { error } = await supabase
-        .from("savings_entries")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-
-      // Update savings totals
-      const { data: savingsRecord } = await supabase
-        .from("savings")
-        .select("id, usd_amount, ars_amount")
-        .maybeSingle();
-
-      if (savingsRecord) {
-        const field = entry.currency === "USD" ? "usd_amount" : "ars_amount";
-        const adjustment = entry.entry_type === "withdrawal" ? entry.amount : -entry.amount;
-        
-        await supabase
-          .from("savings")
-          .update({ [field]: Number(savingsRecord[field]) + adjustment })
-          .eq("id", savingsRecord.id);
-
-        setCurrentSavings(prev => ({
-          ...prev,
-          [entry.currency === "USD" ? "usd" : "ars"]: Number(savingsRecord[field]) + adjustment,
-        }));
-      }
-
-      setEntries(entries.filter(e => e.id !== id));
-      toast.success("Movimiento eliminado");
-    } catch (error) {
-      console.error("Error deleting entry:", error);
-      toast.error("Error al eliminar movimiento");
-    }
   };
 
   const formatCurrency = (amount: number, currency: "USD" | "ARS") => {
@@ -480,20 +58,7 @@ const Savings = () => {
     }).format(amount)}`;
   };
 
-  // Calculate totals
-  const totalInvestedUSD = investments
-    .filter(i => i.is_active && i.currency === "USD")
-    .reduce((sum, i) => sum + i.current_amount, 0);
-  
-  const totalInvestedARS = investments
-    .filter(i => i.is_active && i.currency === "ARS")
-    .reduce((sum, i) => sum + i.current_amount, 0);
-  
-  const totalPatrimonioARS = 
-    (currentSavings.usd * exchangeRate) + currentSavings.ars +
-    (totalInvestedUSD * exchangeRate) + totalInvestedARS;
-
-  if (loading) {
+  if (loading || dataLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -503,6 +68,20 @@ const Savings = () => {
       </div>
     );
   }
+
+  // Extract data from hook
+  const currentSavings = savingsData?.currentSavings || { usd: 0, ars: 0 };
+  const exchangeRate = savingsData?.exchangeRate || 1300;
+  const entries = savingsData?.entries || [];
+  const investments = savingsData?.investments || [];
+  const goals = savingsData?.goals || [];
+  const totals = savingsData?.totals || {
+    investedUSD: 0,
+    investedARS: 0,
+    patrimonioARS: 0,
+    activeGoals: 0,
+    completedGoals: 0
+  };
 
   return (
     <AppLayout>
@@ -524,85 +103,85 @@ const Savings = () => {
           </div>
         </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-6 py-8">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in">
-          <StatCard
-            title="Ahorros Líquidos"
-            value={`${formatCurrency(currentSavings.usd, "USD")}`}
-            subtitle={formatCurrency(currentSavings.ars, "ARS")}
-            icon={Wallet}
-          />
-          <StatCard
-            title="Total Invertido"
-            value={`${formatCurrency(totalInvestedUSD, "USD")}`}
-            subtitle={formatCurrency(totalInvestedARS, "ARS")}
-            icon={TrendingUp}
-          />
-          <StatCard
-            title="Patrimonio Total"
-            value={formatCurrency(totalPatrimonioARS, "ARS")}
-            subtitle={`TC: ${exchangeRate.toFixed(0)}`}
-            icon={PiggyBank}
-          />
-          <StatCard
-            title="Objetivos Activos"
-            value={goals.filter(g => !g.is_completed).length.toString()}
-            subtitle={`${goals.filter(g => g.is_completed).length} completados`}
-            icon={Target}
-          />
-        </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="historial" className="animate-slide-up">
-          <div className="flex items-center justify-between mb-4">
-            <TabsList>
-              <TabsTrigger value="historial">Historial</TabsTrigger>
-              <TabsTrigger value="inversiones">Inversiones</TabsTrigger>
-              <TabsTrigger value="objetivos">Objetivos</TabsTrigger>
-            </TabsList>
-            
-            <div className="flex gap-2">
-              <AddSavingsEntryDialog onAdd={handleAddEntry} />
-              <AddInvestmentDialog onAdd={handleAddInvestment} />
-              <AddGoalDialog onAdd={handleAddGoal} />
-            </div>
+        {/* Main Content */}
+        <main className="container mx-auto px-6 py-8">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in">
+            <StatCard
+              title="Ahorros Líquidos"
+              value={`${formatCurrency(currentSavings.usd, "USD")}`}
+              subtitle={formatCurrency(currentSavings.ars, "ARS")}
+              icon={Wallet}
+            />
+            <StatCard
+              title="Total Invertido"
+              value={`${formatCurrency(totals.investedUSD, "USD")}`}
+              subtitle={formatCurrency(totals.investedARS, "ARS")}
+              icon={TrendingUp}
+            />
+            <StatCard
+              title="Patrimonio Total"
+              value={formatCurrency(totals.patrimonioARS, "ARS")}
+              subtitle={`TC: ${exchangeRate.toFixed(0)}`}
+              icon={PiggyBank}
+            />
+            <StatCard
+              title="Objetivos Activos"
+              value={totals.activeGoals.toString()}
+              subtitle={`${totals.completedGoals} completados`}
+              icon={Target}
+            />
           </div>
 
-          <TabsContent value="historial">
-            <SavingsEntriesList entries={entries} onEdit={handleEditEntry} />
-          </TabsContent>
+          {/* Tabs */}
+          <Tabs defaultValue="historial" className="animate-slide-up">
+            <div className="flex items-center justify-between mb-4">
+              <TabsList>
+                <TabsTrigger value="historial">Historial</TabsTrigger>
+                <TabsTrigger value="inversiones">Inversiones</TabsTrigger>
+                <TabsTrigger value="objetivos">Objetivos</TabsTrigger>
+              </TabsList>
+              
+              <div className="flex gap-2">
+                <AddSavingsEntryDialog onAdd={addEntry} />
+                <AddInvestmentDialog onAdd={addInvestment} />
+                <AddGoalDialog onAdd={addGoal} />
+              </div>
+            </div>
 
-          <TabsContent value="inversiones">
-            <InvestmentsList 
-              investments={investments} 
-              onDelete={handleDeleteInvestment}
-              exchangeRate={exchangeRate}
-            />
-          </TabsContent>
+            <TabsContent value="historial">
+              <SavingsEntriesList entries={entries} onEdit={handleEditEntry} />
+            </TabsContent>
 
-          <TabsContent value="objetivos">
-            <GoalsList
-              goals={goals}
-              currentSavings={currentSavings}
-              totalInvested={{ usd: totalInvestedUSD, ars: totalInvestedARS }}
-              exchangeRate={exchangeRate}
-              onToggleComplete={handleToggleGoalComplete}
-              onDelete={handleDeleteGoal}
-            />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="inversiones">
+              <InvestmentsList 
+                investments={investments} 
+                onDelete={deleteInvestment}
+                exchangeRate={exchangeRate}
+              />
+            </TabsContent>
 
-        <EditSavingsEntryDialog
-          entry={editingEntry}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-          onUpdate={handleUpdateEntry}
-          onDelete={handleDeleteEntry}
-        />
-      </main>
-    </div>
+            <TabsContent value="objetivos">
+              <GoalsList
+                goals={goals}
+                currentSavings={currentSavings}
+                totalInvested={{ usd: totals.investedUSD, ars: totals.investedARS }}
+                exchangeRate={exchangeRate}
+                onToggleComplete={toggleGoalComplete}
+                onDelete={deleteGoal}
+              />
+            </TabsContent>
+          </Tabs>
+
+          <EditSavingsEntryDialog
+            entry={editingEntry}
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            onUpdate={updateEntry}
+            onDelete={deleteEntry}
+          />
+        </main>
+      </div>
     </AppLayout>
   );
 };

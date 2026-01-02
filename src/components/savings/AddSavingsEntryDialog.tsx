@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { SavingsEntry } from "@/pages/Savings";
+import { SavingsEntry } from "@/hooks/useSavingsData";
 import { toast } from "sonner";
 
 interface AddSavingsEntryDialogProps {

@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SavingsGoal } from "@/pages/Savings";
+import { SavingsGoal } from "@/hooks/useSavingsData";
 import { toast } from "sonner";
 
 interface AddGoalDialogProps {

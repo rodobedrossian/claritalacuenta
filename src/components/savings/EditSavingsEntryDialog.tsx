@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { SavingsEntry } from "@/pages/Savings";
+import { SavingsEntry } from "@/hooks/useSavingsData";
 
 interface EditSavingsEntryDialogProps {
   entry: SavingsEntry | null;
