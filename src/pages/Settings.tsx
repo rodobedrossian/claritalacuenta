@@ -10,10 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Mail, Plus, Trash2, RefreshCw, Loader2, CreditCard } from "lucide-react";
+import { Mail, Plus, Trash2, RefreshCw, Loader2, CreditCard, Repeat } from "lucide-react";
 import { useCreditCardsData } from "@/hooks/useCreditCardsData";
+import { useRecurringExpensesData } from "@/hooks/useRecurringExpensesData";
+import { useCategoriesData } from "@/hooks/useCategoriesData";
 import { AddCreditCardDialog } from "@/components/credit-cards/AddCreditCardDialog";
 import { CreditCardsList } from "@/components/credit-cards/CreditCardsList";
+import { AddRecurringExpenseDialog } from "@/components/recurring/AddRecurringExpenseDialog";
+import { RecurringExpensesList } from "@/components/recurring/RecurringExpensesList";
 
 interface GmailConnection {
   id: string;
@@ -124,6 +128,18 @@ export default function Settings() {
   
   // Credit cards hook
   const { creditCards, addCreditCard, deleteCreditCard } = useCreditCardsData(userId);
+  
+  // Recurring expenses hook
+  const { 
+    recurringExpenses, 
+    addRecurringExpense, 
+    updateRecurringExpense, 
+    deleteRecurringExpense, 
+    generateTransaction 
+  } = useRecurringExpensesData(userId);
+  
+  // Categories hook
+  const { categories: allCategories } = useCategoriesData();
   
   // Parser form state
   const [parserForm, setParserForm] = useState({
@@ -447,12 +463,40 @@ export default function Settings() {
         <div className="max-w-4xl mx-auto p-6">
           <h1 className="text-2xl font-bold mb-6">Configuración</h1>
 
-        <Tabs defaultValue="credit-cards" className="space-y-6">
+        <Tabs defaultValue="recurring" className="space-y-6">
           <TabsList>
+            <TabsTrigger value="recurring">Gastos Recurrentes</TabsTrigger>
             <TabsTrigger value="credit-cards">Tarjetas de Crédito</TabsTrigger>
             <TabsTrigger value="gmail">Gmail</TabsTrigger>
             <TabsTrigger value="parsers">Parsers</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="recurring" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Repeat className="h-5 w-5" />
+                  Gastos Recurrentes
+                </CardTitle>
+                <CardDescription>
+                  Configura gastos que se repiten cada mes. Podrás generarlos con un click y ajustar el monto si es necesario.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <AddRecurringExpenseDialog 
+                  categories={allCategories} 
+                  onAdd={addRecurringExpense} 
+                />
+                <RecurringExpensesList
+                  expenses={recurringExpenses}
+                  categories={allCategories}
+                  onDelete={deleteRecurringExpense}
+                  onUpdate={updateRecurringExpense}
+                  onGenerate={generateTransaction}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="credit-cards" className="space-y-4">
             <Card>
