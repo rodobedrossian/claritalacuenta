@@ -418,7 +418,8 @@ const Index = () => {
           <StatCard 
             title="Current Savings" 
             value={`${formatCurrency(currentSavings.usd, "USD")} / ${formatCurrency(currentSavings.ars, "ARS")}`} 
-            icon={PiggyBank} 
+            icon={PiggyBank}
+            onClick={() => navigate("/savings")}
           />
           <StatCard 
             title="Total Income" 

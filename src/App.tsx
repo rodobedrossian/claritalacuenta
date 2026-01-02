@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Transactions from "./pages/Transactions";
 import PendingTransactions from "./pages/PendingTransactions";
 import Settings from "./pages/Settings";
+import Savings from "./pages/Savings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/pending" element={<PendingTransactions />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/savings" element={<Savings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

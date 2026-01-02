@@ -140,6 +140,63 @@ export type Database = {
         }
         Relationships: []
       }
+      investments: {
+        Row: {
+          created_at: string | null
+          currency: string
+          current_amount: number
+          end_date: string | null
+          id: string
+          institution: string | null
+          interest_rate: number | null
+          investment_type: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          principal_amount: number
+          rate_type: string | null
+          start_date: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          currency: string
+          current_amount: number
+          end_date?: string | null
+          id?: string
+          institution?: string | null
+          interest_rate?: number | null
+          investment_type: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          principal_amount: number
+          rate_type?: string | null
+          start_date: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          currency?: string
+          current_amount?: number
+          end_date?: string | null
+          id?: string
+          institution?: string | null
+          interest_rate?: number | null
+          investment_type?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          principal_amount?: number
+          rate_type?: string | null
+          start_date?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       processed_emails: {
         Row: {
           gmail_connection_id: string | null
@@ -230,6 +287,72 @@ export type Database = {
           id?: string
           updated_at?: string
           usd_amount?: number
+        }
+        Relationships: []
+      }
+      savings_entries: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string
+          entry_type: string
+          id: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency: string
+          entry_type: string
+          id?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string
+          entry_type?: string
+          id?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      savings_goals: {
+        Row: {
+          created_at: string | null
+          currency: string
+          id: string
+          is_completed: boolean | null
+          name: string
+          target_amount: number
+          target_date: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          currency: string
+          id?: string
+          is_completed?: boolean | null
+          name: string
+          target_amount: number
+          target_date?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          currency?: string
+          id?: string
+          is_completed?: boolean | null
+          name?: string
+          target_amount?: number
+          target_date?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
