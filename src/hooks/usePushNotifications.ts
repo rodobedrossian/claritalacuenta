@@ -124,14 +124,22 @@ export function usePushNotifications(userId: string | null) {
       // Register service worker if not already
       const registration = await navigator.serviceWorker.ready;
 
-      // Get VAPID public key - this should be set in .env as VITE_VAPID_PUBLIC_KEY
-      // The VAPID public key is safe to expose publicly
-      const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+      // Fetch VAPID public key from backend
+      let vapidPublicKey: string | null = null;
+      try {
+        const response = await supabase.functions.invoke("get-vapid-key");
+        if (response.data?.vapidPublicKey) {
+          vapidPublicKey = response.data.vapidPublicKey;
+        } else {
+          console.error("Failed to get VAPID key:", response.error);
+        }
+      } catch (err) {
+        console.error("Error fetching VAPID key:", err);
+      }
       
       if (!vapidPublicKey) {
-        console.warn("VAPID public key not configured in .env - using fallback subscription method");
-        // Still allow subscription for basic push support
-        toast.info("Configuración de notificaciones en proceso");
+        toast.error("Error de configuración de notificaciones");
+        return false;
       }
 
       // Convert VAPID key to Uint8Array
@@ -146,24 +154,17 @@ export function usePushNotifications(userId: string | null) {
         return outputArray;
       };
 
-      // Subscribe to push - use VAPID key if available
+      // Subscribe to push with VAPID key
       let subscription: PushSubscription;
       try {
-        const subscribeOptions: PushSubscriptionOptionsInit = {
-          userVisibleOnly: true,
-        };
-        
-        if (vapidPublicKey) {
-          subscribeOptions.applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
-        }
-        
-        subscription = await registration.pushManager.subscribe(subscribeOptions);
-      } catch (pushError) {
-        console.error("Push subscription error:", pushError);
-        // Try without VAPID key as fallback
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
         });
+      } catch (pushError) {
+        console.error("Push subscription error:", pushError);
+        toast.error("Error al suscribirse a notificaciones");
+        return false;
       }
 
       const subJson = subscription.toJSON();
