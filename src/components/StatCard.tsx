@@ -8,11 +8,15 @@ interface StatCardProps {
   change?: string;
   icon: LucideIcon;
   trend?: "up" | "down";
+  onClick?: () => void;
 }
 
-export const StatCard = ({ title, value, subtitle, change, icon: Icon, trend }: StatCardProps) => {
+export const StatCard = ({ title, value, subtitle, change, icon: Icon, trend, onClick }: StatCardProps) => {
   return (
-    <Card className="p-6 gradient-card border-border/50 hover:border-primary/50 transition-smooth shadow-glow">
+    <Card 
+      className={`p-6 gradient-card border-border/50 hover:border-primary/50 transition-smooth shadow-glow ${onClick ? 'cursor-pointer' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">{title}</p>
