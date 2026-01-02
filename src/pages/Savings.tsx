@@ -87,12 +87,12 @@ const Savings = () => {
 
   const fetchAllData = async () => {
     try {
-      // Fetch savings
+      // Fetch savings (single aggregated row)
       const { data: savingsData } = await supabase
         .from("savings")
         .select("usd_amount, ars_amount")
         .maybeSingle();
-      
+
       if (savingsData) {
         setCurrentSavings({
           usd: Number(savingsData.usd_amount),
@@ -107,7 +107,7 @@ const Savings = () => {
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      
+
       if (rateData) {
         setExchangeRate(Number(rateData.rate));
       }
@@ -117,15 +117,42 @@ const Savings = () => {
         .from("savings_entries")
         .select("*")
         .order("created_at", { ascending: false });
-      
-      if (entriesData) {
-        setEntries(entriesData.map(e => ({
-          ...e,
-          amount: Number(e.amount),
-          currency: e.currency as "USD" | "ARS",
-          entry_type: e.entry_type as "deposit" | "withdrawal" | "interest",
-          savings_type: (e.savings_type || "cash") as "cash" | "bank" | "other",
-        })));
+
+      const mappedEntries = entriesData
+        ? entriesData.map((e) => ({
+            ...e,
+            amount: Number(e.amount),
+            currency: e.currency as "USD" | "ARS",
+            entry_type: e.entry_type as "deposit" | "withdrawal" | "interest",
+            savings_type: (e.savings_type || "cash") as "cash" | "bank" | "other",
+          }))
+        : [];
+
+      setEntries(mappedEntries);
+
+      // If the aggregated row is missing, rebuild it from entries once (so goals/stats reflect reality)
+      if (!savingsData && mappedEntries.length > 0) {
+        const rebuilt = mappedEntries.reduce(
+          (acc, e) => {
+            const delta = e.entry_type === "withdrawal" ? -e.amount : e.amount;
+            if (e.currency === "USD") acc.usd += delta;
+            else acc.ars += delta;
+            return acc;
+          },
+          { usd: 0, ars: 0 }
+        );
+
+        rebuilt.usd = Math.max(0, rebuilt.usd);
+        rebuilt.ars = Math.max(0, rebuilt.ars);
+
+        await supabase.from("savings").insert([
+          {
+            usd_amount: rebuilt.usd,
+            ars_amount: rebuilt.ars,
+          },
+        ]);
+
+        setCurrentSavings(rebuilt);
       }
 
       // Fetch investments
@@ -133,17 +160,19 @@ const Savings = () => {
         .from("investments")
         .select("*")
         .order("created_at", { ascending: false });
-      
+
       if (investmentsData) {
-        setInvestments(investmentsData.map(i => ({
-          ...i,
-          principal_amount: Number(i.principal_amount),
-          current_amount: Number(i.current_amount),
-          interest_rate: i.interest_rate ? Number(i.interest_rate) : null,
-          currency: i.currency as "USD" | "ARS",
-          investment_type: i.investment_type as Investment["investment_type"],
-          rate_type: i.rate_type as Investment["rate_type"],
-        })));
+        setInvestments(
+          investmentsData.map((i) => ({
+            ...i,
+            principal_amount: Number(i.principal_amount),
+            current_amount: Number(i.current_amount),
+            interest_rate: i.interest_rate ? Number(i.interest_rate) : null,
+            currency: i.currency as "USD" | "ARS",
+            investment_type: i.investment_type as Investment["investment_type"],
+            rate_type: i.rate_type as Investment["rate_type"],
+          }))
+        );
       }
 
       // Fetch goals
@@ -167,48 +196,61 @@ const Savings = () => {
 
   const handleAddEntry = async (entry: Omit<SavingsEntry, "id" | "user_id" | "created_at">) => {
     if (!user) return;
-    
+
     try {
       const { data, error } = await supabase
         .from("savings_entries")
         .insert([{ ...entry, user_id: user.id }])
         .select()
         .single();
-      
+
       if (error) throw error;
-      
-      // Update savings table
+
+      // Update aggregated savings table (create the single row if missing)
       const { data: savingsRecord } = await supabase
         .from("savings")
         .select("id, usd_amount, ars_amount")
         .maybeSingle();
-      
+
+      const field = entry.currency === "USD" ? "usd_amount" : "ars_amount";
+      const currentAmount = Number(savingsRecord?.[field] ?? 0);
+      const adjustment = entry.entry_type === "withdrawal" ? -entry.amount : entry.amount;
+      const newAmount = Math.max(0, currentAmount + adjustment);
+
       if (savingsRecord) {
-        const field = entry.currency === "USD" ? "usd_amount" : "ars_amount";
-        const currentAmount = Number(savingsRecord[field]);
-        const adjustment = entry.entry_type === "withdrawal" ? -entry.amount : entry.amount;
-        
-        await supabase
+        const { error: updateError } = await supabase
           .from("savings")
-          .update({ [field]: currentAmount + adjustment })
+          .update({ [field]: newAmount })
           .eq("id", savingsRecord.id);
-        
-        setCurrentSavings(prev => ({
-          ...prev,
-          [entry.currency === "USD" ? "usd" : "ars"]: currentAmount + adjustment,
-        }));
+        if (updateError) throw updateError;
+      } else {
+        const insertPayload = {
+          usd_amount: entry.currency === "USD" ? newAmount : 0,
+          ars_amount: entry.currency === "ARS" ? newAmount : 0,
+        };
+
+        const { error: insertError } = await supabase.from("savings").insert([insertPayload]);
+        if (insertError) throw insertError;
       }
-      
+
+      setCurrentSavings((prev) => ({
+        ...prev,
+        [entry.currency === "USD" ? "usd" : "ars"]: newAmount,
+      }));
+
       if (data) {
-        setEntries([{
-          ...data,
-          amount: Number(data.amount),
-          currency: data.currency as "USD" | "ARS",
-          entry_type: data.entry_type as "deposit" | "withdrawal" | "interest",
-          savings_type: (data.savings_type || "cash") as "cash" | "bank" | "other",
-        }, ...entries]);
+        setEntries([
+          {
+            ...data,
+            amount: Number(data.amount),
+            currency: data.currency as "USD" | "ARS",
+            entry_type: data.entry_type as "deposit" | "withdrawal" | "interest",
+            savings_type: (data.savings_type || "cash") as "cash" | "bank" | "other",
+          },
+          ...entries,
+        ]);
       }
-      
+
       toast.success("Movimiento registrado");
     } catch (error) {
       console.error("Error adding entry:", error);
