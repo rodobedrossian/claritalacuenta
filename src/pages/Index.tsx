@@ -54,6 +54,10 @@ const Index = () => {
     usd: 0,
     ars: 0
   });
+  const [monthlySavingsTransfers, setMonthlySavingsTransfers] = useState({
+    usd: 0,
+    ars: 0
+  });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [users, setUsers] = useState<Array<{
@@ -100,6 +104,47 @@ const Index = () => {
       fetchExchangeRate();
     }
   }, [user]);
+
+  // Fetch monthly savings transfers when month changes
+  useEffect(() => {
+    if (user) {
+      fetchMonthlySavingsTransfers();
+    }
+  }, [user, activeMonth]);
+  const fetchMonthlySavingsTransfers = async () => {
+    try {
+      const monthStart = startOfMonth(activeMonth);
+      const monthEnd = endOfMonth(activeMonth);
+      
+      // Fetch savings entries that are transfers from balance (deposits with specific notes)
+      const { data: entriesData } = await supabase
+        .from("savings_entries")
+        .select("amount, currency, notes")
+        .eq("entry_type", "deposit")
+        .gte("created_at", monthStart.toISOString())
+        .lte("created_at", monthEnd.toISOString());
+      
+      if (entriesData) {
+        // Filter for transfers from balance (those with the specific note)
+        const transfers = entriesData.filter(e => 
+          e.notes?.includes("Transferencia desde balance")
+        );
+        
+        const usdTransfers = transfers
+          .filter(e => e.currency === "USD")
+          .reduce((sum, e) => sum + (typeof e.amount === 'string' ? parseFloat(e.amount) : e.amount), 0);
+        
+        const arsTransfers = transfers
+          .filter(e => e.currency === "ARS")
+          .reduce((sum, e) => sum + (typeof e.amount === 'string' ? parseFloat(e.amount) : e.amount), 0);
+        
+        setMonthlySavingsTransfers({ usd: usdTransfers, ars: arsTransfers });
+      }
+    } catch (error) {
+      console.error("Error fetching monthly savings transfers:", error);
+    }
+  };
+
   const fetchData = async () => {
     try {
       // Fetch users/profiles
@@ -337,6 +382,15 @@ const Index = () => {
         ...prev,
         [currency === "USD" ? "usd" : "ars"]: newAmount
       }));
+      
+      // If this is a transfer from balance, update monthly transfers state
+      if (notes?.includes("Transferencia desde balance") && entryType === "deposit") {
+        setMonthlySavingsTransfers(prev => ({
+          ...prev,
+          [currency === "USD" ? "usd" : "ars"]: prev[currency === "USD" ? "usd" : "ars"] + amount
+        }));
+      }
+      
       toast.success(entryType === "deposit" ? "Depósito registrado" : "Retiro registrado");
     } catch (error) {
       console.error("Error updating savings:", error);
@@ -404,9 +458,9 @@ const Index = () => {
   const totalExpensesUSD = monthlyTransactions.filter(t => t.type === "expense" && t.currency === "USD" && !t.from_savings).reduce((sum, t) => sum + t.amount, 0);
   const totalExpensesARS = monthlyTransactions.filter(t => t.type === "expense" && t.currency === "ARS" && !t.from_savings).reduce((sum, t) => sum + t.amount, 0);
 
-  // Available balance per currency (for transfer to savings)
-  const availableBalanceUSD = Math.max(0, totalIncomeUSD - totalExpensesUSD);
-  const availableBalanceARS = Math.max(0, totalIncomeARS - totalExpensesARS);
+  // Available balance per currency (for transfer to savings) - subtract already transferred amounts
+  const availableBalanceUSD = Math.max(0, totalIncomeUSD - totalExpensesUSD - monthlySavingsTransfers.usd);
+  const availableBalanceARS = Math.max(0, totalIncomeARS - totalExpensesARS - monthlySavingsTransfers.ars);
 
   // Calcular valores globalizados en ARS
   const globalIncomeARS = (totalIncomeUSD * exchangeRate) + totalIncomeARS;
