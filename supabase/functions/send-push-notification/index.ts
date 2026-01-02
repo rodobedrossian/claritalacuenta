@@ -41,23 +41,46 @@ function normalizeVapidSubject(subjectRaw: string): string {
   return s;
 }
 
-function exportedVapidKeysFromBase64Url(
-  publicKeyB64: string,
-  privateKeyB64: string,
-): webpush.ExportedVapidKeys {
-  const publicKeyBytes = base64UrlDecode(publicKeyB64);
-  const privateKeyBytes = base64UrlDecode(privateKeyB64);
+function exportedVapidKeysFromBase64Url(publicKeyB64: string, privateKeyB64: string): webpush.ExportedVapidKeys {
+  // Trim whitespace from keys
+  const publicKeyB64Clean = publicKeyB64.trim();
+  const privateKeyB64Clean = privateKeyB64.trim();
 
+  if (!publicKeyB64Clean || !privateKeyB64Clean) {
+    throw new Error("VAPID keys cannot be empty");
+  }
+
+  const publicKeyBytes = base64UrlDecode(publicKeyB64Clean);
+  const privateKeyBytes = base64UrlDecode(privateKeyB64Clean);
+
+  // Validate public key: should be 65 bytes (0x04 prefix + 32 bytes x + 32 bytes y)
   if (publicKeyBytes.length !== 65) {
-    throw new Error(`Invalid VAPID public key length: ${publicKeyBytes.length} (expected 65)`);
-  }
-  if (privateKeyBytes.length !== 32) {
-    throw new Error(`Invalid VAPID private key length: ${privateKeyBytes.length} (expected 32)`);
+    throw new Error(
+      `Invalid VAPID public key length: ${publicKeyBytes.length} (expected 65). ` +
+        `Key might be incorrectly formatted. Make sure you're using the raw base64url encoded key from 'web-push generate-vapid-keys'`,
+    );
   }
 
+  // Validate private key: should be 32 bytes
+  if (privateKeyBytes.length !== 32) {
+    throw new Error(
+      `Invalid VAPID private key length: ${privateKeyBytes.length} (expected 32). ` +
+        `Key might be incorrectly formatted. Make sure you're using the raw base64url encoded key from 'web-push generate-vapid-keys'`,
+    );
+  }
+
+  // Validate public key starts with 0x04 (uncompressed point indicator)
+  if (publicKeyBytes[0] !== 0x04) {
+    throw new Error(
+      `Invalid VAPID public key format: first byte should be 0x04 (uncompressed), got 0x${publicKeyBytes[0].toString(16)}`,
+    );
+  }
+
+  // Extract x and y coordinates (skip the 0x04 prefix)
   const x = publicKeyBytes.slice(1, 33);
   const y = publicKeyBytes.slice(33, 65);
 
+  // Create JWK format (base64url encode the coordinates)
   const publicJwk: JsonWebKey = {
     kty: "EC",
     crv: "P-256",
@@ -85,11 +108,29 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
-    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
-    const vapidSubject = normalizeVapidSubject(
-      Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@financeflow.app",
-    );
+    const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
+    const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
+
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      throw new Error("VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY environment variables are required");
+    }
+
+    const vapidSubject = normalizeVapidSubject(Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@financeflow.app");
+
+    // Validate subject format
+    if (
+      !vapidSubject.startsWith("mailto:") &&
+      !vapidSubject.startsWith("https://") &&
+      !vapidSubject.startsWith("http://")
+    ) {
+      console.warn(`VAPID_SUBJECT should start with 'mailto:', 'https://', or 'http://'. Got: ${vapidSubject}`);
+    }
+
+    console.log("VAPID Configuration:", {
+      subject: vapidSubject,
+      publicKeyLength: vapidPublicKey.length,
+      privateKeyLength: vapidPrivateKey.length,
+    });
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -121,12 +162,39 @@ serve(async (req) => {
     }
 
     // Use a standards-compliant WebPush implementation (payload encryption + VAPID headers)
-    const exportedKeys = exportedVapidKeysFromBase64Url(vapidPublicKey, vapidPrivateKey);
-    const importedVapidKeys = await webpush.importVapidKeys(exportedKeys, { extractable: false });
-    const appServer = await webpush.ApplicationServer.new({
-      contactInformation: vapidSubject,
-      vapidKeys: importedVapidKeys,
-    });
+    let exportedKeys;
+    try {
+      exportedKeys = exportedVapidKeysFromBase64Url(vapidPublicKey, vapidPrivateKey);
+      console.log("VAPID keys converted successfully");
+    } catch (keyError) {
+      console.error("Error converting VAPID keys:", keyError);
+      throw new Error(`Invalid VAPID key format: ${keyError instanceof Error ? keyError.message : String(keyError)}`);
+    }
+
+    let importedVapidKeys;
+    try {
+      importedVapidKeys = await webpush.importVapidKeys(exportedKeys, { extractable: false });
+      console.log("VAPID keys imported successfully");
+    } catch (importError) {
+      console.error("Error importing VAPID keys:", importError);
+      throw new Error(
+        `Failed to import VAPID keys: ${importError instanceof Error ? importError.message : String(importError)}`,
+      );
+    }
+
+    let appServer;
+    try {
+      appServer = await webpush.ApplicationServer.new({
+        contactInformation: vapidSubject, // This is critical for JWT generation
+        vapidKeys: importedVapidKeys,
+      });
+      console.log("ApplicationServer created with subject:", vapidSubject);
+    } catch (serverError) {
+      console.error("Error creating ApplicationServer:", serverError);
+      throw new Error(
+        `Failed to create ApplicationServer: ${serverError instanceof Error ? serverError.message : String(serverError)}`,
+      );
+    }
 
     const pushPayload = JSON.stringify({
       title: payload.title,
