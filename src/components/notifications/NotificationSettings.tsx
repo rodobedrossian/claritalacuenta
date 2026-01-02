@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Bell, Smartphone, Trash2, Send, Clock, Loader2, RefreshCw } from "lucide-react";
+import { Bell, Smartphone, Trash2, Send, Clock, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface NotificationSettingsProps {
   isSupported: boolean;
@@ -168,7 +169,24 @@ export function NotificationSettings({
             <div className="p-3 rounded-lg bg-destructive/10 text-sm text-destructive">
               Las notificaciones están bloqueadas. Por favor, habilítalas en la configuración de tu navegador.
             </div>
-          )}
+        )}
+
+        {/* iOS Troubleshooting Checklist */}
+        {hasSubscription && (
+          <Alert className="bg-muted/50 border-muted-foreground/20">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle className="text-sm">¿No ves las notificaciones en iPhone?</AlertTitle>
+            <AlertDescription className="text-xs space-y-2 mt-2">
+              <p>Verifica estos puntos:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Abre <strong>Ajustes → Notificaciones → FinanceFlow</strong> y activa "Permitir notificaciones"</li>
+                <li>Si usas <strong>Modo Enfoque</strong> (Focus), verifica que FinanceFlow esté permitido</li>
+                <li>Asegúrate de abrir la app desde el <strong>ícono en pantalla de inicio</strong> (no Safari)</li>
+                <li>Si sigue sin funcionar, usa el botón <strong>Resetear</strong> y luego <strong>Probar</strong></li>
+              </ol>
+            </AlertDescription>
+          </Alert>
+        )}
         </div>
 
         {/* Devices */}
