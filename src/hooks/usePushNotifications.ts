@@ -231,6 +231,61 @@ export function usePushNotifications(userId: string | null) {
     }
   }, [fetchData]);
 
+  // Reset subscription (delete current device's subscription and re-subscribe)
+  const resetSubscription = useCallback(async () => {
+    if (!userId || !isSupported) return false;
+
+    setSubscribing(true);
+    try {
+      // First, unsubscribe from push manager if there's an active subscription
+      const registration = await navigator.serviceWorker.ready;
+      const existingSubscription = await registration.pushManager.getSubscription();
+      
+      if (existingSubscription) {
+        // Find and delete matching subscription from database
+        const endpoint = existingSubscription.endpoint;
+        const { error: deleteError } = await supabase
+          .from("push_subscriptions")
+          .delete()
+          .eq("user_id", userId)
+          .eq("endpoint", endpoint);
+
+        if (deleteError) {
+          console.error("Error deleting old subscription:", deleteError);
+        }
+
+        // Unsubscribe from push manager
+        await existingSubscription.unsubscribe();
+        console.log("Old subscription removed from push manager");
+      }
+
+      // Delete all subscriptions for this user from database (cleanup)
+      const { error: cleanupError } = await supabase
+        .from("push_subscriptions")
+        .delete()
+        .eq("user_id", userId);
+
+      if (cleanupError) {
+        console.error("Error cleaning up subscriptions:", cleanupError);
+      }
+
+      // Now create a fresh subscription
+      const success = await subscribe();
+      
+      if (success) {
+        toast.success("Suscripción reseteada correctamente");
+      }
+      
+      return success;
+    } catch (error) {
+      console.error("Error resetting subscription:", error);
+      toast.error("Error al resetear suscripción");
+      return false;
+    } finally {
+      setSubscribing(false);
+    }
+  }, [userId, isSupported, subscribe]);
+
   // Update notification settings
   const updateSettings = useCallback(async (newSettings: Partial<NotificationSettings>) => {
     if (!userId) return;
@@ -288,6 +343,7 @@ export function usePushNotifications(userId: string | null) {
     subscribing,
     subscribe,
     unsubscribe,
+    resetSubscription,
     updateSettings,
     sendTestNotification,
     refetch: fetchData,

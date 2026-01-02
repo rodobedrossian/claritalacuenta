@@ -546,6 +546,7 @@ export default function Settings() {
               subscribing={pushNotifications.subscribing}
               onSubscribe={pushNotifications.subscribe}
               onUnsubscribe={pushNotifications.unsubscribe}
+              onResetSubscription={pushNotifications.resetSubscription}
               onUpdateSettings={pushNotifications.updateSettings}
               onSendTest={pushNotifications.sendTestNotification}
             />

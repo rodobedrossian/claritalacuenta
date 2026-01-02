@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Smartphone, Trash2, Send, Clock, Loader2 } from "lucide-react";
+import { Bell, Smartphone, Trash2, Send, Clock, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -30,6 +30,7 @@ interface NotificationSettingsProps {
   subscribing: boolean;
   onSubscribe: () => Promise<boolean>;
   onUnsubscribe: (id: string) => Promise<void>;
+  onResetSubscription: () => Promise<boolean>;
   onUpdateSettings: (settings: Partial<NotificationSettingsProps["settings"]>) => Promise<void>;
   onSendTest: () => Promise<void>;
 }
@@ -44,10 +45,12 @@ export function NotificationSettings({
   subscribing,
   onSubscribe,
   onUnsubscribe,
+  onResetSubscription,
   onUpdateSettings,
   onSendTest,
 }: NotificationSettingsProps) {
   const [sendingTest, setSendingTest] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const hasSubscription = subscriptions.length > 0;
 
   const timeOptions = Array.from({ length: 24 }, (_, i) => ({
@@ -107,25 +110,46 @@ export function NotificationSettings({
               </Button>
             )}
             {hasSubscription && (
-              <Button 
-                variant="outline" 
-                onClick={async () => {
-                  setSendingTest(true);
-                  try {
-                    await onSendTest();
-                  } finally {
-                    setSendingTest(false);
-                  }
-                }}
-                disabled={sendingTest}
-              >
-                {sendingTest ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4 mr-2" />
-                )}
-                {sendingTest ? "Enviando..." : "Probar notificación"}
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={async () => {
+                    setSendingTest(true);
+                    try {
+                      await onSendTest();
+                    } finally {
+                      setSendingTest(false);
+                    }
+                  }}
+                  disabled={sendingTest || resetting}
+                >
+                  {sendingTest ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  {sendingTest ? "Enviando..." : "Probar"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={async () => {
+                    setResetting(true);
+                    try {
+                      await onResetSubscription();
+                    } finally {
+                      setResetting(false);
+                    }
+                  }}
+                  disabled={resetting || sendingTest}
+                >
+                  {resetting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  {resetting ? "Reseteando..." : "Resetear"}
+                </Button>
+              </div>
             )}
           </div>
 
