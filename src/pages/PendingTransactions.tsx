@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Check, Loader2, Mail, Pencil, Trash2 } from "lucide-react";
+import { Check, Loader2, Mail, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -154,18 +155,10 @@ const PendingTransactions = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/")}
-              title="Volver al dashboard"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+    <AppLayout>
+      <div className="min-h-screen">
+        <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="container mx-auto px-6 py-4">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold">Transacciones Pendientes</h1>
               <Badge variant="secondary" className="text-sm">
@@ -173,238 +166,238 @@ const PendingTransactions = () => {
               </Badge>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="container mx-auto px-6 py-8">
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : transactions.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Mail className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">
-                No hay transacciones pendientes
-              </h3>
-              <p className="text-muted-foreground">
-                Las transacciones importadas desde Gmail aparecerán aquí para
-                que las revises antes de confirmarlas.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {transactions.map((transaction) => {
-              const isEditing = editingId === transaction.id;
-              const isSaving = savingId === transaction.id;
+        <main className="container mx-auto px-6 py-8">
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : transactions.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Mail className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">
+                  No hay transacciones pendientes
+                </h3>
+                <p className="text-muted-foreground">
+                  Las transacciones importadas desde Gmail aparecerán aquí para
+                  que las revises antes de confirmarlas.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {transactions.map((transaction) => {
+                const isEditing = editingId === transaction.id;
+                const isSaving = savingId === transaction.id;
 
-              return (
-                <Card key={transaction.id} className="relative">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant={
-                            transaction.type === "income"
-                              ? "default"
-                              : "destructive"
-                          }
-                        >
-                          {transaction.type === "income" ? "Ingreso" : "Gasto"}
-                        </Badge>
-                        {transaction.source === "email" && (
-                          <Badge variant="outline" className="gap-1">
-                            <Mail className="h-3 w-3" />
-                            Email
+                return (
+                  <Card key={transaction.id} className="relative">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={
+                              transaction.type === "income"
+                                ? "default"
+                                : "destructive"
+                            }
+                          >
+                            {transaction.type === "income" ? "Ingreso" : "Gasto"}
                           </Badge>
-                        )}
+                          {transaction.source === "email" && (
+                            <Badge variant="outline" className="gap-1">
+                              <Mail className="h-3 w-3" />
+                              Email
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {format(new Date(transaction.date), "dd/MM/yyyy HH:mm")}
+                        </span>
                       </div>
-                      <span className="text-sm text-muted-foreground">
-                        {format(new Date(transaction.date), "dd/MM/yyyy HH:mm")}
-                      </span>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {isEditing ? (
-                      <>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {isEditing ? (
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <label className="text-sm font-medium mb-1 block">
+                                Monto
+                              </label>
+                              <Input
+                                type="number"
+                                value={editForm.amount || 0}
+                                onChange={(e) =>
+                                  setEditForm((prev) => ({
+                                    ...prev,
+                                    amount: parseFloat(e.target.value) || 0,
+                                  }))
+                                }
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium mb-1 block">
+                                Moneda
+                              </label>
+                              <Select
+                                value={editForm.currency}
+                                onValueChange={(value) =>
+                                  setEditForm((prev) => ({
+                                    ...prev,
+                                    currency: value as "USD" | "ARS",
+                                  }))
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="ARS">ARS</SelectItem>
+                                  <SelectItem value="USD">USD</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium mb-1 block">
+                                Categoría
+                              </label>
+                              <Select
+                                value={editForm.category}
+                                onValueChange={(value) =>
+                                  setEditForm((prev) => ({
+                                    ...prev,
+                                    category: value,
+                                  }))
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {filteredCategories.map((cat) => (
+                                    <SelectItem key={cat.id} value={cat.name}>
+                                      {cat.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
                           <div>
                             <label className="text-sm font-medium mb-1 block">
-                              Monto
+                              Descripción
                             </label>
-                            <Input
-                              type="number"
-                              value={editForm.amount || 0}
+                            <Textarea
+                              value={editForm.description || ""}
                               onChange={(e) =>
                                 setEditForm((prev) => ({
                                   ...prev,
-                                  amount: parseFloat(e.target.value) || 0,
+                                  description: e.target.value,
                                 }))
                               }
+                              rows={2}
                             />
                           </div>
-                          <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              Moneda
-                            </label>
-                            <Select
-                              value={editForm.currency}
-                              onValueChange={(value) =>
-                                setEditForm((prev) => ({
-                                  ...prev,
-                                  currency: value as "USD" | "ARS",
-                                }))
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="ARS">ARS</SelectItem>
-                                <SelectItem value="USD">USD</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium mb-1 block">
-                              Categoría
-                            </label>
-                            <Select
-                              value={editForm.category}
-                              onValueChange={(value) =>
-                                setEditForm((prev) => ({
-                                  ...prev,
-                                  category: value,
-                                }))
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {filteredCategories.map((cat) => (
-                                  <SelectItem key={cat.id} value={cat.name}>
-                                    {cat.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium mb-1 block">
-                            Descripción
-                          </label>
-                          <Textarea
-                            value={editForm.description || ""}
-                            onChange={(e) =>
-                              setEditForm((prev) => ({
-                                ...prev,
-                                description: e.target.value,
-                              }))
-                            }
-                            rows={2}
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span
-                            className={`text-2xl font-bold ${
-                              transaction.type === "income"
-                                ? "text-green-500"
-                                : "text-red-500"
-                            }`}
-                          >
-                            {transaction.type === "income" ? "+" : "-"}
-                            {formatCurrency(
-                              transaction.amount,
-                              transaction.currency
-                            )}
-                          </span>
-                          <Badge variant="secondary">
-                            {transaction.category}
-                          </Badge>
-                        </div>
-                        <p className="text-muted-foreground">
-                          {transaction.description}
-                        </p>
-                      </>
-                    )}
-
-                    <div className="flex justify-end gap-2 pt-2 border-t border-border/50">
-                      {isEditing ? (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleCancelEdit}
-                            disabled={isSaving}
-                          >
-                            Cancelar
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleConfirm(transaction)}
-                            disabled={isSaving}
-                            className="gap-1"
-                          >
-                            {isSaving ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Check className="h-4 w-4" />
-                            )}
-                            Confirmar
-                          </Button>
                         </>
                       ) : (
                         <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(transaction.id)}
-                            disabled={isSaving}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Eliminar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(transaction)}
-                            disabled={isSaving}
-                          >
-                            <Pencil className="h-4 w-4 mr-1" />
-                            Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleConfirm(transaction)}
-                            disabled={isSaving}
-                            className="gap-1"
-                          >
-                            {isSaving ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Check className="h-4 w-4" />
-                            )}
-                            Confirmar
-                          </Button>
+                          <div className="flex items-center justify-between">
+                            <span
+                              className={`text-2xl font-bold ${
+                                transaction.type === "income"
+                                  ? "text-success"
+                                  : "text-destructive"
+                              }`}
+                            >
+                              {transaction.type === "income" ? "+" : "-"}
+                              {formatCurrency(
+                                transaction.amount,
+                                transaction.currency
+                              )}
+                            </span>
+                            <Badge variant="secondary">
+                              {transaction.category}
+                            </Badge>
+                          </div>
+                          <p className="text-muted-foreground">
+                            {transaction.description}
+                          </p>
                         </>
                       )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </main>
-    </div>
+
+                      <div className="flex justify-end gap-2 pt-2 border-t border-border/50">
+                        {isEditing ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleCancelEdit}
+                              disabled={isSaving}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleConfirm(transaction)}
+                              disabled={isSaving}
+                              className="gap-1"
+                            >
+                              {isSaving ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Check className="h-4 w-4" />
+                              )}
+                              Confirmar
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(transaction.id)}
+                              disabled={isSaving}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Eliminar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(transaction)}
+                              disabled={isSaving}
+                            >
+                              <Pencil className="h-4 w-4 mr-1" />
+                              Editar
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleConfirm(transaction)}
+                              disabled={isSaving}
+                              className="gap-1"
+                            >
+                              {isSaving ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Check className="h-4 w-4" />
+                              )}
+                              Confirmar
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </main>
+      </div>
+    </AppLayout>
   );
 };
 
