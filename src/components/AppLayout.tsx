@@ -5,6 +5,7 @@ import {
   Receipt, 
   Clock, 
   PiggyBank, 
+  Target,
   Settings, 
   LogOut,
   Menu,
@@ -24,6 +25,7 @@ const navItems = [
   { title: "Transacciones", path: "/transactions", icon: Receipt },
   { title: "Pendientes", path: "/pending", icon: Clock },
   { title: "Ahorros", path: "/savings", icon: PiggyBank },
+  { title: "Presupuestos", path: "/budgets", icon: Target },
   { title: "Configuración", path: "/settings", icon: Settings },
 ];
 

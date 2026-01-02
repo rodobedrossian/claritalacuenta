@@ -11,7 +11,7 @@ import { SpendingChart } from "@/components/SpendingChart";
 import { TimelineChart } from "@/components/TimelineChart";
 import { AppLayout } from "@/components/AppLayout";
 import { BudgetProgress } from "@/components/budgets/BudgetProgress";
-import { ManageBudgetsDialog } from "@/components/budgets/ManageBudgetsDialog";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -28,7 +28,6 @@ const Index = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeMonth, setActiveMonth] = useState<Date>(new Date());
-  const [manageBudgetsOpen, setManageBudgetsOpen] = useState(false);
 
   // Use the new consolidated data hook
   const { 
@@ -346,7 +345,7 @@ const Index = () => {
             {budgetsWithSpending.length > 0 ? (
               <BudgetProgress
                 budgets={budgetsWithSpending}
-                onManageBudgets={() => setManageBudgetsOpen(true)}
+                onManageBudgets={() => navigate("/budgets")}
               />
             ) : (
               <Card className="p-6 gradient-card border-border/50">
@@ -358,7 +357,7 @@ const Index = () => {
                     </p>
                   </div>
                   <Button 
-                    onClick={() => setManageBudgetsOpen(true)}
+                    onClick={() => navigate("/budgets")}
                     className="gradient-primary"
                   >
                     Crear Presupuesto
@@ -393,15 +392,6 @@ const Index = () => {
           users={users}
         />
 
-        <ManageBudgetsDialog
-          open={manageBudgetsOpen}
-          onOpenChange={setManageBudgetsOpen}
-          budgets={budgets}
-          categories={categories}
-          onAdd={addBudget}
-          onUpdate={updateBudget}
-          onDelete={deleteBudget}
-        />
       </div>
     </AppLayout>
   );
