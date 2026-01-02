@@ -1,4 +1,5 @@
-import { Bell, Smartphone, Trash2, Send, Clock } from "lucide-react";
+import { useState } from "react";
+import { Bell, Smartphone, Trash2, Send, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -46,6 +47,7 @@ export function NotificationSettings({
   onUpdateSettings,
   onSendTest,
 }: NotificationSettingsProps) {
+  const [sendingTest, setSendingTest] = useState(false);
   const hasSubscription = subscriptions.length > 0;
 
   const timeOptions = Array.from({ length: 24 }, (_, i) => ({
@@ -105,9 +107,24 @@ export function NotificationSettings({
               </Button>
             )}
             {hasSubscription && (
-              <Button variant="outline" onClick={onSendTest}>
-                <Send className="h-4 w-4 mr-2" />
-                Enviar prueba
+              <Button 
+                variant="outline" 
+                onClick={async () => {
+                  setSendingTest(true);
+                  try {
+                    await onSendTest();
+                  } finally {
+                    setSendingTest(false);
+                  }
+                }}
+                disabled={sendingTest}
+              >
+                {sendingTest ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                {sendingTest ? "Enviando..." : "Probar notificación"}
               </Button>
             )}
           </div>
