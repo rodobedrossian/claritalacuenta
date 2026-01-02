@@ -158,9 +158,9 @@ const PendingTransactions = () => {
     <AppLayout>
       <div className="min-h-screen">
         <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-          <div className="container mx-auto px-6 py-4">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">Transacciones Pendientes</h1>
+          <div className="container mx-auto px-4 md:px-6 py-4 pl-14 md:pl-6">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-xl md:text-2xl font-bold">Transacciones Pendientes</h1>
               <Badge variant="secondary" className="text-sm">
                 {transactions.length}
               </Badge>
@@ -168,7 +168,7 @@ const PendingTransactions = () => {
           </div>
         </header>
 
-        <main className="container mx-auto px-6 py-8">
+        <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
           {isLoading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
