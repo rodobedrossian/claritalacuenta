@@ -152,21 +152,27 @@ export const StatementDetail = ({
   useEffect(() => {
     if (Object.keys(learnedCategories).length === 0 || extractedItems.length === 0) return;
 
-    const autoCategories: Record<string, string> = {};
-    let matchCount = 0;
+    setItemCategories(prev => {
+      const updated = { ...prev };
+      let count = 0;
 
-    extractedItems.forEach(item => {
-      const normalized = normalizeDescription(item.descripcion);
-      if (learnedCategories[normalized] && !itemCategories[item.id]) {
-        autoCategories[item.id] = learnedCategories[normalized];
-        matchCount++;
+      extractedItems.forEach(item => {
+        const normalized = normalizeDescription(item.descripcion);
+        const learned = learnedCategories[normalized];
+        
+        // Only assign if there's a match AND no category already set
+        if (learned && !updated[item.id]) {
+          updated[item.id] = learned;
+          count++;
+        }
+      });
+
+      if (count > 0) {
+        setAutoAssignedCount(count);
       }
-    });
 
-    if (matchCount > 0) {
-      setItemCategories(prev => ({ ...autoCategories, ...prev }));
-      setAutoAssignedCount(matchCount);
-    }
+      return updated;
+    });
   }, [learnedCategories, extractedItems]);
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -196,8 +202,38 @@ export const StatementDetail = ({
   });
 
   const handleCategoryChange = (itemId: string, category: string) => {
-    setItemCategories(prev => ({ ...prev, [itemId]: category }));
-    toast.success("Categoría asignada");
+    // Find the current item's description
+    const item = extractedItems.find(i => i.id === itemId);
+    if (!item) return;
+
+    const normalizedDesc = normalizeDescription(item.descripcion);
+    
+    // Find all items with the same description
+    const matchingItems = extractedItems.filter(
+      i => normalizeDescription(i.descripcion) === normalizedDesc
+    );
+
+    // Update all matching items
+    setItemCategories(prev => {
+      const updated = { ...prev };
+      matchingItems.forEach(matchItem => {
+        updated[matchItem.id] = category;
+      });
+      return updated;
+    });
+
+    // Update local learned categories map for future matches
+    setLearnedCategories(prev => ({
+      ...prev,
+      [normalizedDesc]: category
+    }));
+
+    const count = matchingItems.length;
+    if (count > 1) {
+      toast.success(`Categoría asignada a ${count} consumos similares`);
+    } else {
+      toast.success("Categoría asignada");
+    }
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -429,7 +465,8 @@ export const StatementDetail = ({
                           ))}
                         </SelectContent>
                       </Select>
-                      {learnedCategories[normalizeDescription(item.descripcion)] === itemCategories[item.id] && (
+                      {itemCategories[item.id] && 
+                       learnedCategories[normalizeDescription(item.descripcion)] === itemCategories[item.id] && (
                         <span title="Auto-asignada">
                           <Sparkles className="h-3 w-3 text-primary" />
                         </span>
