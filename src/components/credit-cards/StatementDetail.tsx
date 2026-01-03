@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, Search, Check, Edit2 } from "lucide-react";
+import { ArrowLeft, Search, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,12 +23,23 @@ import {
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { StatementImport, StatementTransaction, useCreditCardStatements } from "@/hooks/useCreditCardStatements";
+import { StatementImport } from "@/hooks/useCreditCardStatements";
 
 interface Category {
   id: string;
   name: string;
   type: string;
+}
+
+interface ExtractedItem {
+  id: string;
+  fecha: string;
+  descripcion: string;
+  monto: number;
+  moneda: string;
+  tipo: "consumo" | "cuota" | "impuesto";
+  cuota_actual?: number | null;
+  total_cuotas?: number | null;
 }
 
 interface StatementDetailProps {
@@ -43,46 +54,68 @@ type FilterType = "all" | "consumo" | "cuota" | "impuesto";
 export const StatementDetail = ({ 
   statement, 
   categories, 
-  userId,
   onBack 
 }: StatementDetailProps) => {
-  const [transactions, setTransactions] = useState<StatementTransaction[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkCategory, setBulkCategory] = useState("");
-  
-  const { getStatementTransactions, updateTransactionCategory, bulkUpdateCategories } = useCreditCardStatements(userId);
+  const [itemCategories, setItemCategories] = useState<Record<string, string>>({});
 
-  const loadTransactions = useCallback(async () => {
-    setLoading(true);
-    const txns = await getStatementTransactions(statement.id);
-    setTransactions(txns);
-    setLoading(false);
-  }, [statement.id, getStatementTransactions]);
+  // Transform extracted_data into a flat list of items
+  const extractedItems = useMemo((): ExtractedItem[] => {
+    const items: ExtractedItem[] = [];
+    const data = statement.extracted_data;
+    if (!data) return items;
 
-  useEffect(() => {
-    loadTransactions();
-  }, [loadTransactions]);
+    let idCounter = 0;
+
+    // Add consumos
+    (data.consumos || []).forEach((c) => {
+      items.push({
+        id: `consumo_${idCounter++}`,
+        fecha: c.fecha,
+        descripcion: c.descripcion,
+        monto: c.monto,
+        moneda: c.moneda || "ARS",
+        tipo: "consumo",
+      });
+    });
+
+    // Add cuotas
+    (data.cuotas || []).forEach((c) => {
+      items.push({
+        id: `cuota_${idCounter++}`,
+        fecha: c.fecha,
+        descripcion: c.descripcion,
+        monto: c.monto,
+        moneda: c.moneda || "ARS",
+        tipo: "cuota",
+        cuota_actual: c.cuota_actual,
+        total_cuotas: c.total_cuotas,
+      });
+    });
+
+    // Add impuestos
+    (data.impuestos || []).forEach((i) => {
+      items.push({
+        id: `impuesto_${idCounter++}`,
+        fecha: "",
+        descripcion: i.descripcion,
+        monto: i.monto,
+        moneda: i.moneda || "ARS",
+        tipo: "impuesto",
+      });
+    });
+
+    return items;
+  }, [statement.extracted_data]);
 
   const formatCurrency = (amount: number, currency: string) => {
     return `${currency} ${new Intl.NumberFormat("es-AR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount)}`;
-  };
-
-  const getTransactionType = (description: string): string => {
-    if (description.toLowerCase().includes("impuesto") || 
-        description.toLowerCase().includes("iva") ||
-        description.toLowerCase().includes("percepcion")) {
-      return "impuesto";
-    }
-    if (description.match(/\(\d+\/\d+\)/)) {
-      return "cuota";
-    }
-    return "consumo";
   };
 
   const getBadgeVariant = (type: string) => {
@@ -98,30 +131,20 @@ export const StatementDetail = ({
     }
   };
 
-  const filteredTransactions = transactions.filter((tx) => {
-    const matchesSearch = tx.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const type = getTransactionType(tx.description);
-    const matchesFilter = filterType === "all" || type === filterType;
+  const filteredItems = extractedItems.filter((item) => {
+    const matchesSearch = item.descripcion.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filterType === "all" || item.tipo === filterType;
     return matchesSearch && matchesFilter;
   });
 
-  const handleCategoryChange = async (transactionId: string, category: string) => {
-    const success = await updateTransactionCategory(transactionId, category);
-    if (success) {
-      setTransactions(prev => 
-        prev.map(tx => 
-          tx.id === transactionId ? { ...tx, category } : tx
-        )
-      );
-      toast.success("Categoría actualizada - Presupuesto impactado");
-    } else {
-      toast.error("Error al actualizar la categoría");
-    }
+  const handleCategoryChange = (itemId: string, category: string) => {
+    setItemCategories(prev => ({ ...prev, [itemId]: category }));
+    toast.success("Categoría asignada");
   };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(new Set(filteredTransactions.map(tx => tx.id)));
+      setSelectedIds(new Set(filteredItems.map(item => item.id)));
     } else {
       setSelectedIds(new Set());
     }
@@ -137,27 +160,20 @@ export const StatementDetail = ({
     setSelectedIds(newSelected);
   };
 
-  const handleBulkUpdate = async () => {
+  const handleBulkUpdate = () => {
     if (selectedIds.size === 0 || !bulkCategory) return;
     
-    const idsArray = Array.from(selectedIds);
-    const success = await bulkUpdateCategories(idsArray, bulkCategory);
-    
-    if (success) {
-      setTransactions(prev =>
-        prev.map(tx =>
-          selectedIds.has(tx.id) ? { ...tx, category: bulkCategory } : tx
-        )
-      );
-      setSelectedIds(new Set());
-      setBulkCategory("");
-      toast.success(`${idsArray.length} transacciones actualizadas - Presupuestos impactados`);
-    } else {
-      toast.error("Error al actualizar las categorías");
-    }
+    const newCategories = { ...itemCategories };
+    selectedIds.forEach(id => {
+      newCategories[id] = bulkCategory;
+    });
+    setItemCategories(newCategories);
+    setSelectedIds(new Set());
+    setBulkCategory("");
+    toast.success(`${selectedIds.size} items categorizados`);
   };
 
-  const expenseCategories = categories.filter(c => c.type === "expense");
+  const expenseCategories = categories.filter(c => c.type === "expense" || c.type === "both");
 
   const extractedData = statement.extracted_data;
   const totalArs = extractedData?.resumen?.total_ars || 0;
@@ -196,8 +212,8 @@ export const StatementDetail = ({
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Transacciones</p>
-            <p className="text-lg font-bold">{transactions.length}</p>
+            <p className="text-sm text-muted-foreground">Items extraídos</p>
+            <p className="text-lg font-bold">{extractedItems.length}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Fecha cierre</p>
@@ -271,17 +287,13 @@ export const StatementDetail = ({
         </Card>
       )}
 
-      {/* Transactions Table */}
-      {loading ? (
-        <div className="text-center py-8 text-muted-foreground">
-          Cargando transacciones...
-        </div>
-      ) : filteredTransactions.length === 0 ? (
+      {/* Items Table */}
+      {filteredItems.length === 0 ? (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">
-            {transactions.length === 0 
-              ? "No hay transacciones importadas para este resumen"
-              : "No se encontraron transacciones con los filtros aplicados"}
+            {extractedItems.length === 0 
+              ? "No hay datos extraídos para este resumen"
+              : "No se encontraron items con los filtros aplicados"}
           </p>
         </Card>
       ) : (
@@ -291,7 +303,7 @@ export const StatementDetail = ({
               <TableRow>
                 <TableHead className="w-12">
                   <Checkbox
-                    checked={selectedIds.size === filteredTransactions.length && filteredTransactions.length > 0}
+                    checked={selectedIds.size === filteredItems.length && filteredItems.length > 0}
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
@@ -303,50 +315,52 @@ export const StatementDetail = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map((tx) => {
-                const type = getTransactionType(tx.description);
-                return (
-                  <TableRow key={tx.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.has(tx.id)}
-                        onCheckedChange={(checked) => handleSelectOne(tx.id, !!checked)}
-                      />
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {tx.date ? format(parseISO(tx.date), "dd/MM/yyyy") : "-"}
-                    </TableCell>
-                    <TableCell className="max-w-[300px] truncate">
-                      {tx.description}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getBadgeVariant(type)}>
-                        {type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap font-medium">
-                      {formatCurrency(tx.amount, tx.currency)}
-                    </TableCell>
-                    <TableCell>
-                      <Select 
-                        value={tx.category} 
-                        onValueChange={(value) => handleCategoryChange(tx.id, value)}
-                      >
-                        <SelectTrigger className="w-[150px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {expenseCategories.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.name}>
-                              {cat.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {filteredItems.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedIds.has(item.id)}
+                      onCheckedChange={(checked) => handleSelectOne(item.id, !!checked)}
+                    />
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {item.fecha || "-"}
+                  </TableCell>
+                  <TableCell className="max-w-[300px] truncate">
+                    {item.descripcion}
+                    {item.cuota_actual && item.total_cuotas && (
+                      <span className="text-muted-foreground ml-1">
+                        ({item.cuota_actual}/{item.total_cuotas})
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={getBadgeVariant(item.tipo)}>
+                      {item.tipo}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap font-medium">
+                    {formatCurrency(item.monto, item.moneda)}
+                  </TableCell>
+                  <TableCell>
+                    <Select 
+                      value={itemCategories[item.id] || ""} 
+                      onValueChange={(value) => handleCategoryChange(item.id, value)}
+                    >
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Sin categoría" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {expenseCategories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.name}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </Card>
