@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Wallet, TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight, FileUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "@/components/StatCard";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
@@ -13,6 +13,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { BudgetProgress } from "@/components/budgets/BudgetProgress";
 import { CreditCardSummary } from "@/components/credit-cards/CreditCardSummary";
 import { ReconcileCreditCardDialog } from "@/components/credit-cards/ReconcileCreditCardDialog";
+import { ImportStatementDialog } from "@/components/credit-cards/ImportStatementDialog";
 import { NotificationSetupBanner } from "@/components/notifications/NotificationSetupBanner";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
@@ -34,6 +35,7 @@ const Index = () => {
   const [activeMonth, setActiveMonth] = useState<Date>(new Date());
   const [reconcileCardId, setReconcileCardId] = useState<string | null>(null);
   const [reconcileDialogOpen, setReconcileDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Use the new consolidated data hook
   const { 
@@ -305,6 +307,17 @@ const Index = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2 sm:gap-3">
+                {creditCards.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setImportDialogOpen(true)}
+                    className="hidden sm:flex"
+                  >
+                    <FileUp className="h-4 w-4 mr-2" />
+                    Importar Resumen
+                  </Button>
+                )}
                 <SavingsActionDropdown
                   availableBalanceUSD={availableBalanceUSD}
                   availableBalanceARS={availableBalanceARS}
@@ -443,6 +456,14 @@ const Index = () => {
           onReconcileComplete={refetch}
         />
 
+        <ImportStatementDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          userId={user?.id || ""}
+          creditCards={creditCards}
+          categories={categories}
+          onSuccess={refetch}
+        />
       </div>
     </AppLayout>
   );

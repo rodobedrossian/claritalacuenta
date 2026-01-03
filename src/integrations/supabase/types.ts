@@ -575,6 +575,59 @@ export type Database = {
         }
         Relationships: []
       }
+      statement_imports: {
+        Row: {
+          created_at: string
+          credit_card_id: string | null
+          error_message: string | null
+          extracted_data: Json | null
+          file_name: string
+          file_path: string
+          id: string
+          statement_month: string
+          status: string
+          transactions_created: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credit_card_id?: string | null
+          error_message?: string | null
+          extracted_data?: Json | null
+          file_name: string
+          file_path: string
+          id?: string
+          statement_month: string
+          status?: string
+          transactions_created?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credit_card_id?: string | null
+          error_message?: string | null
+          extracted_data?: Json | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          statement_month?: string
+          status?: string
+          transactions_created?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "statement_imports_credit_card_id_fkey"
+            columns: ["credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number
