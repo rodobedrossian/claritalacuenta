@@ -266,8 +266,8 @@ export function ImportStatementDialog({
             </div>
 
             {/* Items list */}
-            <ScrollArea className="flex-1 -mx-6 px-6">
-              <div className="space-y-2">
+            <ScrollArea className="h-[400px] -mx-6 px-6">
+              <div className="space-y-2 pr-4">
                 {extractedItems.map((item) => (
                   <ItemRow
                     key={item.id}
