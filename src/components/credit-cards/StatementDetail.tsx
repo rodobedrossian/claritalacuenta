@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, Search, Check } from "lucide-react";
+import { ArrowLeft, Search, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { StatementImport } from "@/hooks/useCreditCardStatements";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Category {
   id: string;
@@ -51,9 +52,15 @@ interface StatementDetailProps {
 
 type FilterType = "all" | "consumo" | "cuota" | "impuesto";
 
+// Normalize description for matching (remove extra spaces, lowercase)
+const normalizeDescription = (desc: string): string => {
+  return desc.toLowerCase().trim().replace(/\s+/g, ' ');
+};
+
 export const StatementDetail = ({ 
   statement, 
-  categories, 
+  categories,
+  userId,
   onBack 
 }: StatementDetailProps) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,6 +68,36 @@ export const StatementDetail = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkCategory, setBulkCategory] = useState("");
   const [itemCategories, setItemCategories] = useState<Record<string, string>>({});
+  const [learnedCategories, setLearnedCategories] = useState<Record<string, string>>({});
+  const [autoAssignedCount, setAutoAssignedCount] = useState(0);
+
+  // Load learned categories from previous transactions
+  useEffect(() => {
+    const loadLearnedCategories = async () => {
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('description, category')
+        .eq('user_id', userId)
+        .not('category', 'is', null)
+        .not('category', 'eq', '')
+        .order('created_at', { ascending: false });
+
+      if (!transactions) return;
+
+      // Build a map of description -> category (most recent wins)
+      const categoryMap: Record<string, string> = {};
+      transactions.forEach(t => {
+        const normalized = normalizeDescription(t.description);
+        if (!categoryMap[normalized]) {
+          categoryMap[normalized] = t.category;
+        }
+      });
+
+      setLearnedCategories(categoryMap);
+    };
+
+    loadLearnedCategories();
+  }, [userId]);
 
   // Transform extracted_data into a flat list of items
   const extractedItems = useMemo((): ExtractedItem[] => {
@@ -110,6 +147,27 @@ export const StatementDetail = ({
 
     return items;
   }, [statement.extracted_data]);
+
+  // Auto-assign categories based on learned categories
+  useEffect(() => {
+    if (Object.keys(learnedCategories).length === 0 || extractedItems.length === 0) return;
+
+    const autoCategories: Record<string, string> = {};
+    let matchCount = 0;
+
+    extractedItems.forEach(item => {
+      const normalized = normalizeDescription(item.descripcion);
+      if (learnedCategories[normalized] && !itemCategories[item.id]) {
+        autoCategories[item.id] = learnedCategories[normalized];
+        matchCount++;
+      }
+    });
+
+    if (matchCount > 0) {
+      setItemCategories(prev => ({ ...autoCategories, ...prev }));
+      setAutoAssignedCount(matchCount);
+    }
+  }, [learnedCategories, extractedItems]);
 
   const formatCurrency = (amount: number, currency: string) => {
     return `${currency} ${new Intl.NumberFormat("es-AR", {
@@ -195,6 +253,18 @@ export const StatementDetail = ({
           </p>
         </div>
       </div>
+
+      {/* Auto-assign notification */}
+      {autoAssignedCount > 0 && (
+        <Card className="p-3 bg-primary/5 border-primary/20">
+          <div className="flex items-center gap-2 text-sm">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span>
+              <strong>{autoAssignedCount}</strong> categorías asignadas automáticamente basadas en consumos anteriores
+            </span>
+          </div>
+        </Card>
+      )}
 
       {/* Summary Card */}
       <Card className="p-4">
@@ -343,21 +413,28 @@ export const StatementDetail = ({
                     {formatCurrency(item.monto, item.moneda)}
                   </TableCell>
                   <TableCell>
-                    <Select 
-                      value={itemCategories[item.id] || ""} 
-                      onValueChange={(value) => handleCategoryChange(item.id, value)}
-                    >
-                      <SelectTrigger className="w-[150px]">
-                        <SelectValue placeholder="Sin categoría" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {expenseCategories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.name}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-1">
+                      <Select 
+                        value={itemCategories[item.id] || ""} 
+                        onValueChange={(value) => handleCategoryChange(item.id, value)}
+                      >
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder="Sin categoría" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {expenseCategories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.name}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {learnedCategories[normalizeDescription(item.descripcion)] === itemCategories[item.id] && (
+                        <span title="Auto-asignada">
+                          <Sparkles className="h-3 w-3 text-primary" />
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
