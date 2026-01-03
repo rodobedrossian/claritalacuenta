@@ -644,6 +644,7 @@ export type Database = {
           payment_method: string
           savings_source: string | null
           source: string | null
+          statement_import_id: string | null
           status: string
           type: string
           user_id: string
@@ -663,6 +664,7 @@ export type Database = {
           payment_method?: string
           savings_source?: string | null
           source?: string | null
+          statement_import_id?: string | null
           status?: string
           type: string
           user_id: string
@@ -682,6 +684,7 @@ export type Database = {
           payment_method?: string
           savings_source?: string | null
           source?: string | null
+          statement_import_id?: string | null
           status?: string
           type?: string
           user_id?: string
@@ -692,6 +695,13 @@ export type Database = {
             columns: ["credit_card_id"]
             isOneToOne: false
             referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_statement_import_id_fkey"
+            columns: ["statement_import_id"]
+            isOneToOne: false
+            referencedRelation: "statement_imports"
             referencedColumns: ["id"]
           },
           {

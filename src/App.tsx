@@ -10,6 +10,7 @@ import PendingTransactions from "./pages/PendingTransactions";
 import Settings from "./pages/Settings";
 import Savings from "./pages/Savings";
 import Budgets from "./pages/Budgets";
+import CreditCards from "./pages/CreditCards";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/settings" element={<Settings />} />
           <Route path="/savings" element={<Savings />} />
           <Route path="/budgets" element={<Budgets />} />
+          <Route path="/credit-cards" element={<CreditCards />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -11,7 +11,8 @@ import {
   Menu,
   X,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  CreditCard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +27,7 @@ const navItems = [
   { title: "Dashboard", path: "/", icon: LayoutDashboard },
   { title: "Transacciones", path: "/transactions", icon: Receipt },
   { title: "Pendientes", path: "/pending", icon: Clock },
+  { title: "Tarjetas", path: "/credit-cards", icon: CreditCard },
   { title: "Ahorros", path: "/savings", icon: PiggyBank },
   { title: "Presupuestos", path: "/budgets", icon: Target },
   { title: "Configuración", path: "/settings", icon: Settings },
