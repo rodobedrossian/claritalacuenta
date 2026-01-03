@@ -50,6 +50,7 @@ interface UseStatementImportReturn {
   parsing: boolean;
   importing: boolean;
   extractedItems: ExtractedItem[];
+  statementImportId: string | null;
   uploadAndParse: (file: File, userId: string, creditCardId: string, statementMonth: Date) => Promise<boolean>;
   toggleItemSelection: (id: string) => void;
   toggleAllSelection: (selected: boolean) => void;
@@ -87,12 +88,14 @@ export function useStatementImport(): UseStatementImportReturn {
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [extractedItems, setExtractedItems] = useState<ExtractedItem[]>([]);
+  const [statementImportId, setStatementImportId] = useState<string | null>(null);
 
   const reset = useCallback(() => {
     setExtractedItems([]);
     setUploading(false);
     setParsing(false);
     setImporting(false);
+    setStatementImportId(null);
   }, []);
 
   const uploadAndParse = useCallback(async (
@@ -147,6 +150,8 @@ export function useStatementImport(): UseStatementImportReturn {
         return false;
       }
 
+      // Store the import ID for later use
+      setStatementImportId(importRecord.id);
       setUploading(false);
       setParsing(true);
 
@@ -306,7 +311,7 @@ export function useStatementImport(): UseStatementImportReturn {
         return false;
       }
 
-      // Create transactions
+      // Create transactions with statement_import_id link
       const transactions = selectedItems.map((item) => ({
         user_id: userId,
         type: "expense",
@@ -319,6 +324,7 @@ export function useStatementImport(): UseStatementImportReturn {
         credit_card_id: creditCardId,
         source: "pdf_import",
         status: "confirmed",
+        statement_import_id: statementImportId,
       }));
 
       const { error: insertError } = await supabase
@@ -340,13 +346,14 @@ export function useStatementImport(): UseStatementImportReturn {
     } finally {
       setImporting(false);
     }
-  }, [extractedItems]);
+  }, [extractedItems, statementImportId]);
 
   return {
     uploading,
     parsing,
     importing,
     extractedItems,
+    statementImportId,
     uploadAndParse,
     toggleItemSelection,
     toggleAllSelection,
