@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { ArrowLeft, Search, Check, Sparkles } from "lucide-react";
@@ -70,6 +70,18 @@ export const StatementDetail = ({
   const [itemCategories, setItemCategories] = useState<Record<string, string>>({});
   const [learnedCategories, setLearnedCategories] = useState<Record<string, string>>({});
   const [autoAssignedCount, setAutoAssignedCount] = useState(0);
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
+  const autoAssignRan = useRef(false);
+
+  // Load saved categories from extracted_data
+  useEffect(() => {
+    const data = statement.extracted_data as Record<string, unknown> | null;
+    const savedCategories = data?.categorias_asignadas;
+    if (savedCategories && typeof savedCategories === 'object') {
+      setItemCategories(savedCategories as Record<string, string>);
+    }
+    setCategoriesLoaded(true);
+  }, [statement.extracted_data]);
 
   // Load learned categories from previous transactions
   useEffect(() => {
@@ -148,32 +160,56 @@ export const StatementDetail = ({
     return items;
   }, [statement.extracted_data]);
 
-  // Auto-assign categories based on learned categories
+  // Auto-assign categories based on learned categories (only once)
   useEffect(() => {
+    if (autoAssignRan.current) return;
+    if (!categoriesLoaded) return;
     if (Object.keys(learnedCategories).length === 0 || extractedItems.length === 0) return;
 
-    setItemCategories(prev => {
-      const updated = { ...prev };
-      let count = 0;
+    autoAssignRan.current = true;
 
-      extractedItems.forEach(item => {
-        const normalized = normalizeDescription(item.descripcion);
-        const learned = learnedCategories[normalized];
-        
-        // Only assign if there's a match AND no category already set
-        if (learned && !updated[item.id]) {
-          updated[item.id] = learned;
-          count++;
-        }
-      });
-
-      if (count > 0) {
-        setAutoAssignedCount(count);
+    // Check what can be auto-assigned
+    const toAssign: Record<string, string> = {};
+    
+    extractedItems.forEach(item => {
+      const normalized = normalizeDescription(item.descripcion);
+      const learned = learnedCategories[normalized];
+      
+      // Only assign if there's a match AND no category already saved
+      if (learned && !itemCategories[item.id]) {
+        toAssign[item.id] = learned;
       }
-
-      return updated;
     });
-  }, [learnedCategories, extractedItems]);
+
+    const count = Object.keys(toAssign).length;
+    if (count > 0) {
+      const newCategories = { ...itemCategories, ...toAssign };
+      setItemCategories(newCategories);
+      setAutoAssignedCount(count);
+      // Persist auto-assigned categories
+      const updatedData = {
+        ...statement.extracted_data,
+        categorias_asignadas: newCategories
+      };
+      supabase
+        .from('statement_imports')
+        .update({ extracted_data: updatedData })
+        .eq('id', statement.id);
+    }
+  }, [learnedCategories, extractedItems, categoriesLoaded, itemCategories, statement]);
+
+  // Persist categories to database
+  const persistCategories = async (newCategories: Record<string, string>) => {
+    const updatedData = {
+      ...statement.extracted_data,
+      categorias_asignadas: newCategories
+    };
+
+    await supabase
+      .from('statement_imports')
+      .update({ extracted_data: updatedData })
+      .eq('id', statement.id);
+  };
 
   const formatCurrency = (amount: number, currency: string) => {
     return `${currency} ${new Intl.NumberFormat("es-AR", {
@@ -213,14 +249,13 @@ export const StatementDetail = ({
       i => normalizeDescription(i.descripcion) === normalizedDesc
     );
 
-    // Update all matching items
-    setItemCategories(prev => {
-      const updated = { ...prev };
-      matchingItems.forEach(matchItem => {
-        updated[matchItem.id] = category;
-      });
-      return updated;
+    // Update all matching items and persist
+    const newCategories = { ...itemCategories };
+    matchingItems.forEach(matchItem => {
+      newCategories[matchItem.id] = category;
     });
+    setItemCategories(newCategories);
+    persistCategories(newCategories);
 
     // Update local learned categories map for future matches
     setLearnedCategories(prev => ({
@@ -262,6 +297,17 @@ export const StatementDetail = ({
       newCategories[id] = bulkCategory;
     });
     setItemCategories(newCategories);
+    persistCategories(newCategories);
+    
+    // Update learned categories for bulk items
+    selectedIds.forEach(id => {
+      const item = extractedItems.find(i => i.id === id);
+      if (item) {
+        const normalized = normalizeDescription(item.descripcion);
+        setLearnedCategories(prev => ({ ...prev, [normalized]: bulkCategory }));
+      }
+    });
+    
     setSelectedIds(new Set());
     setBulkCategory("");
     toast.success(`${selectedIds.size} items categorizados`);
