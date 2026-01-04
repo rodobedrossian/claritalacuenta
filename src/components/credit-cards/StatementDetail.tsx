@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { ArrowLeft, Search, Check, Sparkles } from "lucide-react";
@@ -43,11 +43,42 @@ interface ExtractedItem {
   total_cuotas?: number | null;
 }
 
+// Type for extracted_data structure
+interface ExtractedDataType {
+  consumos?: Array<{
+    fecha: string;
+    descripcion: string;
+    monto: number;
+    moneda: string;
+  }>;
+  cuotas?: Array<{
+    fecha: string;
+    descripcion: string;
+    monto: number;
+    moneda: string;
+    cuota_actual: number;
+    total_cuotas: number;
+  }>;
+  impuestos?: Array<{
+    descripcion: string;
+    monto: number;
+    moneda: string;
+  }>;
+  resumen?: {
+    total_ars?: number;
+    total_usd?: number;
+    fecha_vencimiento?: string;
+    fecha_cierre?: string;
+  };
+  categorias_asignadas?: Record<string, string>;
+}
+
 interface StatementDetailProps {
   statement: StatementImport;
   categories: Category[];
   userId: string;
   onBack: () => void;
+  onStatementUpdated?: (updatedStatement: StatementImport) => void;
 }
 
 type FilterType = "all" | "consumo" | "cuota" | "impuesto";
@@ -61,7 +92,8 @@ export const StatementDetail = ({
   statement, 
   categories,
   userId,
-  onBack 
+  onBack,
+  onStatementUpdated
 }: StatementDetailProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
@@ -70,21 +102,32 @@ export const StatementDetail = ({
   const [itemCategories, setItemCategories] = useState<Record<string, string>>({});
   const [learnedCategories, setLearnedCategories] = useState<Record<string, string>>({});
   const [autoAssignedCount, setAutoAssignedCount] = useState(0);
-  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  
+  // Track local extracted_data to prevent stale state
+  const [localExtractedData, setLocalExtractedData] = useState<ExtractedDataType>(
+    statement.extracted_data as ExtractedDataType || {}
+  );
+  
+  // Refs to prevent duplicate runs
   const autoAssignRan = useRef(false);
+  const learnedCategoriesLoaded = useRef(false);
 
-  // Load saved categories from extracted_data
+  // Load saved categories from extracted_data on mount
   useEffect(() => {
-    const data = statement.extracted_data as Record<string, unknown> | null;
+    const data = localExtractedData as Record<string, unknown> | null;
     const savedCategories = data?.categorias_asignadas;
     if (savedCategories && typeof savedCategories === 'object') {
       setItemCategories(savedCategories as Record<string, string>);
     }
-    setCategoriesLoaded(true);
-  }, [statement.extracted_data]);
+    setDataLoaded(true);
+  }, []);
 
-  // Load learned categories from previous transactions
+  // Load learned categories from previous transactions (once)
   useEffect(() => {
+    if (learnedCategoriesLoaded.current) return;
+    learnedCategoriesLoaded.current = true;
+
     const loadLearnedCategories = async () => {
       const { data: transactions } = await supabase
         .from('transactions')
@@ -114,7 +157,7 @@ export const StatementDetail = ({
   // Transform extracted_data into a flat list of items
   const extractedItems = useMemo((): ExtractedItem[] => {
     const items: ExtractedItem[] = [];
-    const data = statement.extracted_data;
+    const data = localExtractedData;
     if (!data) return items;
 
     let idCounter = 0;
@@ -158,58 +201,105 @@ export const StatementDetail = ({
     });
 
     return items;
-  }, [statement.extracted_data]);
+  }, [localExtractedData]);
 
-  // Auto-assign categories based on learned categories (only once)
+  // Build categoryOptions as union of: categories table + saved itemCategories + learnedCategories
+  const categoryOptions = useMemo(() => {
+    const expenseCats = categories.filter(c => c.type === "expense" || c.type === "both");
+    const namesFromTable = new Set(expenseCats.map(c => c.name));
+    
+    // Add any saved categories not in the table
+    const additionalNames = new Set<string>();
+    Object.values(itemCategories).forEach(cat => {
+      if (cat && !namesFromTable.has(cat)) {
+        additionalNames.add(cat);
+      }
+    });
+    Object.values(learnedCategories).forEach(cat => {
+      if (cat && !namesFromTable.has(cat)) {
+        additionalNames.add(cat);
+      }
+    });
+
+    // Combine: table categories first, then additional
+    const options = expenseCats.map(c => ({ id: c.id, name: c.name }));
+    additionalNames.forEach(name => {
+      options.push({ id: `custom_${name}`, name });
+    });
+
+    return options;
+  }, [categories, itemCategories, learnedCategories]);
+
+  // Persist categories to database with proper error handling
+  const persistCategories = useCallback(async (newCategories: Record<string, string>) => {
+    const updatedData = {
+      ...localExtractedData,
+      categorias_asignadas: newCategories
+    };
+
+    const { data, error } = await supabase
+      .from('statement_imports')
+      .update({ extracted_data: updatedData })
+      .eq('id', statement.id)
+      .select('extracted_data')
+      .single();
+
+    if (error) {
+      console.error("Error persisting categories:", error);
+      toast.error("Error al guardar las categorías");
+      return;
+    }
+
+    // Update local state with DB response (with type assertion)
+    if (data?.extracted_data && typeof data.extracted_data === 'object' && !Array.isArray(data.extracted_data)) {
+      const extractedData = data.extracted_data as ExtractedDataType;
+      setLocalExtractedData(extractedData);
+      // Notify parent if callback exists
+      if (onStatementUpdated) {
+        onStatementUpdated({
+          ...statement,
+          extracted_data: extractedData
+        });
+      }
+    }
+  }, [localExtractedData, statement, onStatementUpdated]);
+
+  // Auto-assign categories based on learned categories (runs once after data is loaded)
   useEffect(() => {
     if (autoAssignRan.current) return;
-    if (!categoriesLoaded) return;
+    if (!dataLoaded) return;
     if (Object.keys(learnedCategories).length === 0 || extractedItems.length === 0) return;
 
     autoAssignRan.current = true;
 
-    // Check what can be auto-assigned
-    const toAssign: Record<string, string> = {};
-    
-    extractedItems.forEach(item => {
-      const normalized = normalizeDescription(item.descripcion);
-      const learned = learnedCategories[normalized];
+    // Use functional update to get current itemCategories state
+    setItemCategories(currentCategories => {
+      const toAssign: Record<string, string> = {};
       
-      // Only assign if there's a match AND no category already saved
-      if (learned && !itemCategories[item.id]) {
-        toAssign[item.id] = learned;
+      extractedItems.forEach(item => {
+        const normalized = normalizeDescription(item.descripcion);
+        const learned = learnedCategories[normalized];
+        
+        // Only assign if there's a match AND no category already saved
+        if (learned && !currentCategories[item.id]) {
+          toAssign[item.id] = learned;
+        }
+      });
+
+      const count = Object.keys(toAssign).length;
+      if (count > 0) {
+        const newCategories = { ...currentCategories, ...toAssign };
+        setAutoAssignedCount(count);
+        
+        // Persist auto-assigned categories
+        persistCategories(newCategories);
+        
+        return newCategories;
       }
+      
+      return currentCategories;
     });
-
-    const count = Object.keys(toAssign).length;
-    if (count > 0) {
-      const newCategories = { ...itemCategories, ...toAssign };
-      setItemCategories(newCategories);
-      setAutoAssignedCount(count);
-      // Persist auto-assigned categories
-      const updatedData = {
-        ...statement.extracted_data,
-        categorias_asignadas: newCategories
-      };
-      supabase
-        .from('statement_imports')
-        .update({ extracted_data: updatedData })
-        .eq('id', statement.id);
-    }
-  }, [learnedCategories, extractedItems, categoriesLoaded, itemCategories, statement]);
-
-  // Persist categories to database
-  const persistCategories = async (newCategories: Record<string, string>) => {
-    const updatedData = {
-      ...statement.extracted_data,
-      categorias_asignadas: newCategories
-    };
-
-    await supabase
-      .from('statement_imports')
-      .update({ extracted_data: updatedData })
-      .eq('id', statement.id);
-  };
+  }, [learnedCategories, extractedItems, dataLoaded, persistCategories]);
 
   const formatCurrency = (amount: number, currency: string) => {
     return `${currency} ${new Intl.NumberFormat("es-AR", {
@@ -237,7 +327,7 @@ export const StatementDetail = ({
     return matchesSearch && matchesFilter;
   });
 
-  const handleCategoryChange = (itemId: string, category: string) => {
+  const handleCategoryChange = async (itemId: string, category: string) => {
     // Find the current item's description
     const item = extractedItems.find(i => i.id === itemId);
     if (!item) return;
@@ -249,13 +339,16 @@ export const StatementDetail = ({
       i => normalizeDescription(i.descripcion) === normalizedDesc
     );
 
-    // Update all matching items and persist
+    // Update all matching items
     const newCategories = { ...itemCategories };
     matchingItems.forEach(matchItem => {
       newCategories[matchItem.id] = category;
     });
+    
     setItemCategories(newCategories);
-    persistCategories(newCategories);
+    
+    // Persist to database
+    await persistCategories(newCategories);
 
     // Update local learned categories map for future matches
     setLearnedCategories(prev => ({
@@ -289,15 +382,16 @@ export const StatementDetail = ({
     setSelectedIds(newSelected);
   };
 
-  const handleBulkUpdate = () => {
+  const handleBulkUpdate = async () => {
     if (selectedIds.size === 0 || !bulkCategory) return;
     
     const newCategories = { ...itemCategories };
     selectedIds.forEach(id => {
       newCategories[id] = bulkCategory;
     });
+    
     setItemCategories(newCategories);
-    persistCategories(newCategories);
+    await persistCategories(newCategories);
     
     // Update learned categories for bulk items
     selectedIds.forEach(id => {
@@ -313,9 +407,7 @@ export const StatementDetail = ({
     toast.success(`${selectedIds.size} items categorizados`);
   };
 
-  const expenseCategories = categories.filter(c => c.type === "expense" || c.type === "both");
-
-  const extractedData = statement.extracted_data;
+  const extractedData = localExtractedData;
   const totalArs = extractedData?.resumen?.total_ars || 0;
   const totalUsd = extractedData?.resumen?.total_usd || 0;
 
@@ -413,7 +505,7 @@ export const StatementDetail = ({
                 <SelectValue placeholder="Asignar categoría" />
               </SelectTrigger>
               <SelectContent>
-                {expenseCategories.map((cat) => (
+                {categoryOptions.map((cat) => (
                   <SelectItem key={cat.id} value={cat.name}>
                     {cat.name}
                   </SelectItem>
@@ -504,7 +596,7 @@ export const StatementDetail = ({
                           <SelectValue placeholder="Sin categoría" />
                         </SelectTrigger>
                         <SelectContent>
-                          {expenseCategories.map((cat) => (
+                          {categoryOptions.map((cat) => (
                             <SelectItem key={cat.id} value={cat.name}>
                               {cat.name}
                             </SelectItem>
