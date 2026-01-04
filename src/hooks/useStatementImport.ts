@@ -59,26 +59,25 @@ interface UseStatementImportReturn {
   reset: () => void;
 }
 
-// Category suggestions based on common patterns
+// Category suggestions based on common patterns - normalized to match categories table
 const suggestCategory = (descripcion: string, tipo: string): string => {
   const desc = descripcion.toUpperCase();
   
-  if (tipo === "impuesto") return "Impuestos";
+  if (tipo === "impuesto") return "Taxes";
   
-  // Common Argentine merchants
-  if (desc.includes("MERCADOPAGO") || desc.includes("MERPAGO")) return "Compras Online";
-  if (desc.includes("NETFLIX") || desc.includes("SPOTIFY") || desc.includes("DISNEY") || desc.includes("HBO") || desc.includes("APPLE.COM") || desc.includes("GOOGLE")) return "Suscripciones";
-  if (desc.includes("UBER") || desc.includes("CABIFY") || desc.includes("DIDI")) return "Transporte";
-  if (desc.includes("RAPPI") || desc.includes("PEDIDOSYA") || desc.includes("DELIVERY")) return "Delivery";
-  if (desc.includes("SUPERMERCADO") || desc.includes("JUMBO") || desc.includes("CARREFOUR") || desc.includes("DIA") || desc.includes("COTO")) return "Supermercado";
-  if (desc.includes("FARMACIA") || desc.includes("FARMACITY")) return "Salud";
-  if (desc.includes("RESTAURANTE") || desc.includes("REST ") || desc.includes("CAFE") || desc.includes("BAR ")) return "Restaurantes";
-  if (desc.includes("MEGATLON") || desc.includes("SPORTCLUB") || desc.includes("GYM")) return "Gimnasio";
-  if (desc.includes("HOTEL") || desc.includes("AIRBNB") || desc.includes("BOOKING")) return "Viajes";
-  if (desc.includes("COMBUSTIBLE") || desc.includes("YPF") || desc.includes("SHELL") || desc.includes("AXION")) return "Combustible";
-  if (desc.includes("SEGURO")) return "Seguros";
-  if (desc.includes("STEAM") || desc.includes("PLAYSTATION") || desc.includes("XBOX") || desc.includes("NINTENDO")) return "Entretenimiento";
-  if (desc.includes("AMAZON")) return "Compras Online";
+  // Common Argentine merchants - using normalized category names that match the categories table
+  if (desc.includes("MERCADOPAGO") || desc.includes("MERPAGO") || desc.includes("AMAZON")) return "Shopping";
+  if (desc.includes("NETFLIX") || desc.includes("SPOTIFY") || desc.includes("DISNEY") || desc.includes("HBO") || desc.includes("APPLE.COM") || desc.includes("GOOGLE")) return "Subscriptions";
+  if (desc.includes("UBER") || desc.includes("CABIFY") || desc.includes("DIDI")) return "Transportation";
+  if (desc.includes("RAPPI") || desc.includes("PEDIDOSYA") || desc.includes("DELIVERY")) return "Dining";
+  if (desc.includes("SUPERMERCADO") || desc.includes("JUMBO") || desc.includes("CARREFOUR") || desc.includes("DIA") || desc.includes("COTO")) return "Groceries";
+  if (desc.includes("FARMACIA") || desc.includes("FARMACITY")) return "Healthcare";
+  if (desc.includes("RESTAURANTE") || desc.includes("REST ") || desc.includes("CAFE") || desc.includes("BAR ")) return "Dining";
+  if (desc.includes("MEGATLON") || desc.includes("SPORTCLUB") || desc.includes("GYM")) return "Fitness";
+  if (desc.includes("HOTEL") || desc.includes("AIRBNB") || desc.includes("BOOKING")) return "Travel";
+  if (desc.includes("COMBUSTIBLE") || desc.includes("YPF") || desc.includes("SHELL") || desc.includes("AXION")) return "Transportation";
+  if (desc.includes("SEGURO")) return "Insurance";
+  if (desc.includes("STEAM") || desc.includes("PLAYSTATION") || desc.includes("XBOX") || desc.includes("NINTENDO")) return "Entertainment";
   
   return "General";
 };
