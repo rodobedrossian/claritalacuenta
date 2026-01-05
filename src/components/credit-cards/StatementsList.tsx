@@ -1,22 +1,45 @@
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { FileText, AlertCircle, CheckCircle, Clock, ChevronRight } from "lucide-react";
+import { FileText, AlertCircle, CheckCircle, Clock, ChevronRight, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatementImport } from "@/hooks/useCreditCardStatements";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface StatementsListProps {
   statements: StatementImport[];
   creditCards: { id: string; name: string; bank: string | null }[];
   onSelectStatement: (statement: StatementImport) => void;
+  onDeleteStatement: (statementId: string) => Promise<boolean>;
 }
 
 export const StatementsList = ({ 
   statements, 
   creditCards, 
-  onSelectStatement 
+  onSelectStatement,
+  onDeleteStatement,
 }: StatementsListProps) => {
+  const handleDelete = async (e: React.MouseEvent, statementId: string) => {
+    e.stopPropagation();
+    const success = await onDeleteStatement(statementId);
+    if (success) {
+      toast.success("Resumen eliminado correctamente");
+    } else {
+      toast.error("Error al eliminar el resumen");
+    }
+  };
   const getCardName = (cardId: string | null) => {
     if (!cardId) return "Sin tarjeta";
     const card = creditCards.find(c => c.id === cardId);
@@ -121,6 +144,35 @@ export const StatementsList = ({
                     </div>
                   )}
                 </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Eliminar resumen?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta acción eliminará el resumen y todas las transacciones asociadas. Esta acción no se puede deshacer.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={(e) => handleDelete(e, statement.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Eliminar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <Button variant="ghost" size="icon">
                   <ChevronRight className="h-5 w-5" />
                 </Button>
