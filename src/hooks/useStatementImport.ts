@@ -45,17 +45,25 @@ export interface ExtractedData {
   };
 }
 
+interface StatementSummary {
+  totalARS: number;
+  totalUSD: number;
+  fechaVencimiento: string | null;
+  fechaCierre: string | null;
+}
+
 interface UseStatementImportReturn {
   uploading: boolean;
   parsing: boolean;
   importing: boolean;
   extractedItems: ExtractedItem[];
   statementImportId: string | null;
+  statementSummary: StatementSummary | null;
   uploadAndParse: (file: File, userId: string, creditCardId: string, statementMonth: Date) => Promise<boolean>;
   toggleItemSelection: (id: string) => void;
   toggleAllSelection: (selected: boolean) => void;
   updateItemCategory: (id: string, category: string) => void;
-  importTransactions: (userId: string, creditCardId: string, statementMonth: Date) => Promise<boolean>;
+  importTransactions: (userId: string, creditCardId: string, statementMonth: Date, cardName: string) => Promise<boolean>;
   reset: () => void;
 }
 
@@ -88,6 +96,7 @@ export function useStatementImport(): UseStatementImportReturn {
   const [importing, setImporting] = useState(false);
   const [extractedItems, setExtractedItems] = useState<ExtractedItem[]>([]);
   const [statementImportId, setStatementImportId] = useState<string | null>(null);
+  const [statementSummary, setStatementSummary] = useState<StatementSummary | null>(null);
 
   const reset = useCallback(() => {
     setExtractedItems([]);
@@ -95,6 +104,7 @@ export function useStatementImport(): UseStatementImportReturn {
     setParsing(false);
     setImporting(false);
     setStatementImportId(null);
+    setStatementSummary(null);
   }, []);
 
   const uploadAndParse = useCallback(async (
@@ -234,6 +244,14 @@ export function useStatementImport(): UseStatementImportReturn {
 
       setExtractedItems(items);
       
+      // Store statement summary for payment transaction creation
+      setStatementSummary({
+        totalARS: data.resumen?.total_ars || 0,
+        totalUSD: data.resumen?.total_usd || 0,
+        fechaVencimiento: data.resumen?.fecha_vencimiento || null,
+        fechaCierre: data.resumen?.fecha_cierre || null,
+      });
+      
       if (items.length === 0) {
         toast.warning("No se encontraron consumos en el PDF");
       } else {
@@ -295,10 +313,42 @@ export function useStatementImport(): UseStatementImportReturn {
     return statementMonth;
   };
 
+  const parsePaymentDate = (dateStr: string | null, statementMonth: Date): Date => {
+    if (!dateStr) {
+      // Default to end of statement month if no due date
+      const nextMonth = new Date(statementMonth);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      nextMonth.setDate(10); // Default to 10th of next month
+      return nextMonth;
+    }
+    
+    // DD/MM/YYYY
+    const fullMatch = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (fullMatch) {
+      return new Date(parseInt(fullMatch[3]), parseInt(fullMatch[2]) - 1, parseInt(fullMatch[1]));
+    }
+    
+    // DD/MM
+    const shortMatch = dateStr.match(/(\d{1,2})\/(\d{1,2})/);
+    if (shortMatch) {
+      const day = parseInt(shortMatch[1]);
+      const month = parseInt(shortMatch[2]) - 1;
+      // Use next year if the month is before statement month
+      let year = statementMonth.getFullYear();
+      if (month < statementMonth.getMonth()) {
+        year++;
+      }
+      return new Date(year, month, day);
+    }
+    
+    return statementMonth;
+  };
+
   const importTransactions = useCallback(async (
     userId: string,
     creditCardId: string,
-    statementMonth: Date
+    statementMonth: Date,
+    cardName: string
   ): Promise<boolean> => {
     try {
       setImporting(true);
@@ -310,8 +360,8 @@ export function useStatementImport(): UseStatementImportReturn {
         return false;
       }
 
-      // Create transactions with statement_import_id link
-      const transactions = selectedItems.map((item) => ({
+      // 1. Create individual consumption transactions (is_projected: true - for analysis and budgets)
+      const detailTransactions = selectedItems.map((item) => ({
         user_id: userId,
         type: "expense",
         amount: Math.abs(item.monto),
@@ -324,11 +374,68 @@ export function useStatementImport(): UseStatementImportReturn {
         source: "pdf_import",
         status: "confirmed",
         statement_import_id: statementImportId,
+        is_projected: true, // Does NOT impact balance - for analysis/budgets only
       }));
 
+      // 2. Create payment transactions (is_projected: false - impacts balance on due date)
+      const paymentTransactions: typeof detailTransactions = [];
+      const paymentDate = parsePaymentDate(statementSummary?.fechaVencimiento || null, statementMonth);
+      const monthLabel = statementMonth.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+
+      // Calculate totals from selected items (or use statement summary if available)
+      const selectedTotalARS = selectedItems
+        .filter(item => item.moneda === "ARS")
+        .reduce((sum, item) => sum + Math.abs(item.monto), 0);
+      const selectedTotalUSD = selectedItems
+        .filter(item => item.moneda === "USD")
+        .reduce((sum, item) => sum + Math.abs(item.monto), 0);
+
+      // Use statement summary totals if available, otherwise use selected items total
+      const totalARS = statementSummary?.totalARS || selectedTotalARS;
+      const totalUSD = statementSummary?.totalUSD || selectedTotalUSD;
+
+      if (totalARS > 0) {
+        paymentTransactions.push({
+          user_id: userId,
+          type: "expense",
+          amount: totalARS,
+          currency: "ARS",
+          category: "Credit Card Payment",
+          description: `Pago tarjeta ${cardName} - ${monthLabel}`,
+          date: paymentDate.toISOString(),
+          payment_method: "debit", // Payment comes from debit/cash
+          credit_card_id: creditCardId,
+          source: "pdf_import",
+          status: "confirmed",
+          statement_import_id: statementImportId,
+          is_projected: false, // DOES impact balance
+        });
+      }
+
+      if (totalUSD > 0) {
+        paymentTransactions.push({
+          user_id: userId,
+          type: "expense",
+          amount: totalUSD,
+          currency: "USD",
+          category: "Credit Card Payment",
+          description: `Pago tarjeta ${cardName} (USD) - ${monthLabel}`,
+          date: paymentDate.toISOString(),
+          payment_method: "debit",
+          credit_card_id: creditCardId,
+          source: "pdf_import",
+          status: "confirmed",
+          statement_import_id: statementImportId,
+          is_projected: false,
+        });
+      }
+
+      // Insert all transactions
+      const allTransactions = [...detailTransactions, ...paymentTransactions];
+      
       const { error: insertError } = await supabase
         .from("transactions")
-        .insert(transactions);
+        .insert(allTransactions);
 
       if (insertError) {
         console.error("Insert transactions error:", insertError);
@@ -336,7 +443,10 @@ export function useStatementImport(): UseStatementImportReturn {
         return false;
       }
 
-      toast.success(`Se importaron ${selectedItems.length} transacciones`);
+      const paymentCount = paymentTransactions.length;
+      toast.success(
+        `Se importaron ${selectedItems.length} consumos y ${paymentCount} pago${paymentCount > 1 ? 's' : ''} de tarjeta`
+      );
       return true;
     } catch (error) {
       console.error("Import error:", error);
@@ -345,7 +455,7 @@ export function useStatementImport(): UseStatementImportReturn {
     } finally {
       setImporting(false);
     }
-  }, [extractedItems, statementImportId]);
+  }, [extractedItems, statementImportId, statementSummary]);
 
   return {
     uploading,
@@ -353,6 +463,7 @@ export function useStatementImport(): UseStatementImportReturn {
     importing,
     extractedItems,
     statementImportId,
+    statementSummary,
     uploadAndParse,
     toggleItemSelection,
     toggleAllSelection,
