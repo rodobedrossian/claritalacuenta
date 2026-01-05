@@ -18,6 +18,7 @@ interface UseVoiceTransactionProps {
   categories: Array<{ name: string; type: string }>;
   users: Array<{ name: string }>;
   userName?: string;
+  userId?: string;
 }
 
 type RecordingState = "idle" | "recording" | "processing";

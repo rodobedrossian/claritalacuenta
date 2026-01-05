@@ -79,7 +79,8 @@ const Index = () => {
   const voiceTransaction = useVoiceTransaction({
     categories: dashboardData?.categories || [],
     users: (dashboardData?.users || []).map(u => ({ name: u.full_name })),
-    userName: user?.user_metadata?.full_name || user?.email || "Usuario"
+    userName: user?.user_metadata?.full_name || user?.email || "Usuario",
+    userId: user?.id
   });
 
   // Open dialog when voice transaction is parsed
@@ -488,6 +489,7 @@ const Index = () => {
           transcribedText={voiceTransaction.transcribedText}
           categories={categories}
           users={users.map(u => ({ id: u.id, name: u.full_name }))}
+          currentUserId={user?.id}
           onConfirm={async (transaction) => {
             await handleAddTransaction({
               type: transaction.type,
@@ -496,7 +498,7 @@ const Index = () => {
               category: transaction.category,
               description: transaction.description,
               date: transaction.date,
-              user_id: transaction.owner_id || users[0]?.id || user?.id || "",
+              user_id: transaction.owner_id || user?.id || "",
               payment_method: "cash",
               from_savings: false
             });
