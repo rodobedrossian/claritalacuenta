@@ -11,8 +11,6 @@ import { SpendingChart } from "@/components/SpendingChart";
 import { TimelineChart } from "@/components/TimelineChart";
 import { AppLayout } from "@/components/AppLayout";
 import { BudgetProgress } from "@/components/budgets/BudgetProgress";
-import { CreditCardSummary } from "@/components/credit-cards/CreditCardSummary";
-import { ReconcileCreditCardDialog } from "@/components/credit-cards/ReconcileCreditCardDialog";
 import { ImportStatementDialog } from "@/components/credit-cards/ImportStatementDialog";
 import { NotificationSetupBanner } from "@/components/notifications/NotificationSetupBanner";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -33,8 +31,6 @@ const Index = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeMonth, setActiveMonth] = useState<Date>(new Date());
-  const [reconcileCardId, setReconcileCardId] = useState<string | null>(null);
-  const [reconcileDialogOpen, setReconcileDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Use the new consolidated data hook
@@ -231,7 +227,6 @@ const Index = () => {
   const categories = dashboardData?.categories || [];
   const users = dashboardData?.users || [];
   const creditCards = dashboardData?.creditCards || [];
-  const projectedByCard = dashboardData?.projectedByCard || [];
   const totals = dashboardData?.totals || {
     incomeUSD: 0,
     incomeARS: 0,
@@ -378,21 +373,6 @@ const Index = () => {
             />
           </div>
 
-          {/* Credit Card Summary */}
-          {(totals.projectedExpensesUSD > 0 || totals.projectedExpensesARS > 0) && (
-            <div className="mb-6 animate-fade-in">
-              <CreditCardSummary
-                creditCards={creditCards}
-                projectedByCard={projectedByCard}
-                projectedExpensesUSD={totals.projectedExpensesUSD}
-                projectedExpensesARS={totals.projectedExpensesARS}
-                onReconcile={(cardId) => {
-                  setReconcileCardId(cardId);
-                  setReconcileDialogOpen(true);
-                }}
-              />
-            </div>
-          )}
 
           {/* Budget Progress */}
           <div className="animate-fade-in mb-6">
@@ -448,13 +428,6 @@ const Index = () => {
           users={users}
         />
 
-        <ReconcileCreditCardDialog
-          open={reconcileDialogOpen}
-          onOpenChange={setReconcileDialogOpen}
-          creditCard={creditCards.find(c => c.id === reconcileCardId) || null}
-          activeMonth={activeMonth}
-          onReconcileComplete={refetch}
-        />
 
         <ImportStatementDialog
           open={importDialogOpen}
