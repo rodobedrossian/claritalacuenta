@@ -13,7 +13,10 @@ import { AppLayout } from "@/components/AppLayout";
 import { BudgetProgress } from "@/components/budgets/BudgetProgress";
 import { ImportStatementDialog } from "@/components/credit-cards/ImportStatementDialog";
 import { NotificationSetupBanner } from "@/components/notifications/NotificationSetupBanner";
+import { VoiceTransactionButton } from "@/components/voice/VoiceTransactionButton";
+import { VoiceTransactionDialog } from "@/components/voice/VoiceTransactionDialog";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useVoiceTransaction } from "@/hooks/useVoiceTransaction";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,6 +35,7 @@ const Index = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeMonth, setActiveMonth] = useState<Date>(new Date());
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
 
   // Use the new consolidated data hook
   const { 
@@ -63,6 +67,20 @@ const Index = () => {
 
   // Push notifications hook
   const pushNotifications = usePushNotifications(user?.id);
+
+  // Voice transaction hook
+  const voiceTransaction = useVoiceTransaction({
+    categories: dashboardData?.categories || [],
+    users: (dashboardData?.users || []).map(u => ({ name: u.full_name })),
+    userName: user?.user_metadata?.full_name || user?.email || "Usuario"
+  });
+
+  // Open dialog when voice transaction is parsed
+  useEffect(() => {
+    if (voiceTransaction.parsedTransaction) {
+      setVoiceDialogOpen(true);
+    }
+  }, [voiceTransaction.parsedTransaction]);
 
   useEffect(() => {
     // Check authentication
@@ -313,6 +331,12 @@ const Index = () => {
                     Importar Resumen
                   </Button>
                 )}
+                <VoiceTransactionButton
+                  isRecording={voiceTransaction.isRecording}
+                  isProcessing={voiceTransaction.isProcessing}
+                  onStart={voiceTransaction.startRecording}
+                  onStop={voiceTransaction.stopRecording}
+                />
                 <SavingsActionDropdown
                   availableBalanceUSD={availableBalanceUSD}
                   availableBalanceARS={availableBalanceARS}
@@ -436,6 +460,38 @@ const Index = () => {
           creditCards={creditCards}
           categories={categories}
           onSuccess={refetch}
+        />
+
+        <VoiceTransactionDialog
+          open={voiceDialogOpen}
+          onOpenChange={(open) => {
+            setVoiceDialogOpen(open);
+            if (!open) voiceTransaction.reset();
+          }}
+          transaction={voiceTransaction.parsedTransaction}
+          transcribedText={voiceTransaction.transcribedText}
+          categories={categories}
+          users={users.map(u => ({ id: u.id, name: u.full_name }))}
+          onConfirm={async (transaction) => {
+            await handleAddTransaction({
+              type: transaction.type,
+              amount: transaction.amount,
+              currency: transaction.currency,
+              category: transaction.category,
+              description: transaction.description,
+              date: transaction.date,
+              user_id: transaction.owner_id || users[0]?.id || user?.id || "",
+              payment_method: "cash",
+              from_savings: false
+            });
+            setVoiceDialogOpen(false);
+            voiceTransaction.reset();
+            toast.success("Transacción creada por voz");
+          }}
+          onCancel={() => {
+            setVoiceDialogOpen(false);
+            voiceTransaction.reset();
+          }}
         />
       </div>
     </AppLayout>
