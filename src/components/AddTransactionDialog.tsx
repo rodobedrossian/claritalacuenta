@@ -53,10 +53,25 @@ interface AddTransactionDialogProps {
   users: Array<{ id: string; full_name: string | null }>;
   currentSavings?: { usd: number; ars: number };
   creditCards?: CreditCardOption[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export const AddTransactionDialog = ({ onAdd, categories, users, currentSavings, creditCards = [] }: AddTransactionDialogProps) => {
-  const [open, setOpen] = useState(false);
+export const AddTransactionDialog = ({ 
+  onAdd, 
+  categories, 
+  users, 
+  currentSavings, 
+  creditCards = [],
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange
+}: AddTransactionDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? (controlledOnOpenChange || (() => {})) : setInternalOpen;
   const [type, setType] = useState<"income" | "expense">("expense");
   const [currency, setCurrency] = useState<"USD" | "ARS" | "">("");
   const [amount, setAmount] = useState("");
@@ -130,12 +145,6 @@ export const AddTransactionDialog = ({ onAdd, categories, users, currentSavings,
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gradient-primary hover:opacity-90 transition-smooth shadow-glow">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Transaction
-        </Button>
-      </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] bg-card border-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Transaction</DialogTitle>
