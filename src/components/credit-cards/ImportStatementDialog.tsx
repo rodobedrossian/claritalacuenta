@@ -117,10 +117,13 @@ export function ImportStatementDialog({
   const handleImport = async () => {
     setStep("importing");
     
+    const cardName = selectedCard?.name || "Tarjeta";
+    
     const success = await importTransactions(
       userId,
       selectedCardId,
-      new Date(selectedMonth)
+      new Date(selectedMonth),
+      cardName
     );
 
     if (success) {
