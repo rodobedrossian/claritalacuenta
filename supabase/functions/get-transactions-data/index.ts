@@ -72,10 +72,13 @@ Deno.serve(async (req) => {
     const to = from + limit - 1;
 
     // Build base query for transactions
+    // Exclude credit card consumptions (is_projected: true AND payment_method: credit_card)
+    // These are shown in the Credit Cards module, not in Cashflow
     let transactionsQuery = supabase
       .from("transactions")
       .select("id, type, amount, currency, category, description, date, user_id, from_savings, savings_source", { count: "exact" })
       .eq("status", "confirmed")
+      .or("is_projected.eq.false,payment_method.neq.credit_card")
       .order("date", { ascending: false });
 
     // Apply filters
