@@ -15,6 +15,7 @@ import { BudgetProgress } from "@/components/budgets/BudgetProgress";
 import { ImportStatementDialog } from "@/components/credit-cards/ImportStatementDialog";
 import { NotificationSetupBanner } from "@/components/notifications/NotificationSetupBanner";
 import { VoiceTransactionDialog } from "@/components/voice/VoiceTransactionDialog";
+import { VoiceRecordingOverlay } from "@/components/voice/VoiceRecordingOverlay";
 import { InsightsCard } from "@/components/insights/InsightsCard";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useVoiceTransaction } from "@/hooks/useVoiceTransaction";
@@ -507,6 +508,17 @@ const Index = () => {
             setVoiceDialogOpen(false);
             voiceTransaction.reset();
           }}
+        />
+
+        {/* Voice Recording Overlay */}
+        <VoiceRecordingOverlay
+          isRecording={voiceTransaction.isRecording}
+          isProcessing={voiceTransaction.isProcessing}
+          duration={voiceTransaction.duration}
+          getAudioLevels={voiceTransaction.getAudioLevels}
+          onStop={voiceTransaction.stopRecording}
+          onCancel={voiceTransaction.cancel}
+          error={voiceTransaction.error}
         />
       </div>
     </AppLayout>
