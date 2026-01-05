@@ -1,6 +1,6 @@
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isBefore, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { FileText, AlertCircle, CheckCircle, Clock, ChevronRight, Trash2 } from "lucide-react";
+import { FileText, AlertCircle, CheckCircle, Clock, ChevronRight, Trash2, Calendar } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ export const StatementsList = ({
       toast.error("Error al eliminar el resumen");
     }
   };
+  
   const getCardName = (cardId: string | null) => {
     if (!cardId) return "Sin tarjeta";
     const card = creditCards.find(c => c.id === cardId);
@@ -78,6 +79,30 @@ export const StatementsList = ({
     }
   };
 
+  const getPaymentStatusBadge = (fechaVencimiento: string | undefined) => {
+    if (!fechaVencimiento) return null;
+    
+    const today = startOfDay(new Date());
+    const dueDate = parseISO(fechaVencimiento);
+    const isPaid = isBefore(dueDate, today);
+    
+    if (isPaid) {
+      return (
+        <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Pagado
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
+          <Calendar className="h-3 w-3 mr-1" />
+          Vence {format(dueDate, "dd/MM", { locale: es })}
+        </Badge>
+      );
+    }
+  };
+
   const formatCurrency = (amount: number, currency: string) => {
     return `${currency} ${new Intl.NumberFormat("es-AR", {
       minimumFractionDigits: 0,
@@ -103,6 +128,7 @@ export const StatementsList = ({
         const extractedData = statement.extracted_data;
         const totalArs = extractedData?.resumen?.total_ars || 0;
         const totalUsd = extractedData?.resumen?.total_usd || 0;
+        const fechaVencimiento = extractedData?.resumen?.fecha_vencimiento;
         
         return (
           <Card 
@@ -116,11 +142,12 @@ export const StatementsList = ({
                   <FileText className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium">
                       {format(parseISO(statement.statement_month), "MMMM yyyy", { locale: es })}
                     </span>
                     {getStatusBadge(statement.status)}
+                    {getPaymentStatusBadge(fechaVencimiento)}
                   </div>
                   <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
                     <span>{getCardName(statement.credit_card_id)}</span>

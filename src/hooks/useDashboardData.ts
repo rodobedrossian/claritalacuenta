@@ -47,7 +47,6 @@ export interface DashboardData {
   };
   transactions: Transaction[];
   spendingByCategory: Array<{ category: string; amount: number }>;
-  projectedByCard: Array<{ credit_card_id: string; usd: number; ars: number }>;
   categories: Array<{ id: string; name: string; type: string }>;
   users: Array<{ id: string; full_name: string | null }>;
   creditCards: CreditCard[];
@@ -115,7 +114,6 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
           projectedExpensesUSD: responseData.totals.projectedExpensesUSD || 0,
           projectedExpensesARS: responseData.totals.projectedExpensesARS || 0
         },
-        projectedByCard: responseData.projectedByCard || [],
         creditCards: responseData.creditCards || []
       });
 

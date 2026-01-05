@@ -198,20 +198,6 @@ Deno.serve(async (req) => {
       .map(([category, amount]) => ({ category, amount }))
       .sort((a, b) => b.amount - a.amount);
 
-    // Calculate projected spending by credit card
-    const projectedByCard = new Map<string, { usd: number; ars: number }>();
-    for (const t of transactions) {
-      if (t.type === "expense" && t.is_projected && t.credit_card_id) {
-        const cardData = projectedByCard.get(t.credit_card_id) || { usd: 0, ars: 0 };
-        if (t.currency === "USD") cardData.usd += t.amount;
-        else cardData.ars += t.amount;
-        projectedByCard.set(t.credit_card_id, cardData);
-      }
-    }
-    const projectedByCardArray = Array.from(projectedByCard.entries()).map(([cardId, amounts]) => ({
-      credit_card_id: cardId,
-      ...amounts
-    }));
 
     // Format current savings
     const currentSavings = {
@@ -243,7 +229,6 @@ Deno.serve(async (req) => {
       exchangeRate,
       transactions,
       spendingByCategory,
-      projectedByCard: projectedByCardArray,
       categories: (categoriesResult.data || []).map((c: any) => ({ id: c.id, name: c.name, type: c.type })),
       users: usersResult.data || [],
       creditCards: creditCardsResult.data || []
