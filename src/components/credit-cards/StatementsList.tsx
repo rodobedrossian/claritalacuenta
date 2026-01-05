@@ -1,4 +1,4 @@
-import { format, parseISO, isBefore, startOfDay } from "date-fns";
+import { format, parseISO, isBefore, startOfDay, parse, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { FileText, AlertCircle, CheckCircle, Clock, ChevronRight, Trash2, Calendar } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -82,8 +82,23 @@ export const StatementsList = ({
   const getPaymentStatusBadge = (fechaVencimiento: string | undefined) => {
     if (!fechaVencimiento) return null;
     
+    // Try to parse the date - it could be in DD/MM/YYYY format or ISO format
+    let dueDate: Date;
+    
+    // First try parsing as DD/MM/YYYY (common format from PDF extraction)
+    const parsedDMY = parse(fechaVencimiento, "dd/MM/yyyy", new Date());
+    if (isValid(parsedDMY)) {
+      dueDate = parsedDMY;
+    } else {
+      // Try ISO format
+      dueDate = parseISO(fechaVencimiento);
+      if (!isValid(dueDate)) {
+        console.warn("Invalid date format for fecha_vencimiento:", fechaVencimiento);
+        return null;
+      }
+    }
+    
     const today = startOfDay(new Date());
-    const dueDate = parseISO(fechaVencimiento);
     const isPaid = isBefore(dueDate, today);
     
     if (isPaid) {
