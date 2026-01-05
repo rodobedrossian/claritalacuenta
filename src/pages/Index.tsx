@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Wallet, TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight, FileUp } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "@/components/StatCard";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
 import { SavingsActionDropdown } from "@/components/SavingsActionDropdown";
+import { TransactionActionsDropdown } from "@/components/TransactionActionsDropdown";
 import { TransactionsList } from "@/components/TransactionsList";
 import { EditTransactionDialog } from "@/components/EditTransactionDialog";
 import { SpendingChart } from "@/components/SpendingChart";
@@ -13,7 +14,6 @@ import { AppLayout } from "@/components/AppLayout";
 import { BudgetProgress } from "@/components/budgets/BudgetProgress";
 import { ImportStatementDialog } from "@/components/credit-cards/ImportStatementDialog";
 import { NotificationSetupBanner } from "@/components/notifications/NotificationSetupBanner";
-import { VoiceTransactionButton } from "@/components/voice/VoiceTransactionButton";
 import { VoiceTransactionDialog } from "@/components/voice/VoiceTransactionDialog";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useVoiceTransaction } from "@/hooks/useVoiceTransaction";
@@ -36,6 +36,7 @@ const Index = () => {
   const [activeMonth, setActiveMonth] = useState<Date>(new Date());
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
+  const [addTransactionDialogOpen, setAddTransactionDialogOpen] = useState(false);
 
   // Use the new consolidated data hook
   const { 
@@ -320,30 +321,20 @@ const Index = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2 sm:gap-3">
-                {creditCards.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setImportDialogOpen(true)}
-                    className="hidden sm:flex"
-                  >
-                    <FileUp className="h-4 w-4 mr-2" />
-                    Importar Resumen
-                  </Button>
-                )}
-                <VoiceTransactionButton
-                  isRecording={voiceTransaction.isRecording}
-                  isProcessing={voiceTransaction.isProcessing}
-                  onStart={voiceTransaction.startRecording}
-                  onStop={voiceTransaction.stopRecording}
-                />
                 <SavingsActionDropdown
                   availableBalanceUSD={availableBalanceUSD}
                   availableBalanceARS={availableBalanceARS}
                   onTransferFromBalance={(currency, amount, savingsType, notes) => handleAddSavings(currency, amount, "deposit", savingsType, notes)}
                   onAddSavings={handleAddSavings}
                 />
-                <AddTransactionDialog onAdd={handleAddTransaction} categories={categories} users={users} currentSavings={currentSavings} creditCards={creditCards} />
+                <TransactionActionsDropdown
+                  onAddManual={() => setAddTransactionDialogOpen(true)}
+                  onVoiceRecord={voiceTransaction.isRecording ? voiceTransaction.stopRecording : voiceTransaction.startRecording}
+                  onImportStatement={() => setImportDialogOpen(true)}
+                  isRecording={voiceTransaction.isRecording}
+                  isProcessing={voiceTransaction.isProcessing}
+                  showImport={creditCards.length > 0}
+                />
               </div>
             </div>
           </div>
@@ -452,6 +443,16 @@ const Index = () => {
           users={users}
         />
 
+
+        <AddTransactionDialog 
+          onAdd={handleAddTransaction} 
+          categories={categories} 
+          users={users} 
+          currentSavings={currentSavings} 
+          creditCards={creditCards}
+          open={addTransactionDialogOpen}
+          onOpenChange={setAddTransactionDialogOpen}
+        />
 
         <ImportStatementDialog
           open={importDialogOpen}
