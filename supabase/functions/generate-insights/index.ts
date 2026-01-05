@@ -15,6 +15,24 @@ interface Transaction {
   type: string;
   is_projected: boolean;
   user_id: string;
+  payment_method?: string;
+  statement_import_id?: string;
+}
+
+interface StatementImport {
+  id: string;
+  statement_month: string;
+  created_at: string;
+}
+
+interface StatementTransaction {
+  id: string;
+  description: string;
+  amount: number;
+  currency: string;
+  category: string;
+  transaction_date: string;
+  statement_import_id: string;
 }
 
 interface MonthlyData {
@@ -23,6 +41,14 @@ interface MonthlyData {
   byCategory: Record<string, number>;
   transactionCount: number;
   transactions: Transaction[];
+}
+
+interface ConsumptionData {
+  month: string;
+  total: number;
+  byCategory: Record<string, number>;
+  transactionCount: number;
+  creditCardBreakdown: Record<string, number>;
 }
 
 interface Insight {
@@ -67,11 +93,11 @@ Deno.serve(async (req) => {
 
     const { months_to_analyze = 6 } = await req.json().catch(() => ({}));
 
-    // Fetch historical transactions
+    // Fetch historical transactions (for cashflow analysis - includes CC payments)
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - months_to_analyze);
     
-    const { data: transactions, error: txError } = await supabase
+    const { data: allTransactions, error: txError } = await supabase
       .from("transactions")
       .select("*")
       .eq("user_id", user.id)
@@ -94,49 +120,128 @@ Deno.serve(async (req) => {
 
     const usdRate = exchangeRate?.rate || 1200;
 
-    console.log(`Analyzing ${transactions?.length || 0} transactions for user ${user.id}`);
+    // Fetch recent statement imports to get credit card consumption details
+    const { data: statementImports, error: stmtError } = await supabase
+      .from("statement_imports")
+      .select("id, statement_month, created_at")
+      .eq("user_id", user.id)
+      .gte("created_at", sixMonthsAgo.toISOString())
+      .order("created_at", { ascending: false });
+
+    if (stmtError) {
+      console.error("Error fetching statement imports:", stmtError);
+    }
+
+    // Fetch detailed credit card transactions from statements
+    let statementTransactions: StatementTransaction[] = [];
+    if (statementImports && statementImports.length > 0) {
+      const statementIds = statementImports.map((s: StatementImport) => s.id);
+      const { data: stmtTxs, error: stmtTxError } = await supabase
+        .from("statement_transactions")
+        .select("id, description, amount, currency, category, transaction_date, statement_import_id")
+        .in("statement_import_id", statementIds);
+      
+      if (stmtTxError) {
+        console.error("Error fetching statement transactions:", stmtTxError);
+      } else {
+        statementTransactions = stmtTxs || [];
+      }
+    }
+
+    console.log(`Analyzing ${allTransactions?.length || 0} transactions and ${statementTransactions.length} CC consumptions for user ${user.id}`);
 
     const insights: Insight[] = [];
 
-    if (!transactions || transactions.length === 0) {
+    if (!allTransactions || allTransactions.length === 0) {
       return new Response(
         JSON.stringify({ insights: [], message: "No hay suficientes datos para generar insights" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Organize transactions by month
-    const monthlyData: Record<string, MonthlyData> = {};
+    // === DUAL ANALYSIS SETUP ===
     
-    transactions.forEach((tx: Transaction) => {
-      const month = tx.date.substring(0, 7); // YYYY-MM
-      if (!monthlyData[month]) {
-        monthlyData[month] = {
-          month,
-          total: 0,
-          byCategory: {},
-          transactionCount: 0,
-          transactions: [],
-        };
+    // 1. CASHFLOW DATA: All transactions including CC payments (for projections)
+    const cashflowData: Record<string, MonthlyData> = {};
+    
+    allTransactions.forEach((tx: Transaction) => {
+      const month = tx.date.substring(0, 7);
+      if (!cashflowData[month]) {
+        cashflowData[month] = { month, total: 0, byCategory: {}, transactionCount: 0, transactions: [] };
       }
-      
       const amountInARS = tx.currency === "USD" ? tx.amount * usdRate : tx.amount;
-      monthlyData[month].total += amountInARS;
-      monthlyData[month].byCategory[tx.category] = (monthlyData[month].byCategory[tx.category] || 0) + amountInARS;
-      monthlyData[month].transactionCount++;
-      monthlyData[month].transactions.push(tx);
+      cashflowData[month].total += amountInARS;
+      cashflowData[month].byCategory[tx.category] = (cashflowData[month].byCategory[tx.category] || 0) + amountInARS;
+      cashflowData[month].transactionCount++;
+      cashflowData[month].transactions.push(tx);
     });
 
-    const sortedMonths = Object.keys(monthlyData).sort().reverse();
+    // 2. CONSUMPTION DATA: Direct expenses + CC consumptions (excluding CC Payment category)
+    const consumptionData: Record<string, ConsumptionData> = {};
+    
+    // Add direct expenses (excluding Credit Card Payment)
+    allTransactions
+      .filter((tx: Transaction) => tx.category !== "Credit Card Payment")
+      .forEach((tx: Transaction) => {
+        const month = tx.date.substring(0, 7);
+        if (!consumptionData[month]) {
+          consumptionData[month] = { month, total: 0, byCategory: {}, transactionCount: 0, creditCardBreakdown: {} };
+        }
+        const amountInARS = tx.currency === "USD" ? tx.amount * usdRate : tx.amount;
+        consumptionData[month].total += amountInARS;
+        consumptionData[month].byCategory[tx.category] = (consumptionData[month].byCategory[tx.category] || 0) + amountInARS;
+        consumptionData[month].transactionCount++;
+      });
+
+    // Add CC consumption details, associated with the payment month
+    // Statement from December (statement_month = 2024-12) gets paid in January
+    if (statementImports && statementTransactions.length > 0) {
+      const statementMonthMap = new Map<string, string>();
+      statementImports.forEach((s: StatementImport) => {
+        // Get the payment month (month after statement_month)
+        const stmtDate = new Date(s.statement_month + "-01");
+        stmtDate.setMonth(stmtDate.getMonth() + 1);
+        const paymentMonth = stmtDate.toISOString().substring(0, 7);
+        statementMonthMap.set(s.id, paymentMonth);
+      });
+
+      statementTransactions.forEach((stx: StatementTransaction) => {
+        const paymentMonth = statementMonthMap.get(stx.statement_import_id);
+        if (!paymentMonth) return;
+
+        if (!consumptionData[paymentMonth]) {
+          consumptionData[paymentMonth] = { month: paymentMonth, total: 0, byCategory: {}, transactionCount: 0, creditCardBreakdown: {} };
+        }
+        
+        const category = stx.category || "General";
+        const amountInARS = stx.currency === "USD" ? stx.amount * usdRate : stx.amount;
+        
+        // Track as CC breakdown (for insight generation)
+        consumptionData[paymentMonth].creditCardBreakdown[category] = 
+          (consumptionData[paymentMonth].creditCardBreakdown[category] || 0) + amountInARS;
+        
+        // Also add to general category totals for pattern analysis
+        consumptionData[paymentMonth].byCategory[category] = 
+          (consumptionData[paymentMonth].byCategory[category] || 0) + amountInARS;
+        consumptionData[paymentMonth].total += amountInARS;
+        consumptionData[paymentMonth].transactionCount++;
+      });
+    }
+
+    const sortedMonths = Object.keys(cashflowData).sort().reverse();
     const currentMonth = sortedMonths[0];
     const previousMonth = sortedMonths[1];
 
-    // 1. ANOMALY DETECTION: Month-over-month category changes
-    if (currentMonth && previousMonth) {
-      const currentData = monthlyData[currentMonth];
-      const previousData = monthlyData[previousMonth];
+    // 1. ANOMALY DETECTION: Month-over-month category changes (using CONSUMPTION data, not cashflow)
+    const consumptionSortedMonths = Object.keys(consumptionData).sort().reverse();
+    const consumptionCurrentMonth = consumptionSortedMonths[0];
+    const consumptionPreviousMonth = consumptionSortedMonths[1];
 
-      // Check each category for significant changes
+    if (consumptionCurrentMonth && consumptionPreviousMonth) {
+      const currentData = consumptionData[consumptionCurrentMonth];
+      const previousData = consumptionData[consumptionPreviousMonth];
+
+      // Check each category for significant changes (excluding Credit Card Payment which is already filtered)
       const allCategories = new Set([
         ...Object.keys(currentData.byCategory),
         ...Object.keys(previousData.byCategory),
@@ -184,7 +289,7 @@ Deno.serve(async (req) => {
         }
       });
 
-      // Overall spending change
+      // Overall consumption change (not cashflow)
       const totalChange = ((currentData.total - previousData.total) / previousData.total) * 100;
       if (Math.abs(totalChange) > 30) {
         insights.push({
@@ -192,20 +297,47 @@ Deno.serve(async (req) => {
           priority: totalChange > 0 ? "high" : "low",
           category: null,
           title: totalChange > 0 
-            ? `Gasto mensual +${Math.round(totalChange)}%` 
-            : `Gasto mensual ${Math.round(totalChange)}%`,
+            ? `Consumo mensual +${Math.round(totalChange)}%` 
+            : `Consumo mensual ${Math.round(totalChange)}%`,
           description: totalChange > 0
-            ? `Este mes vas ${formatCurrency(currentData.total)} vs ${formatCurrency(previousData.total)} el anterior`
+            ? `Este mes consumiste ${formatCurrency(currentData.total)} vs ${formatCurrency(previousData.total)} el anterior`
             : `Excelente control: de ${formatCurrency(previousData.total)} a ${formatCurrency(currentData.total)}`,
           data: { current: currentData.total, previous: previousData.total, changePercent: Math.round(totalChange) },
         });
       }
+
+      // CC BREAKDOWN INSIGHT: If there are CC consumptions, show breakdown
+      if (Object.keys(currentData.creditCardBreakdown).length > 0) {
+        const ccTotal = Object.values(currentData.creditCardBreakdown).reduce((a, b) => a + b, 0);
+        const topCCCategories = Object.entries(currentData.creditCardBreakdown)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 3);
+        
+        if (ccTotal > 100000) {
+          const breakdown = topCCCategories
+            .map(([cat, amt]) => `${cat}: ${Math.round((amt / ccTotal) * 100)}%`)
+            .join(", ");
+          
+          insights.push({
+            type: "pattern",
+            priority: "high",
+            category: null,
+            title: `Desglose de consumos TC: ${formatCurrency(ccTotal)}`,
+            description: `Tu pago de tarjeta se compone de: ${breakdown}`,
+            data: { total: ccTotal, breakdown: Object.fromEntries(topCCCategories) },
+            action: { label: "Ver resumen", route: "/credit-cards" },
+          });
+        }
+      }
     }
 
-    // 2. PATTERN DETECTION: Recurring expenses
+    // 2. PATTERN DETECTION: Recurring expenses (using direct transactions excluding CC Payment)
     const descriptionMap: Record<string, { amounts: number[]; months: Set<string>; category: string }> = {};
     
-    transactions.forEach((tx: Transaction) => {
+    // Use direct transactions (excluding CC Payment) for pattern detection
+    const directTransactions = allTransactions.filter((tx: Transaction) => tx.category !== "Credit Card Payment");
+    
+    directTransactions.forEach((tx: Transaction) => {
       // Normalize description for matching
       const normalizedDesc = tx.description.toLowerCase().trim();
       const key = normalizedDesc.substring(0, 30); // First 30 chars for grouping
@@ -217,6 +349,20 @@ Deno.serve(async (req) => {
       const amountInARS = tx.currency === "USD" ? tx.amount * usdRate : tx.amount;
       descriptionMap[key].amounts.push(amountInARS);
       descriptionMap[key].months.add(tx.date.substring(0, 7));
+    });
+    
+    // Also add statement transactions for pattern detection
+    statementTransactions.forEach((stx: StatementTransaction) => {
+      const normalizedDesc = stx.description.toLowerCase().trim();
+      const key = normalizedDesc.substring(0, 30);
+      
+      if (!descriptionMap[key]) {
+        descriptionMap[key] = { amounts: [], months: new Set(), category: stx.category || "General" };
+      }
+      
+      const amountInARS = stx.currency === "USD" ? stx.amount * usdRate : stx.amount;
+      descriptionMap[key].amounts.push(amountInARS);
+      descriptionMap[key].months.add(stx.transaction_date.substring(0, 7));
     });
 
     const recurringExpenses: RecurringExpense[] = [];
@@ -256,11 +402,11 @@ Deno.serve(async (req) => {
       });
     });
 
-    // 3. TEMPORAL PATTERNS: Day of week analysis
+    // 3. TEMPORAL PATTERNS: Day of week analysis (using direct transactions)
     const dayOfWeekSpending: Record<number, { total: number; count: number }> = {};
     const dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
     
-    transactions.forEach((tx: Transaction) => {
+    directTransactions.forEach((tx: Transaction) => {
       const date = new Date(tx.date);
       const day = date.getDay();
       if (!dayOfWeekSpending[day]) {
@@ -293,11 +439,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 4. USD SUBSCRIPTIONS tracking
-    const usdTransactions = transactions.filter((tx: Transaction) => tx.currency === "USD");
-    if (usdTransactions.length > 0) {
-      const totalUSD = usdTransactions.reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
-      const monthlyUSD = totalUSD / sortedMonths.length;
+    // 4. USD SUBSCRIPTIONS tracking (from both direct transactions and statement transactions)
+    const usdDirectTransactions = directTransactions.filter((tx: Transaction) => tx.currency === "USD");
+    const usdStatementTransactions = statementTransactions.filter((stx: StatementTransaction) => stx.currency === "USD");
+    
+    const totalDirectUSD = usdDirectTransactions.reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
+    const totalStatementUSD = usdStatementTransactions.reduce((sum: number, stx: StatementTransaction) => sum + stx.amount, 0);
+    const totalUSD = totalDirectUSD + totalStatementUSD;
+    const totalUSDCount = usdDirectTransactions.length + usdStatementTransactions.length;
+    
+    if (totalUSD > 0) {
+      const monthlyUSD = totalUSD / Math.max(sortedMonths.length, 1);
       
       if (monthlyUSD > 10) {
         insights.push({
@@ -305,13 +457,13 @@ Deno.serve(async (req) => {
           priority: "medium",
           category: "Subscriptions",
           title: `Gastos en USD: ~$${monthlyUSD.toFixed(2)}/mes`,
-          description: `${usdTransactions.length} transacciones en USD totalizando $${totalUSD.toFixed(2)} (${formatCurrency(totalUSD * usdRate)} ARS)`,
-          data: { totalUSD, monthlyUSD, count: usdTransactions.length, arsEquivalent: totalUSD * usdRate },
+          description: `${totalUSDCount} transacciones en USD totalizando $${totalUSD.toFixed(2)} (${formatCurrency(totalUSD * usdRate)} ARS)`,
+          data: { totalUSD, monthlyUSD, count: totalUSDCount, arsEquivalent: totalUSD * usdRate },
         });
       }
     }
 
-    // 5. SPENDING PROJECTION
+    // 5. SPENDING PROJECTION (using CASHFLOW data - includes CC payments)
     if (currentMonth) {
       const now = new Date();
       const currentMonthDate = new Date(currentMonth + "-01");
@@ -319,11 +471,11 @@ Deno.serve(async (req) => {
       if (now.getMonth() === currentMonthDate.getMonth() && now.getFullYear() === currentMonthDate.getFullYear()) {
         const dayOfMonth = now.getDate();
         const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        const currentSpending = monthlyData[currentMonth].total;
+        const currentSpending = cashflowData[currentMonth]?.total || 0;
         const projectedSpending = (currentSpending / dayOfMonth) * daysInMonth;
 
         // Compare with average of previous months
-        const previousMonthsData = sortedMonths.slice(1, 4).map(m => monthlyData[m]?.total || 0);
+        const previousMonthsData = sortedMonths.slice(1, 4).map(m => cashflowData[m]?.total || 0);
         const avgPreviousMonths = previousMonthsData.length > 0 
           ? previousMonthsData.reduce((a, b) => a + b, 0) / previousMonthsData.length 
           : 0;
@@ -354,21 +506,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 6. TOP CATEGORY RECOMMENDATION
-    if (currentMonth) {
-      const categoryTotals = Object.entries(monthlyData[currentMonth].byCategory)
-        .sort(([, a], [, b]) => b - a);
+    // 6. TOP CATEGORY RECOMMENDATION (using CONSUMPTION data - excludes CC Payment)
+    if (consumptionCurrentMonth && consumptionData[consumptionCurrentMonth]) {
+      const categoryTotals = Object.entries(consumptionData[consumptionCurrentMonth].byCategory)
+        .sort(([, a], [, b]) => (b as number) - (a as number));
       
       if (categoryTotals.length > 0) {
-        const [topCategory, topAmount] = categoryTotals[0];
-        const percentage = (topAmount / monthlyData[currentMonth].total) * 100;
+        const [topCategory, topAmount] = categoryTotals[0] as [string, number];
+        const percentage = (topAmount / consumptionData[consumptionCurrentMonth].total) * 100;
         
         if (percentage > 30) {
           insights.push({
             type: "recommendation",
             priority: "medium",
             category: topCategory,
-            title: `${topCategory} = ${Math.round(percentage)}% del gasto`,
+            title: `${topCategory} = ${Math.round(percentage)}% del consumo`,
             description: `Tu mayor categoría este mes. Reducir un 20% ahorraría ${formatCurrency(topAmount * 0.2)}`,
             data: { category: topCategory, amount: topAmount, percentage: Math.round(percentage), potentialSaving: topAmount * 0.2 },
             action: { label: "Analizar", route: `/transactions?category=${encodeURIComponent(topCategory)}` },
@@ -391,7 +543,8 @@ Deno.serve(async (req) => {
         insights: topInsights,
         metadata: {
           analyzedMonths: sortedMonths.length,
-          totalTransactions: transactions.length,
+          totalTransactions: allTransactions.length,
+          totalStatementTransactions: statementTransactions.length,
           generatedAt: new Date().toISOString(),
         }
       }),
