@@ -44,17 +44,21 @@ Deno.serve(async (req) => {
 Contexto:
 - Usuario actual: ${userName || 'Usuario'}
 - Usuarios disponibles: ${userNames}
-- Categorías de gasto disponibles: ${categoryNames}
+- Categorías disponibles: ${categoryNames}
 - Fecha actual: ${today}
 - Moneda por defecto: ARS (pesos argentinos)
 - Si mencionan "dólares", "dolares", "USD", "usd" o "verdes", usar USD
 
 Reglas importantes:
 1. El tipo es "expense" para gastos y "income" para ingresos
-2. Buscar palabras clave: "gaste/gasté/pagué/compré" = expense, "cobré/recibí/me pagaron/vendí" = income
-3. Mapear la descripción a una categoría existente de la lista
+2. Buscar palabras clave: "gaste/gasté/pagué/compré/almorcé/cené/tomé" = expense, "cobré/recibí/me pagaron/vendí" = income
+3. La categoría DEBE ser exactamente una de la lista proporcionada. Elegir la más cercana semánticamente si no hay match exacto:
+   - Comida/almuerzo/cena/café/restaurante → buscar categoría de comida (Food, Comida, Alimentación, etc.)
+   - Taxi/uber/colectivo/nafta → buscar categoría de transporte (Transportation, Transporte, etc.)
+   - Luz/gas/agua/internet/teléfono → buscar categoría de servicios (Utilities, Servicios, etc.)
+   - Salario/sueldo/honorarios → buscar categoría de ingresos (Salary, Sueldo, Ingreso, etc.)
 4. Si no hay fecha específica, usar la fecha actual
-5. Extraer el monto numérico (ej: "dos mil" = 2000, "quinientos" = 500)
+5. Extraer el monto numérico (ej: "dos mil" = 2000, "quinientos" = 500, "quince lucas" = 15000)
 6. Si mencionan un nombre de persona que coincide con los usuarios disponibles, ese es el owner
 
 Debes retornar un JSON válido con esta estructura exacta:
@@ -62,7 +66,7 @@ Debes retornar un JSON válido con esta estructura exacta:
   "type": "expense" | "income",
   "amount": number,
   "currency": "ARS" | "USD",
-  "category": "nombre exacto de categoria de la lista",
+  "category": "nombre EXACTO de una categoria de la lista",
   "description": "descripcion breve del gasto/ingreso",
   "date": "YYYY-MM-DD",
   "owner": "nombre del usuario si se menciona",

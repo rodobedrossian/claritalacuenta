@@ -37,6 +37,7 @@ interface VoiceTransactionDialogProps {
   transcribedText: string;
   categories: Array<{ name: string; type: string }>;
   users: Array<{ id: string; name: string }>;
+  currentUserId?: string;
   onConfirm: (transaction: {
     type: "income" | "expense";
     amount: number;
@@ -56,6 +57,7 @@ export const VoiceTransactionDialog = ({
   transcribedText,
   categories,
   users,
+  currentUserId,
   onConfirm,
   onCancel,
 }: VoiceTransactionDialogProps) => {
@@ -67,27 +69,55 @@ export const VoiceTransactionDialog = ({
   const [date, setDate] = useState<Date>(new Date());
   const [ownerId, setOwnerId] = useState<string>("");
 
+  // Match category with fuzzy matching
+  const matchCategory = (aiCategory: string, availableCategories: Array<{ name: string; type: string }>) => {
+    const normalizedAi = aiCategory.toLowerCase().trim();
+    
+    // Exact match
+    const exact = availableCategories.find(c => c.name.toLowerCase() === normalizedAi);
+    if (exact) return exact.name;
+    
+    // Partial match - category contains AI term or vice versa
+    const partial = availableCategories.find(c => 
+      c.name.toLowerCase().includes(normalizedAi) ||
+      normalizedAi.includes(c.name.toLowerCase())
+    );
+    if (partial) return partial.name;
+    
+    // Return original if no match found
+    return aiCategory;
+  };
+
   // Update form when transaction changes
   useEffect(() => {
     if (transaction) {
       setType(transaction.type);
       setAmount(transaction.amount.toString());
       setCurrency(transaction.currency);
-      setCategory(transaction.category);
       setDescription(transaction.description);
       setDate(parseISO(transaction.date));
       
-      // Find owner ID by name
+      // Match category with fuzzy matching
+      const filteredCats = categories.filter(c => c.type === transaction.type);
+      const matchedCategory = matchCategory(transaction.category, filteredCats);
+      setCategory(matchedCategory);
+      
+      // Find owner ID by name, or default to current user
       if (transaction.owner) {
         const owner = users.find(u => 
           u.name.toLowerCase() === transaction.owner?.toLowerCase()
         );
         if (owner) {
           setOwnerId(owner.id);
+        } else if (currentUserId) {
+          setOwnerId(currentUserId);
         }
+      } else if (currentUserId) {
+        // Default to logged-in user if no owner specified
+        setOwnerId(currentUserId);
       }
     }
-  }, [transaction, users]);
+  }, [transaction, users, categories, currentUserId]);
 
   const handleSubmit = () => {
     const numAmount = parseFloat(amount);
