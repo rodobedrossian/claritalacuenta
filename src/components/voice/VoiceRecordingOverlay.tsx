@@ -44,8 +44,8 @@ export const VoiceRecordingOverlay = ({
       const width = canvas.width;
       const height = canvas.height;
       
-      // Clear canvas
-      ctx.fillStyle = 'hsl(var(--background))';
+      // Clear canvas with a neutral color
+      ctx.fillStyle = '#1a1a2e';
       ctx.fillRect(0, 0, width, height);
 
       if (levels.length === 0) {
@@ -64,15 +64,20 @@ export const VoiceRecordingOverlay = ({
       for (let i = 0; i < barCount; i++) {
         const dataIndex = i * step;
         const value = levels[dataIndex] || 0;
-        const barHeight = (value / 255) * height * 0.8;
+        const barHeight = Math.max(4, (value / 255) * height * 0.8);
         
         const x = i * (barWidth + barGap);
         const y = (height - barHeight) / 2;
 
-        // Create gradient for each bar
+        // Use computed primary color or fallback
+        const primaryColor = getComputedStyle(document.documentElement)
+          .getPropertyValue('--primary')
+          .trim();
+        const [h, s, l] = primaryColor.split(' ').map(v => v.replace('%', ''));
+        
         const gradient = ctx.createLinearGradient(x, y, x, y + barHeight);
-        gradient.addColorStop(0, 'hsl(var(--primary))');
-        gradient.addColorStop(1, 'hsl(var(--primary) / 0.5)');
+        gradient.addColorStop(0, `hsl(${h}, ${s}%, ${l}%)`);
+        gradient.addColorStop(1, `hsl(${h}, ${s}%, ${l}%, 0.5)`);
         
         ctx.fillStyle = gradient;
         ctx.beginPath();
