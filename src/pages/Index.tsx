@@ -15,8 +15,10 @@ import { BudgetProgress } from "@/components/budgets/BudgetProgress";
 import { ImportStatementDialog } from "@/components/credit-cards/ImportStatementDialog";
 import { NotificationSetupBanner } from "@/components/notifications/NotificationSetupBanner";
 import { VoiceTransactionDialog } from "@/components/voice/VoiceTransactionDialog";
+import { InsightsCard } from "@/components/insights/InsightsCard";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useVoiceTransaction } from "@/hooks/useVoiceTransaction";
+import { useInsightsData } from "@/hooks/useInsightsData";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -68,6 +70,9 @@ const Index = () => {
 
   // Push notifications hook
   const pushNotifications = usePushNotifications(user?.id);
+
+  // Insights data
+  const { data: insightsData, loading: insightsLoading, refetch: refetchInsights } = useInsightsData(user?.id);
 
   // Voice transaction hook
   const voiceTransaction = useVoiceTransaction({
@@ -416,6 +421,15 @@ const Index = () => {
                 </div>
               </Card>
             )}
+          </div>
+
+          {/* Insights */}
+          <div className="animate-fade-in mb-6">
+            <InsightsCard
+              insights={insightsData?.insights || []}
+              loading={insightsLoading}
+              onRefresh={refetchInsights}
+            />
           </div>
 
           {/* Charts and Transactions */}
