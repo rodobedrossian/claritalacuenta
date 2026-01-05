@@ -61,6 +61,7 @@ interface UseCreditCardStatementsReturn {
   getStatementTransactions: (statementImportId: string) => Promise<StatementTransaction[]>;
   updateTransactionCategory: (transactionId: string, category: string) => Promise<boolean>;
   bulkUpdateCategories: (transactionIds: string[], category: string) => Promise<boolean>;
+  deleteStatement: (statementId: string) => Promise<boolean>;
 }
 
 export function useCreditCardStatements(userId: string | null): UseCreditCardStatementsReturn {
@@ -151,6 +152,39 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
     return true;
   }, []);
 
+  const deleteStatement = useCallback(async (statementId: string): Promise<boolean> => {
+    try {
+      // First delete associated transactions
+      const { error: txError } = await supabase
+        .from("transactions")
+        .delete()
+        .eq("statement_import_id", statementId);
+
+      if (txError) {
+        console.error("Error deleting statement transactions:", txError);
+        return false;
+      }
+
+      // Then delete the statement itself
+      const { error: stmtError } = await supabase
+        .from("statement_imports")
+        .delete()
+        .eq("id", statementId);
+
+      if (stmtError) {
+        console.error("Error deleting statement:", stmtError);
+        return false;
+      }
+
+      // Update local state
+      setStatements(prev => prev.filter(s => s.id !== statementId));
+      return true;
+    } catch (err) {
+      console.error("Error deleting statement:", err);
+      return false;
+    }
+  }, []);
+
   return {
     statements,
     loading,
@@ -159,5 +193,6 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
     getStatementTransactions,
     updateTransactionCategory,
     bulkUpdateCategories,
+    deleteStatement,
   };
 }

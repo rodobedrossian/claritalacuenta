@@ -20,7 +20,7 @@ const CreditCards = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedStatement, setSelectedStatement] = useState<StatementImport | null>(null);
 
-  const { statements, loading, refetch } = useCreditCardStatements(userId);
+  const { statements, loading, refetch, deleteStatement } = useCreditCardStatements(userId);
   const { creditCards } = useCreditCardsData(userId);
 
   useEffect(() => {
@@ -94,6 +94,7 @@ const CreditCards = () => {
             statements={statements}
             creditCards={creditCards}
             onSelectStatement={setSelectedStatement}
+            onDeleteStatement={deleteStatement}
           />
         )}
       </div>
