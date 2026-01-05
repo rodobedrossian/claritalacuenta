@@ -41,3 +41,9 @@ verify_jwt = false
 
 [functions.parse-credit-card-statement]
 verify_jwt = false
+
+[functions.transcribe-audio]
+verify_jwt = false
+
+[functions.parse-voice-transaction]
+verify_jwt = false
