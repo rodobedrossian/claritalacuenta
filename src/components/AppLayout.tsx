@@ -12,7 +12,8 @@ import {
   X,
   PanelLeftClose,
   PanelLeft,
-  CreditCard
+  CreditCard,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +31,7 @@ const navItems = [
   { title: "Tarjetas", path: "/credit-cards", icon: CreditCard },
   { title: "Ahorros", path: "/savings", icon: PiggyBank },
   { title: "Presupuestos", path: "/budgets", icon: Target },
+  { title: "Insights", path: "/insights", icon: Sparkles },
   { title: "Configuración", path: "/settings", icon: Settings },
 ];
 

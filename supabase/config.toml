@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.parse-voice-transaction]
 verify_jwt = false
+
+[functions.generate-insights]
+verify_jwt = false
