@@ -25,15 +25,6 @@ interface StatementImport {
   created_at: string;
 }
 
-interface StatementTransaction {
-  id: string;
-  description: string;
-  amount: number;
-  currency: string;
-  category: string;
-  transaction_date: string;
-  statement_import_id: string;
-}
 
 interface MonthlyData {
   month: string;
@@ -125,30 +116,39 @@ Deno.serve(async (req) => {
       .from("statement_imports")
       .select("id, statement_month, created_at")
       .eq("user_id", user.id)
-      .gte("created_at", sixMonthsAgo.toISOString())
-      .order("created_at", { ascending: false });
+      // statement_month is stored as a DATE (YYYY-MM-DD). Filter by statement period, not upload time.
+      .gte("statement_month", sixMonthsAgo.toISOString().split("T")[0])
+      .order("statement_month", { ascending: false });
 
     if (stmtError) {
       console.error("Error fetching statement imports:", stmtError);
     }
 
-    // Fetch detailed credit card transactions from statements
-    let statementTransactions: StatementTransaction[] = [];
+    // Fetch detailed credit card consumption transactions (they are stored in public.transactions as is_projected=true)
+    let ccConsumptionTransactions: Transaction[] = [];
     if (statementImports && statementImports.length > 0) {
       const statementIds = statementImports.map((s: StatementImport) => s.id);
-      const { data: stmtTxs, error: stmtTxError } = await supabase
-        .from("statement_transactions")
-        .select("id, description, amount, currency, category, transaction_date, statement_import_id")
+      const { data: ccTxs, error: ccTxError } = await supabase
+        .from("transactions")
+        .select(
+          "id, description, amount, currency, category, date, type, is_projected, user_id, payment_method, statement_import_id, credit_card_id"
+        )
+        .eq("user_id", user.id)
+        .eq("type", "expense")
+        .eq("is_projected", true)
+        .eq("payment_method", "credit_card")
         .in("statement_import_id", statementIds);
-      
-      if (stmtTxError) {
-        console.error("Error fetching statement transactions:", stmtTxError);
+
+      if (ccTxError) {
+        console.error("Error fetching CC consumption transactions:", ccTxError);
       } else {
-        statementTransactions = stmtTxs || [];
+        ccConsumptionTransactions = (ccTxs || []) as Transaction[];
       }
     }
 
-    console.log(`Analyzing ${allTransactions?.length || 0} transactions and ${statementTransactions.length} CC consumptions for user ${user.id}`);
+    console.log(
+      `Analyzing ${allTransactions?.length || 0} cashflow transactions and ${ccConsumptionTransactions.length} CC consumptions for user ${user.id}`
+    );
 
     const insights: Insight[] = [];
 
@@ -194,35 +194,46 @@ Deno.serve(async (req) => {
       });
 
     // Add CC consumption details, associated with the payment month
-    // Statement from December (statement_month = 2024-12) gets paid in January
-    if (statementImports && statementTransactions.length > 0) {
-      const statementMonthMap = new Map<string, string>();
+    // The detailed CC consumptions are stored as transactions with is_projected=true and payment_method=credit_card.
+    // A statement from December (statement_month = 2024-12-01) is typically paid in January.
+    if (statementImports && ccConsumptionTransactions.length > 0) {
+      const statementPaymentMonthById = new Map<string, string>();
       statementImports.forEach((s: StatementImport) => {
-        // Get the payment month (month after statement_month)
-        const stmtDate = new Date(s.statement_month + "-01");
+        // statement_month is a DATE string; normalize to the first day of the month
+        const stmtDate = new Date(String(s.statement_month));
+        // Payment month = month after statement month
         stmtDate.setMonth(stmtDate.getMonth() + 1);
         const paymentMonth = stmtDate.toISOString().substring(0, 7);
-        statementMonthMap.set(s.id, paymentMonth);
+        statementPaymentMonthById.set(s.id, paymentMonth);
       });
 
-      statementTransactions.forEach((stx: StatementTransaction) => {
-        const paymentMonth = statementMonthMap.get(stx.statement_import_id);
+      ccConsumptionTransactions.forEach((tx: Transaction) => {
+        if (!tx.statement_import_id) return;
+
+        const paymentMonth = statementPaymentMonthById.get(tx.statement_import_id);
         if (!paymentMonth) return;
 
         if (!consumptionData[paymentMonth]) {
-          consumptionData[paymentMonth] = { month: paymentMonth, total: 0, byCategory: {}, transactionCount: 0, creditCardBreakdown: {} };
+          consumptionData[paymentMonth] = {
+            month: paymentMonth,
+            total: 0,
+            byCategory: {},
+            transactionCount: 0,
+            creditCardBreakdown: {},
+          };
         }
-        
-        const category = stx.category || "General";
-        const amountInARS = stx.currency === "USD" ? stx.amount * usdRate : stx.amount;
-        
+
+        const category = tx.category || "General";
+        const amountInARS = tx.currency === "USD" ? tx.amount * usdRate : tx.amount;
+
         // Track as CC breakdown (for insight generation)
-        consumptionData[paymentMonth].creditCardBreakdown[category] = 
+        consumptionData[paymentMonth].creditCardBreakdown[category] =
           (consumptionData[paymentMonth].creditCardBreakdown[category] || 0) + amountInARS;
-        
+
         // Also add to general category totals for pattern analysis
-        consumptionData[paymentMonth].byCategory[category] = 
+        consumptionData[paymentMonth].byCategory[category] =
           (consumptionData[paymentMonth].byCategory[category] || 0) + amountInARS;
+
         consumptionData[paymentMonth].total += amountInARS;
         consumptionData[paymentMonth].transactionCount++;
       });
@@ -351,19 +362,33 @@ Deno.serve(async (req) => {
       descriptionMap[key].months.add(tx.date.substring(0, 7));
     });
     
-    // Also add statement transactions for pattern detection
-    statementTransactions.forEach((stx: StatementTransaction) => {
-      const normalizedDesc = stx.description.toLowerCase().trim();
-      const key = normalizedDesc.substring(0, 30);
-      
-      if (!descriptionMap[key]) {
-        descriptionMap[key] = { amounts: [], months: new Set(), category: stx.category || "General" };
-      }
-      
-      const amountInARS = stx.currency === "USD" ? stx.amount * usdRate : stx.amount;
-      descriptionMap[key].amounts.push(amountInARS);
-      descriptionMap[key].months.add(stx.transaction_date.substring(0, 7));
-    });
+    // Also add CC consumption transactions for pattern detection, mapped to payment month
+    if (statementImports && ccConsumptionTransactions.length > 0) {
+      const statementPaymentMonthById = new Map<string, string>();
+      statementImports.forEach((s: StatementImport) => {
+        const stmtDate = new Date(String(s.statement_month));
+        stmtDate.setMonth(stmtDate.getMonth() + 1);
+        statementPaymentMonthById.set(s.id, stmtDate.toISOString().substring(0, 7));
+      });
+
+      ccConsumptionTransactions.forEach((tx: Transaction) => {
+        if (!tx.statement_import_id) return;
+        const paymentMonth = statementPaymentMonthById.get(tx.statement_import_id);
+        if (!paymentMonth) return;
+
+        const normalizedDesc = tx.description.toLowerCase().trim();
+        const key = normalizedDesc.substring(0, 30);
+
+        if (!descriptionMap[key]) {
+          descriptionMap[key] = { amounts: [], months: new Set(), category: tx.category || "General" };
+        }
+
+        const amountInARS = tx.currency === "USD" ? tx.amount * usdRate : tx.amount;
+        descriptionMap[key].amounts.push(amountInARS);
+        // Month aligned to when you pay the statement
+        descriptionMap[key].months.add(paymentMonth);
+      });
+    }
 
     const recurringExpenses: RecurringExpense[] = [];
     
@@ -439,14 +464,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 4. USD SUBSCRIPTIONS tracking (from both direct transactions and statement transactions)
+    // 4. USD SUBSCRIPTIONS tracking (from both direct transactions and CC consumption transactions)
     const usdDirectTransactions = directTransactions.filter((tx: Transaction) => tx.currency === "USD");
-    const usdStatementTransactions = statementTransactions.filter((stx: StatementTransaction) => stx.currency === "USD");
-    
+    const usdCCTxs = ccConsumptionTransactions.filter((tx: Transaction) => tx.currency === "USD");
+
     const totalDirectUSD = usdDirectTransactions.reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
-    const totalStatementUSD = usdStatementTransactions.reduce((sum: number, stx: StatementTransaction) => sum + stx.amount, 0);
-    const totalUSD = totalDirectUSD + totalStatementUSD;
-    const totalUSDCount = usdDirectTransactions.length + usdStatementTransactions.length;
+    const totalCCUSD = usdCCTxs.reduce((sum: number, tx: Transaction) => sum + tx.amount, 0);
+    const totalUSD = totalDirectUSD + totalCCUSD;
+    const totalUSDCount = usdDirectTransactions.length + usdCCTxs.length;
     
     if (totalUSD > 0) {
       const monthlyUSD = totalUSD / Math.max(sortedMonths.length, 1);
@@ -508,21 +533,32 @@ Deno.serve(async (req) => {
 
     // 6. TOP CATEGORY RECOMMENDATION (using CONSUMPTION data - excludes CC Payment)
     if (consumptionCurrentMonth && consumptionData[consumptionCurrentMonth]) {
+      const FIXED_CATEGORIES = new Set(["Rent", "Mortgage"]);
+
       const categoryTotals = Object.entries(consumptionData[consumptionCurrentMonth].byCategory)
         .sort(([, a], [, b]) => (b as number) - (a as number));
-      
+
       if (categoryTotals.length > 0) {
         const [topCategory, topAmount] = categoryTotals[0] as [string, number];
         const percentage = (topAmount / consumptionData[consumptionCurrentMonth].total) * 100;
-        
+
         if (percentage > 30) {
+          const isFixed = FIXED_CATEGORIES.has(topCategory);
+
           insights.push({
             type: "recommendation",
             priority: "medium",
             category: topCategory,
             title: `${topCategory} = ${Math.round(percentage)}% del consumo`,
-            description: `Tu mayor categoría este mes. Reducir un 20% ahorraría ${formatCurrency(topAmount * 0.2)}`,
-            data: { category: topCategory, amount: topAmount, percentage: Math.round(percentage), potentialSaving: topAmount * 0.2 },
+            description: isFixed
+              ? "Es un gasto principalmente fijo. Más que recortarlo 20%, úsalo como señal para revisar si está alineado a tu presupuesto/ingresos (p. ej. renegociación o cambios a mediano plazo)."
+              : `Tu mayor categoría este mes. Reducir un 20% ahorraría ${formatCurrency(topAmount * 0.2)}`,
+            data: {
+              category: topCategory,
+              amount: topAmount,
+              percentage: Math.round(percentage),
+              ...(isFixed ? {} : { potentialSaving: topAmount * 0.2 }),
+            },
             action: { label: "Analizar", route: `/transactions?category=${encodeURIComponent(topCategory)}` },
           });
         }
@@ -544,7 +580,7 @@ Deno.serve(async (req) => {
         metadata: {
           analyzedMonths: sortedMonths.length,
           totalTransactions: allTransactions.length,
-          totalStatementTransactions: statementTransactions.length,
+          totalStatementTransactions: ccConsumptionTransactions.length,
           generatedAt: new Date().toISOString(),
         }
       }),
