@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface Transaction {
   id: string;
@@ -23,7 +24,7 @@ export const TimelineChart = ({ transactions }: TimelineChartProps) => {
   const timelineData = transactions
     .filter(t => t.currency === currency)
     .reduce((acc, transaction) => {
-      const date = format(parseISO(transaction.date), "MMM dd");
+      const date = format(parseISO(transaction.date), "dd MMM", { locale: es });
       const existing = acc.find(item => item.date === date);
       
       if (existing) {
@@ -52,7 +53,7 @@ export const TimelineChart = ({ transactions }: TimelineChartProps) => {
   return (
     <Card className="p-6 gradient-card border-border/50">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Income vs Expenses Timeline</h3>
+        <h3 className="text-lg font-semibold">Ingresos vs Gastos</h3>
         <div className="flex gap-2">
           <Button
             variant={currency === "USD" ? "default" : "outline"}
@@ -74,7 +75,7 @@ export const TimelineChart = ({ transactions }: TimelineChartProps) => {
       </div>
       {timelineData.length === 0 ? (
         <p className="text-muted-foreground text-center py-8">
-          No data yet. Start tracking your transactions!
+          Sin datos aún. ¡Empezá a registrar tus transacciones!
         </p>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
@@ -104,7 +105,7 @@ export const TimelineChart = ({ transactions }: TimelineChartProps) => {
               stroke="hsl(var(--success))" 
               strokeWidth={2}
               dot={{ fill: "hsl(var(--success))" }}
-              name="Income"
+              name="Ingresos"
             />
             <Line 
               type="monotone" 
@@ -112,7 +113,7 @@ export const TimelineChart = ({ transactions }: TimelineChartProps) => {
               stroke="hsl(var(--destructive))" 
               strokeWidth={2}
               dot={{ fill: "hsl(var(--destructive))" }}
-              name="Expenses"
+              name="Gastos"
             />
           </LineChart>
         </ResponsiveContainer>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, CalendarIcon, Wallet, CreditCard } from "lucide-react";
 import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -147,14 +148,14 @@ export const AddTransactionDialog = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[425px] bg-card border-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Transaction</DialogTitle>
+          <DialogTitle>Agregar Transacción</DialogTitle>
           <DialogDescription>
-            Add a new income or expense to track your finances.
+            Agregá un nuevo ingreso o gasto para llevar el control de tus finanzas.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
-            <Label htmlFor="type">Type</Label>
+            <Label htmlFor="type">Tipo</Label>
             <Select value={type} onValueChange={(value: "income" | "expense") => {
               setType(value);
               // Reset payment method for income
@@ -167,17 +168,17 @@ export const AddTransactionDialog = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
-                <SelectItem value="income">Income</SelectItem>
-                <SelectItem value="expense">Expense</SelectItem>
+                <SelectItem value="income">Ingreso</SelectItem>
+                <SelectItem value="expense">Gasto</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="currency">Currency</Label>
+            <Label htmlFor="currency">Moneda</Label>
             <Select value={currency} onValueChange={(value: "USD" | "ARS") => setCurrency(value)}>
               <SelectTrigger id="currency" className="bg-muted border-border">
-                <SelectValue placeholder="Select currency" />
+                <SelectValue placeholder="Seleccionar moneda" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
                 <SelectItem value="USD">USD ($)</SelectItem>
@@ -187,7 +188,7 @@ export const AddTransactionDialog = ({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount</Label>
+            <Label htmlFor="amount">Monto</Label>
             <Input
               id="amount"
               type="number"
@@ -200,10 +201,10 @@ export const AddTransactionDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category">Categoría</Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger id="category" className="bg-muted border-border">
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder="Seleccionar categoría" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
                 {categories.map((cat) => (
@@ -216,15 +217,15 @@ export const AddTransactionDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="owner">Owner</Label>
+            <Label htmlFor="owner">Responsable</Label>
             <Select value={userId} onValueChange={setUserId}>
               <SelectTrigger id="owner" className="bg-muted border-border">
-                <SelectValue placeholder="Select owner" />
+                <SelectValue placeholder="Seleccionar responsable" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
                 {users.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
-                    {user.full_name || "Unknown User"}
+                    {user.full_name || "Usuario desconocido"}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -232,7 +233,7 @@ export const AddTransactionDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="date">Date</Label>
+            <Label htmlFor="date">Fecha</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -244,7 +245,7 @@ export const AddTransactionDialog = ({
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP") : <span>Pick a date</span>}
+                  {date ? format(date, "PPP", { locale: es }) : <span>Elegir fecha</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 bg-card border-border" align="start">
