@@ -52,10 +52,23 @@ interface StatementDetailProps {
 }
 
 type FilterType = "all" | "consumo" | "cuota" | "impuesto";
+type TransactionType = "consumo" | "cuota" | "impuesto";
 
 // Normalize description for matching (remove extra spaces, lowercase)
 const normalizeDescription = (desc: string): string => {
   return desc.toLowerCase().trim().replace(/\s+/g, ' ');
+};
+
+// Extract installment info from description like "MERPAGO*KORA (1/3)"
+const extractInstallmentInfo = (description: string): { current: number; total: number } | null => {
+  const match = description.match(/\((\d+)\/(\d+)\)/);
+  if (match) {
+    return {
+      current: parseInt(match[1], 10),
+      total: parseInt(match[2], 10)
+    };
+  }
+  return null;
 };
 
 export const StatementDetail = ({ 
@@ -272,6 +285,58 @@ export const StatementDetail = ({
       newSelected.delete(id);
     }
     setSelectedIds(newSelected);
+  };
+
+  const handleTransactionTypeChange = async (transactionId: string, newType: TransactionType) => {
+    const transaction = transactions.find(t => t.id === transactionId);
+    if (!transaction) return;
+
+    // Extract installment info if changing to cuota
+    let installmentData: { installment_current: number | null; installment_total: number | null } = {
+      installment_current: null,
+      installment_total: null
+    };
+
+    if (newType === "cuota") {
+      const info = extractInstallmentInfo(transaction.description);
+      if (info) {
+        installmentData = {
+          installment_current: info.current,
+          installment_total: info.total
+        };
+      }
+    }
+
+    // Update in database
+    const { error } = await supabase
+      .from("credit_card_transactions")
+      .update({ 
+        transaction_type: newType,
+        ...installmentData
+      })
+      .eq("id", transactionId);
+
+    if (error) {
+      console.error("Error updating transaction type:", error);
+      toast.error("Error al actualizar el tipo");
+      return;
+    }
+
+    // Update local state
+    setTransactions(prev =>
+      prev.map(tx => 
+        tx.id === transactionId 
+          ? { 
+              ...tx, 
+              transaction_type: newType,
+              installment_current: installmentData.installment_current,
+              installment_total: installmentData.installment_total
+            } 
+          : tx
+      )
+    );
+
+    toast.success(`Tipo cambiado a ${newType}`);
   };
 
   const handleBulkUpdate = async () => {
@@ -513,9 +578,27 @@ export const StatementDetail = ({
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getBadgeVariant(item.transaction_type)}>
-                      {item.transaction_type}
-                    </Badge>
+                    <Select 
+                      value={item.transaction_type} 
+                      onValueChange={(value: TransactionType) => handleTransactionTypeChange(item.id, value)}
+                    >
+                      <SelectTrigger className="w-[110px] h-8">
+                        <Badge variant={getBadgeVariant(item.transaction_type)} className="w-full justify-center">
+                          {item.transaction_type}
+                        </Badge>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="consumo">
+                          <Badge variant="default">consumo</Badge>
+                        </SelectItem>
+                        <SelectItem value="cuota">
+                          <Badge variant="secondary">cuota</Badge>
+                        </SelectItem>
+                        <SelectItem value="impuesto">
+                          <Badge variant="outline">impuesto</Badge>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell className="whitespace-nowrap font-medium">
                     {formatCurrency(item.amount, item.currency)}
