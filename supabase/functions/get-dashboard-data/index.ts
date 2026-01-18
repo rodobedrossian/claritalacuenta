@@ -21,8 +21,6 @@ interface Transaction {
   from_savings: boolean;
   savings_source: string | null;
   payment_method: string;
-  is_projected: boolean;
-  credit_card_id: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -79,7 +77,7 @@ Deno.serve(async (req) => {
       // Transactions for the month
       supabase
         .from("transactions")
-        .select("id, type, amount, currency, category, description, date, user_id, from_savings, savings_source, payment_method, is_projected, credit_card_id")
+        .select("id, type, amount, currency, category, description, date, user_id, from_savings, savings_source, payment_method")
         .gte("date", monthStart.toISOString())
         .lte("date", monthEnd.toISOString())
         .order("date", { ascending: false }),
@@ -139,19 +137,16 @@ Deno.serve(async (req) => {
       ...t,
       amount: typeof t.amount === "string" ? parseFloat(t.amount) : t.amount,
       from_savings: t.from_savings || false,
-      payment_method: t.payment_method || "cash",
-      is_projected: t.is_projected || false
+      payment_method: t.payment_method || "cash"
     }));
 
     // Calculate totals server-side
-    // Separate effective expenses (impact balance) from projected expenses (credit card, only for budgets)
+    // All transactions in this table are now real cashflow (credit card consumptions are in credit_card_transactions)
     let totals = {
       incomeUSD: 0,
       incomeARS: 0,
-      expensesUSD: 0,          // Effective expenses (cash/debit)
-      expensesARS: 0,          // Effective expenses (cash/debit)
-      projectedExpensesUSD: 0, // Credit card expenses (projected)
-      projectedExpensesARS: 0, // Credit card expenses (projected)
+      expensesUSD: 0,
+      expensesARS: 0,
       savingsTransfersUSD: 0,
       savingsTransfersARS: 0
     };
@@ -161,16 +156,8 @@ Deno.serve(async (req) => {
         if (t.currency === "USD") totals.incomeUSD += t.amount;
         else totals.incomeARS += t.amount;
       } else if (t.type === "expense" && !t.from_savings) {
-        // Separate effective vs projected expenses
-        if (t.is_projected) {
-          // Projected (credit card) - doesn't impact balance, but counts for budgets
-          if (t.currency === "USD") totals.projectedExpensesUSD += t.amount;
-          else totals.projectedExpensesARS += t.amount;
-        } else {
-          // Effective (cash/debit) - impacts balance
-          if (t.currency === "USD") totals.expensesUSD += t.amount;
-          else totals.expensesARS += t.amount;
-        }
+        if (t.currency === "USD") totals.expensesUSD += t.amount;
+        else totals.expensesARS += t.amount;
       }
     }
 
@@ -192,18 +179,15 @@ Deno.serve(async (req) => {
       categoryMap.set(c.id, c.name);
     }
 
-    // Filter effective transactions (exclude projected/credit card) for dashboard display
-    // and enrich with category name
-    const effectiveTransactions = transactions
-      .filter(t => !t.is_projected)
-      .map(t => ({
-        ...t,
-        categoryName: categoryMap.get(t.category) || t.category
-      }));
+    // Enrich transactions with category name
+    const enrichedTransactions = transactions.map(t => ({
+      ...t,
+      categoryName: categoryMap.get(t.category) || t.category
+    }));
 
-    // Calculate spending by category (only EFFECTIVE expenses for dashboard)
+    // Calculate spending by category
     const spendingMap = new Map<string, number>();
-    for (const t of effectiveTransactions) {
+    for (const t of enrichedTransactions) {
       if (t.type === "expense") {
         const categoryName = categoryMap.get(t.category) || t.category;
         const key = `${categoryName} (${t.currency})`;
@@ -242,14 +226,14 @@ Deno.serve(async (req) => {
       totals,
       currentSavings,
       exchangeRate,
-      transactions: effectiveTransactions, // Only return effective transactions for dashboard
+      transactions: enrichedTransactions,
       spendingByCategory,
       categories: (categoriesResult.data || []).map((c: any) => ({ id: c.id, name: c.name, type: c.type })),
       users: usersResult.data || [],
       creditCards: creditCardsResult.data || []
     };
 
-    console.log(`Dashboard data fetched successfully. Total transactions: ${transactions.length}, Effective: ${effectiveTransactions.length}`);
+    console.log(`Dashboard data fetched successfully. Total transactions: ${transactions.length}`);
 
     return new Response(
       JSON.stringify(response),

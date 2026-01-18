@@ -719,7 +719,6 @@ export type Database = {
           email_message_id: string | null
           from_savings: boolean | null
           id: string
-          is_projected: boolean
           payment_method: string
           savings_source: string | null
           source: string | null
@@ -739,7 +738,6 @@ export type Database = {
           email_message_id?: string | null
           from_savings?: boolean | null
           id?: string
-          is_projected?: boolean
           payment_method?: string
           savings_source?: string | null
           source?: string | null
@@ -759,7 +757,6 @@ export type Database = {
           email_message_id?: string | null
           from_savings?: boolean | null
           id?: string
-          is_projected?: boolean
           payment_method?: string
           savings_source?: string | null
           source?: string | null

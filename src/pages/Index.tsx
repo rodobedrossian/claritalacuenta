@@ -401,8 +401,6 @@ const Index = () => {
             {budgetsWithSpending.length > 0 ? (
               <BudgetProgress
                 budgets={budgetsWithSpending}
-                projectedExpensesUSD={totals.projectedExpensesUSD}
-                projectedExpensesARS={totals.projectedExpensesARS}
                 onManageBudgets={() => navigate("/budgets")}
               />
             ) : (
@@ -463,7 +461,6 @@ const Index = () => {
           categories={categories} 
           currentUserId={user?.id || ""}
           currentSavings={currentSavings} 
-          creditCards={creditCards}
           open={addTransactionDialogOpen}
           onOpenChange={setAddTransactionDialogOpen}
         />

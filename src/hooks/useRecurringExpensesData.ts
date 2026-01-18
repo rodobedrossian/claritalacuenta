@@ -148,7 +148,6 @@ export const useRecurringExpensesData = (userId: string | null): UseRecurringExp
           description: expense.description,
           date: new Date().toISOString(),
           payment_method: "cash",
-          is_projected: false,
           status: "confirmed",
           source: "recurring",
         },

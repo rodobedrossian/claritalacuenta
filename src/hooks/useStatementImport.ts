@@ -414,7 +414,6 @@ export function useStatementImport(): UseStatementImportReturn {
         source: string;
         status: string;
         statement_import_id: string | null;
-        is_projected: boolean;
       }> = [];
 
       if (totalARS > 0) {
@@ -431,7 +430,6 @@ export function useStatementImport(): UseStatementImportReturn {
           source: "pdf_import",
           status: "confirmed",
           statement_import_id: statementImportId,
-          is_projected: false,
         });
       }
 
@@ -449,7 +447,6 @@ export function useStatementImport(): UseStatementImportReturn {
           source: "pdf_import",
           status: "confirmed",
           statement_import_id: statementImportId,
-          is_projected: false,
         });
       }
 
