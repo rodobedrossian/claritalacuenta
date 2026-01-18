@@ -93,14 +93,17 @@ const Auth = () => {
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         {/* Gradient Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/80 to-primary/60" />
-        
+
         {/* Pattern Overlay */}
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }} />
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            }}
+          />
         </div>
-        
+
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center p-12 text-primary-foreground">
           {/* Logo */}
@@ -108,22 +111,20 @@ const Auth = () => {
             <div className="p-3 rounded-xl bg-white/20 backdrop-blur-sm">
               <Wallet className="h-10 w-10" />
             </div>
-            <h1 className="text-4xl font-bold">¿Y si ahorramos?</h1>
+            <h1 className="text-4xl font-bold">Clarita la cuenta</h1>
           </div>
-          
+
           {/* Tagline */}
           <h2 className="text-2xl font-medium mb-8 leading-relaxed">
-            Tomá el control de tus finanzas<br />
+            Tomá el control de tus finanzas
+            <br />
             personales de forma simple
           </h2>
-          
+
           {/* Features */}
           <div className="space-y-4">
             {features.map((feature, index) => (
-              <div 
-                key={index} 
-                className="flex items-center gap-4 p-4 rounded-lg bg-white/10 backdrop-blur-sm"
-              >
+              <div key={index} className="flex items-center gap-4 p-4 rounded-lg bg-white/10 backdrop-blur-sm">
                 <div className="p-2 rounded-lg bg-white/20">
                   <feature.icon className="h-5 w-5" />
                 </div>
@@ -131,7 +132,7 @@ const Auth = () => {
               </div>
             ))}
           </div>
-          
+
           {/* Bottom decoration */}
           <div className="absolute bottom-8 left-12 right-12">
             <div className="flex items-center gap-2 text-sm opacity-70">
@@ -150,19 +151,14 @@ const Auth = () => {
             <div className="p-2 rounded-lg gradient-primary">
               <Wallet className="h-8 w-8 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold">¿Y si ahorramos?</h1>
+            <h1 className="text-2xl font-bold">Clarita la cuenta</h1>
           </div>
 
           {/* Form Header */}
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-foreground mb-2">
-              {isSignUp ? "Crear cuenta" : "Iniciar sesión"}
-            </h2>
+            <h2 className="text-3xl font-bold text-foreground mb-2">{isSignUp ? "Crear cuenta" : "Iniciar sesión"}</h2>
             <p className="text-muted-foreground">
-              {isSignUp 
-                ? "Completá tus datos para empezar" 
-                : "Ingresá tus credenciales para continuar"
-              }
+              {isSignUp ? "Completá tus datos para empezar" : "Ingresá tus credenciales para continuar"}
             </p>
           </div>
 
@@ -184,7 +180,7 @@ const Auth = () => {
                 />
               </div>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">
                 Email
@@ -199,7 +195,7 @@ const Auth = () => {
                 className="h-12 bg-muted/50 border-border focus:border-primary transition-colors"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium">
                 Contraseña
@@ -214,11 +210,7 @@ const Auth = () => {
                 minLength={6}
                 className="h-12 bg-muted/50 border-border focus:border-primary transition-colors"
               />
-              {isSignUp && (
-                <p className="text-xs text-muted-foreground">
-                  Mínimo 6 caracteres
-                </p>
-              )}
+              {isSignUp && <p className="text-xs text-muted-foreground">Mínimo 6 caracteres</p>}
             </div>
 
             <Button
@@ -231,8 +223,10 @@ const Auth = () => {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {isSignUp ? "Creando cuenta..." : "Iniciando sesión..."}
                 </>
+              ) : isSignUp ? (
+                "Crear cuenta"
               ) : (
-                isSignUp ? "Crear cuenta" : "Iniciar sesión"
+                "Iniciar sesión"
               )}
             </Button>
           </form>
