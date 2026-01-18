@@ -8,36 +8,50 @@ const corsHeaders = {
 const EXTRACTION_PROMPT = `Eres un experto en analizar resúmenes de tarjetas de crédito argentinas. Analiza el siguiente PDF de resumen de tarjeta de crédito y extrae TODOS los consumos, cuotas e impuestos.
 
 REGLAS CRÍTICAS PARA CLASIFICACIÓN:
-1. **CUOTAS**: Cualquier compra que tenga formato "X/Y" o "CUOTA X DE Y" va SOLO en el array "cuotas". 
-   - Ejemplos: "ZARA (1/3)", "MEGATLON (8/12)", "FRAVEGA CUOTA 2 DE 6"
-   - IMPORTANTE: Si una línea tiene patrón de cuota, va ÚNICAMENTE en "cuotas", NUNCA en "consumos"
-   - Extrae cuota_actual (el primer número) y total_cuotas (el segundo número)
+
+1. **CUOTAS**: Cualquier compra que tenga indicador de cuotas va SOLO en el array "cuotas".
+   PATRONES DE CUOTAS A DETECTAR:
+   - "C.XX/YY" o "C.X/Y" (ej: "C.02/03", "C.1/6") - MUY COMÚN EN VISA
+   - "XX/YY" o "X/Y" solo números (ej: "02/03", "1/6")
+   - "CUOTA X DE Y" o "CTA X/Y"
+   - "(X/Y)" entre paréntesis
+   - Cualquier patrón que indique número de cuota actual y total
+   
+   Ejemplos reales:
+   - "ZARA C.02/03" → cuota_actual: 2, total_cuotas: 3
+   - "MERPAGO*LIDHERMAMTZ C.02/03" → cuota_actual: 2, total_cuotas: 3
+   - "MEGATLON (8/12)" → cuota_actual: 8, total_cuotas: 12
+   - "FRAVEGA CUOTA 2 DE 6" → cuota_actual: 2, total_cuotas: 6
+   
+   IMPORTANTE: Si una línea tiene CUALQUIER patrón de cuota, va ÚNICAMENTE en "cuotas", NUNCA en "consumos"
    
 2. **CONSUMOS**: SOLO compras que NO tienen ningún patrón de cuota
    - Son pagos en un solo pago, sin cuotas
    - cuota_actual y total_cuotas deben ser null
+   - NO incluir si la línea tiene "C.XX/YY" u otro patrón de cuotas
    
 3. **IMPUESTOS**: IVA, percepciones, impuesto PAIS, sellados, cargos administrativos
 
 IMPORTANTE - EVITAR DUPLICADOS:
 - Una transacción va en UN SOLO array (consumos O cuotas O impuestos)
-- Si tiene patrón (X/Y) → solo va en cuotas
+- Si tiene CUALQUIER patrón de cuota (C.XX/YY, X/Y, etc.) → solo va en cuotas
 - Si es un impuesto/cargo → solo va en impuestos
-- Todo lo demás → solo va en consumos
+- Todo lo demás sin patrón de cuota → solo va en consumos
 
 DATOS A EXTRAER:
 - Los montos pueden estar en ARS o USD (fijate la sección donde aparecen)
 - **MONTOS NEGATIVOS**: Si un monto tiene signo negativo (ej: "-200.883,89"), ES UNA BONIFICACIÓN/DEVOLUCIÓN. MANTENER el signo negativo en el valor.
-- Las fechas suelen estar en formato DD/MM o DD/MM/YYYY
+- Las fechas suelen estar en formato DD/MM o DD-Mon-YY (ej: "15-Nov-25")
+- Para fechas como "15-Nov-25", convertir a "15/11/2025"
 - IGNORA: pagos anteriores, límites de crédito, tasas de interés, info institucional, avisos legales
 
 Retorna un JSON válido con esta estructura exacta:
 {
-"consumos": [
+  "consumos": [
     {
       "fecha": "DD/MM/YYYY",
       "descripcion": "texto descriptivo SIN el patrón de cuota",
-      "monto": 12345.67,  // PUEDE SER NEGATIVO si es bonificación/devolución
+      "monto": 12345.67,
       "moneda": "ARS" o "USD",
       "cuota_actual": null,
       "total_cuotas": null
@@ -46,7 +60,7 @@ Retorna un JSON válido con esta estructura exacta:
   "cuotas": [
     {
       "fecha": "DD/MM/YYYY",
-      "descripcion": "texto descriptivo SIN el patrón de cuota",
+      "descripcion": "texto descriptivo SIN el patrón de cuota (quitar C.XX/YY)",
       "monto": 12345.67,
       "moneda": "ARS" o "USD",
       "cuota_actual": 2,
