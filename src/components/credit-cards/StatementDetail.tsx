@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, Search, Check, Sparkles } from "lucide-react";
+import { ArrowLeft, Search, Check, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { StatementImport } from "@/hooks/useCreditCardStatements";
+import { StatementImport, CreditCardTransaction } from "@/hooks/useCreditCardStatements";
 import { supabase } from "@/integrations/supabase/client";
 import { StatementSpendingChart } from "./StatementSpendingChart";
 
@@ -33,45 +33,14 @@ interface Category {
   type: string;
 }
 
-interface ExtractedItem {
-  id: string;
-  fecha: string;
-  descripcion: string;
-  monto: number;
-  moneda: string;
-  tipo: "consumo" | "cuota" | "impuesto";
-  cuota_actual?: number | null;
-  total_cuotas?: number | null;
-}
-
-// Type for extracted_data structure
+// Type for extracted_data structure (still used for resumen/summary)
 interface ExtractedDataType {
-  consumos?: Array<{
-    fecha: string;
-    descripcion: string;
-    monto: number;
-    moneda: string;
-  }>;
-  cuotas?: Array<{
-    fecha: string;
-    descripcion: string;
-    monto: number;
-    moneda: string;
-    cuota_actual: number;
-    total_cuotas: number;
-  }>;
-  impuestos?: Array<{
-    descripcion: string;
-    monto: number;
-    moneda: string;
-  }>;
   resumen?: {
     total_ars?: number;
     total_usd?: number;
     fecha_vencimiento?: string;
     fecha_cierre?: string;
   };
-  categorias_asignadas?: Record<string, string>;
 }
 
 interface StatementDetailProps {
@@ -94,58 +63,56 @@ export const StatementDetail = ({
   categories,
   userId,
   onBack,
-  onStatementUpdated
 }: StatementDetailProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkCategory, setBulkCategory] = useState("");
-  const [itemCategories, setItemCategories] = useState<Record<string, string>>({});
+  const [transactions, setTransactions] = useState<CreditCardTransaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [learnedCategories, setLearnedCategories] = useState<Record<string, string>>({});
   const [autoAssignedCount, setAutoAssignedCount] = useState(0);
-  const [dataLoaded, setDataLoaded] = useState(false);
-  
-  // Track local extracted_data to prevent stale state
-  const [localExtractedData, setLocalExtractedData] = useState<ExtractedDataType>(
-    statement.extracted_data as ExtractedDataType || {}
-  );
-  
-  // Refs to prevent duplicate runs
-  const autoAssignRan = useRef(false);
-  const learnedCategoriesLoaded = useRef(false);
 
-  // Load saved categories from extracted_data on mount
+  // Load transactions from credit_card_transactions table
   useEffect(() => {
-    const data = localExtractedData as Record<string, unknown> | null;
-    const savedCategories = data?.categorias_asignadas;
-    if (savedCategories && typeof savedCategories === 'object') {
-      setItemCategories(savedCategories as Record<string, string>);
-    }
-    setDataLoaded(true);
-  }, []);
+    const loadTransactions = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("credit_card_transactions")
+        .select("*")
+        .eq("statement_import_id", statement.id)
+        .order("date", { ascending: false });
+
+      if (error) {
+        console.error("Error loading transactions:", error);
+        toast.error("Error al cargar las transacciones");
+      } else {
+        setTransactions(data || []);
+      }
+      setLoading(false);
+    };
+
+    loadTransactions();
+  }, [statement.id]);
 
   // Load learned categories from previous transactions (once)
   useEffect(() => {
-    if (learnedCategoriesLoaded.current) return;
-    learnedCategoriesLoaded.current = true;
-
     const loadLearnedCategories = async () => {
-      const { data: transactions } = await supabase
-        .from('transactions')
-        .select('description, category')
+      const { data: ccTransactions } = await supabase
+        .from('credit_card_transactions')
+        .select('description, category_id')
         .eq('user_id', userId)
-        .not('category', 'is', null)
-        .not('category', 'eq', '')
+        .not('category_id', 'is', null)
         .order('created_at', { ascending: false });
 
-      if (!transactions) return;
+      if (!ccTransactions) return;
 
-      // Build a map of description -> category (most recent wins)
+      // Build a map of description -> category_id (most recent wins)
       const categoryMap: Record<string, string> = {};
-      transactions.forEach(t => {
+      ccTransactions.forEach(t => {
         const normalized = normalizeDescription(t.description);
-        if (!categoryMap[normalized]) {
-          categoryMap[normalized] = t.category;
+        if (!categoryMap[normalized] && t.category_id) {
+          categoryMap[normalized] = t.category_id;
         }
       });
 
@@ -155,56 +122,52 @@ export const StatementDetail = ({
     loadLearnedCategories();
   }, [userId]);
 
-  // Transform extracted_data into a flat list of items
-  const extractedItems = useMemo((): ExtractedItem[] => {
-    const items: ExtractedItem[] = [];
-    const data = localExtractedData;
-    if (!data) return items;
+  // Auto-assign categories based on learned categories
+  useEffect(() => {
+    if (transactions.length === 0 || Object.keys(learnedCategories).length === 0) return;
 
-    let idCounter = 0;
-
-    // Add consumos
-    (data.consumos || []).forEach((c) => {
-      items.push({
-        id: `consumo_${idCounter++}`,
-        fecha: c.fecha,
-        descripcion: c.descripcion,
-        monto: c.monto,
-        moneda: c.moneda || "ARS",
-        tipo: "consumo",
-      });
+    // Find transactions without categories that can be auto-assigned
+    const toAutoAssign: { id: string; categoryId: string }[] = [];
+    
+    transactions.forEach(tx => {
+      if (tx.category_id) return; // Already has category
+      
+      const normalized = normalizeDescription(tx.description);
+      const learned = learnedCategories[normalized];
+      
+      if (learned) {
+        toAutoAssign.push({ id: tx.id, categoryId: learned });
+      }
     });
 
-    // Add cuotas
-    (data.cuotas || []).forEach((c) => {
-      items.push({
-        id: `cuota_${idCounter++}`,
-        fecha: c.fecha,
-        descripcion: c.descripcion,
-        monto: c.monto,
-        moneda: c.moneda || "ARS",
-        tipo: "cuota",
-        cuota_actual: c.cuota_actual,
-        total_cuotas: c.total_cuotas,
-      });
-    });
+    if (toAutoAssign.length === 0) return;
 
-    // Add impuestos
-    (data.impuestos || []).forEach((i) => {
-      items.push({
-        id: `impuesto_${idCounter++}`,
-        fecha: "",
-        descripcion: i.descripcion,
-        monto: i.monto,
-        moneda: i.moneda || "ARS",
-        tipo: "impuesto",
-      });
-    });
+    // Apply auto-assignments
+    const applyAutoAssignments = async () => {
+      const updatePromises = toAutoAssign.map(({ id, categoryId }) =>
+        supabase
+          .from("credit_card_transactions")
+          .update({ category_id: categoryId })
+          .eq("id", id)
+      );
 
-    return items;
-  }, [localExtractedData]);
+      await Promise.all(updatePromises);
 
-  // Build categoryOptions as union of: categories table + saved itemCategories + learnedCategories
+      // Update local state
+      setTransactions(prev =>
+        prev.map(tx => {
+          const assignment = toAutoAssign.find(a => a.id === tx.id);
+          return assignment ? { ...tx, category_id: assignment.categoryId } : tx;
+        })
+      );
+
+      setAutoAssignedCount(toAutoAssign.length);
+    };
+
+    applyAutoAssignments();
+  }, [transactions.length, learnedCategories]);
+
+  // Build categoryOptions 
   const categoryOptions = useMemo(() => {
     const expenseCats = categories.filter(c => c.type === "expense" || c.type === "both");
     return expenseCats.map(c => ({ id: c.id, name: c.name }));
@@ -218,81 +181,10 @@ export const StatementDetail = ({
   }, [categories]);
 
   // Helper to get category name from ID
-  const getCategoryName = useCallback((categoryId: string | undefined): string => {
+  const getCategoryName = useCallback((categoryId: string | null | undefined): string => {
     if (!categoryId) return "";
     return categoryNameMap.get(categoryId) || categoryId;
   }, [categoryNameMap]);
-
-  // Persist categories to database with proper error handling
-  const persistCategories = useCallback(async (newCategories: Record<string, string>) => {
-    const updatedData = {
-      ...localExtractedData,
-      categorias_asignadas: newCategories
-    };
-
-    const { data, error } = await supabase
-      .from('statement_imports')
-      .update({ extracted_data: updatedData })
-      .eq('id', statement.id)
-      .select('extracted_data')
-      .single();
-
-    if (error) {
-      console.error("Error persisting categories:", error);
-      toast.error("Error al guardar las categorías");
-      return;
-    }
-
-    // Update local state with DB response (with type assertion)
-    if (data?.extracted_data && typeof data.extracted_data === 'object' && !Array.isArray(data.extracted_data)) {
-      const extractedData = data.extracted_data as ExtractedDataType;
-      setLocalExtractedData(extractedData);
-      // Notify parent if callback exists
-      if (onStatementUpdated) {
-        onStatementUpdated({
-          ...statement,
-          extracted_data: extractedData
-        });
-      }
-    }
-  }, [localExtractedData, statement, onStatementUpdated]);
-
-  // Auto-assign categories based on learned categories (runs once after data is loaded)
-  useEffect(() => {
-    if (autoAssignRan.current) return;
-    if (!dataLoaded) return;
-    if (Object.keys(learnedCategories).length === 0 || extractedItems.length === 0) return;
-
-    autoAssignRan.current = true;
-
-    // Use functional update to get current itemCategories state
-    setItemCategories(currentCategories => {
-      const toAssign: Record<string, string> = {};
-      
-      extractedItems.forEach(item => {
-        const normalized = normalizeDescription(item.descripcion);
-        const learned = learnedCategories[normalized];
-        
-        // Only assign if there's a match AND no category already saved
-        if (learned && !currentCategories[item.id]) {
-          toAssign[item.id] = learned;
-        }
-      });
-
-      const count = Object.keys(toAssign).length;
-      if (count > 0) {
-        const newCategories = { ...currentCategories, ...toAssign };
-        setAutoAssignedCount(count);
-        
-        // Persist auto-assigned categories
-        persistCategories(newCategories);
-        
-        return newCategories;
-      }
-      
-      return currentCategories;
-    });
-  }, [learnedCategories, extractedItems, dataLoaded, persistCategories]);
 
   const formatCurrency = (amount: number, currency: string) => {
     return `${currency} ${new Intl.NumberFormat("es-AR", {
@@ -314,42 +206,49 @@ export const StatementDetail = ({
     }
   };
 
-  const filteredItems = extractedItems.filter((item) => {
-    const matchesSearch = item.descripcion.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filterType === "all" || item.tipo === filterType;
+  const filteredItems = transactions.filter((item) => {
+    const matchesSearch = item.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filterType === "all" || item.transaction_type === filterType;
     return matchesSearch && matchesFilter;
   });
 
-  const handleCategoryChange = async (itemId: string, category: string) => {
-    // Find the current item's description
-    const item = extractedItems.find(i => i.id === itemId);
-    if (!item) return;
+  const handleCategoryChange = async (transactionId: string, categoryId: string) => {
+    // Find the current transaction's description
+    const transaction = transactions.find(t => t.id === transactionId);
+    if (!transaction) return;
 
-    const normalizedDesc = normalizeDescription(item.descripcion);
+    const normalizedDesc = normalizeDescription(transaction.description);
     
-    // Find all items with the same description
-    const matchingItems = extractedItems.filter(
-      i => normalizeDescription(i.descripcion) === normalizedDesc
+    // Find all transactions with the same description
+    const matchingTransactions = transactions.filter(
+      t => normalizeDescription(t.description) === normalizedDesc
     );
 
-    // Update all matching items
-    const newCategories = { ...itemCategories };
-    matchingItems.forEach(matchItem => {
-      newCategories[matchItem.id] = category;
-    });
-    
-    setItemCategories(newCategories);
-    
-    // Persist to database
-    await persistCategories(newCategories);
+    // Update all matching transactions in the database
+    const updatePromises = matchingTransactions.map(tx =>
+      supabase
+        .from("credit_card_transactions")
+        .update({ category_id: categoryId })
+        .eq("id", tx.id)
+    );
+
+    await Promise.all(updatePromises);
+
+    // Update local state
+    setTransactions(prev =>
+      prev.map(tx => {
+        const isMatch = normalizeDescription(tx.description) === normalizedDesc;
+        return isMatch ? { ...tx, category_id: categoryId } : tx;
+      })
+    );
 
     // Update local learned categories map for future matches
     setLearnedCategories(prev => ({
       ...prev,
-      [normalizedDesc]: category
+      [normalizedDesc]: categoryId
     }));
 
-    const count = matchingItems.length;
+    const count = matchingTransactions.length;
     if (count > 1) {
       toast.success(`Categoría asignada a ${count} consumos similares`);
     } else {
@@ -378,19 +277,28 @@ export const StatementDetail = ({
   const handleBulkUpdate = async () => {
     if (selectedIds.size === 0 || !bulkCategory) return;
     
-    const newCategories = { ...itemCategories };
-    selectedIds.forEach(id => {
-      newCategories[id] = bulkCategory;
-    });
-    
-    setItemCategories(newCategories);
-    await persistCategories(newCategories);
+    // Update in database
+    const { error } = await supabase
+      .from("credit_card_transactions")
+      .update({ category_id: bulkCategory })
+      .in("id", Array.from(selectedIds));
+
+    if (error) {
+      console.error("Error bulk updating categories:", error);
+      toast.error("Error al actualizar categorías");
+      return;
+    }
+
+    // Update local state
+    setTransactions(prev =>
+      prev.map(tx => selectedIds.has(tx.id) ? { ...tx, category_id: bulkCategory } : tx)
+    );
     
     // Update learned categories for bulk items
     selectedIds.forEach(id => {
-      const item = extractedItems.find(i => i.id === id);
-      if (item) {
-        const normalized = normalizeDescription(item.descripcion);
+      const tx = transactions.find(t => t.id === id);
+      if (tx) {
+        const normalized = normalizeDescription(tx.description);
         setLearnedCategories(prev => ({ ...prev, [normalized]: bulkCategory }));
       }
     });
@@ -400,45 +308,39 @@ export const StatementDetail = ({
     toast.success(`${selectedIds.size} items categorizados`);
   };
 
-  const extractedData = localExtractedData;
+  const extractedData = statement.extracted_data as ExtractedDataType | null;
   const totalArs = extractedData?.resumen?.total_ars || 0;
   const totalUsd = extractedData?.resumen?.total_usd || 0;
 
-  // Build items array for the spending chart
+  // Build chart data from transactions
   const chartItems = useMemo(() => {
-    const items: Array<{ descripcion: string; monto: number; moneda: string }> = [];
-    const data = localExtractedData;
-    if (!data) return items;
+    return transactions.map(tx => ({
+      descripcion: tx.description,
+      monto: tx.amount,
+      moneda: tx.currency,
+    }));
+  }, [transactions]);
 
-    // Add consumos
-    (data.consumos || []).forEach((c) => {
-      items.push({
-        descripcion: c.descripcion,
-        monto: c.monto,
-        moneda: c.moneda || "ARS",
-      });
+  // Build itemCategories map for chart (using category_id directly)
+  const itemCategories = useMemo(() => {
+    const map: Record<string, string> = {};
+    transactions.forEach((tx, index) => {
+      // Use index-based ID to match chart items
+      const key = tx.description; // Chart uses description as key
+      if (tx.category_id) {
+        map[key] = tx.category_id;
+      }
     });
+    return map;
+  }, [transactions]);
 
-    // Add cuotas
-    (data.cuotas || []).forEach((c) => {
-      items.push({
-        descripcion: c.descripcion,
-        monto: c.monto,
-        moneda: c.moneda || "ARS",
-      });
-    });
-
-    // Add impuestos
-    (data.impuestos || []).forEach((i) => {
-      items.push({
-        descripcion: i.descripcion,
-        monto: i.monto,
-        moneda: i.moneda || "ARS",
-      });
-    });
-
-    return items;
-  }, [localExtractedData]);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -485,8 +387,8 @@ export const StatementDetail = ({
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Items extraídos</p>
-            <p className="text-lg font-bold">{extractedItems.length}</p>
+            <p className="text-sm text-muted-foreground">Transacciones</p>
+            <p className="text-lg font-bold">{transactions.length}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Fecha cierre</p>
@@ -567,8 +469,8 @@ export const StatementDetail = ({
       {filteredItems.length === 0 ? (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">
-            {extractedItems.length === 0 
-              ? "No hay datos extraídos para este resumen"
+            {transactions.length === 0 
+              ? "No hay transacciones para este resumen"
               : "No se encontraron items con los filtros aplicados"}
           </p>
         </Card>
@@ -600,33 +502,33 @@ export const StatementDetail = ({
                     />
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {item.fecha || "-"}
+                    {item.date || "-"}
                   </TableCell>
                   <TableCell className="max-w-[300px] truncate">
-                    {item.descripcion}
-                    {item.cuota_actual && item.total_cuotas && (
+                    {item.description}
+                    {item.installment_current && item.installment_total && (
                       <span className="text-muted-foreground ml-1">
-                        ({item.cuota_actual}/{item.total_cuotas})
+                        ({item.installment_current}/{item.installment_total})
                       </span>
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getBadgeVariant(item.tipo)}>
-                      {item.tipo}
+                    <Badge variant={getBadgeVariant(item.transaction_type)}>
+                      {item.transaction_type}
                     </Badge>
                   </TableCell>
                   <TableCell className="whitespace-nowrap font-medium">
-                    {formatCurrency(item.monto, item.moneda)}
+                    {formatCurrency(item.amount, item.currency)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Select 
-                        value={itemCategories[item.id] || ""} 
+                        value={item.category_id || ""} 
                         onValueChange={(value) => handleCategoryChange(item.id, value)}
                       >
                         <SelectTrigger className="w-[150px]">
                           <SelectValue placeholder="Sin categoría">
-                            {getCategoryName(itemCategories[item.id]) || "Sin categoría"}
+                            {getCategoryName(item.category_id) || "Sin categoría"}
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
@@ -637,8 +539,8 @@ export const StatementDetail = ({
                           ))}
                         </SelectContent>
                       </Select>
-                      {itemCategories[item.id] && 
-                       learnedCategories[normalizeDescription(item.descripcion)] === itemCategories[item.id] && (
+                      {item.category_id && 
+                       learnedCategories[normalizeDescription(item.description)] === item.category_id && (
                         <span title="Auto-asignada">
                           <Sparkles className="h-3 w-3 text-primary" />
                         </span>
