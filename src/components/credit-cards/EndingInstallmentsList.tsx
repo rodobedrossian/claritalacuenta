@@ -87,15 +87,18 @@ export const EndingInstallmentsList = ({ projections }: EndingInstallmentsListPr
               >
                 <AccordionTrigger className="hover:no-underline py-3">
                   <div className="flex items-center justify-between w-full pr-4">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 shrink-0">
                         📅 {formatMonth(month.month)}
                       </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {month.endingInstallments.length} cuota{month.endingInstallments.length > 1 ? 's' : ''}
+                      <span className="text-sm text-muted-foreground truncate">
+                        {month.endingInstallments.length === 1 
+                          ? `Última cuota de ${month.endingInstallments[0].description.replace(/^\*\s*/, '').substring(0, 30)}${month.endingInstallments[0].description.length > 30 ? '...' : ''}`
+                          : `Últimas cuotas de ${month.endingInstallments.map(i => i.description.replace(/^\*\s*/, '').split(' ')[0]).slice(0, 2).join(', ')}${month.endingInstallments.length > 2 ? ` y ${month.endingInstallments.length - 2} más` : ''}`
+                        }
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
                       {totalFreedARS > 0 && (
                         <Badge className="bg-success/20 text-success hover:bg-success/30 border-0">
                           <ArrowUp className="h-3 w-3 mr-1" />
