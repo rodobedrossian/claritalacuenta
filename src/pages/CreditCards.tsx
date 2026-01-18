@@ -5,8 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { StatementsList } from "@/components/credit-cards/StatementsList";
 import { StatementDetail } from "@/components/credit-cards/StatementDetail";
+import { InstallmentProjectionPanel } from "@/components/credit-cards/InstallmentProjectionPanel";
 import { useCreditCardStatements, StatementImport } from "@/hooks/useCreditCardStatements";
 import { useCreditCardsData } from "@/hooks/useCreditCardsData";
+import { Separator } from "@/components/ui/separator";
 
 interface Category {
   id: string;
@@ -90,12 +92,20 @@ const CreditCards = () => {
             Cargando resúmenes...
           </div>
         ) : (
-          <StatementsList
-            statements={statements}
-            creditCards={creditCards}
-            onSelectStatement={setSelectedStatement}
-            onDeleteStatement={deleteStatement}
-          />
+          <div className="space-y-8">
+            {/* Installment Projection Panel */}
+            <InstallmentProjectionPanel userId={userId} />
+            
+            <Separator className="my-6" />
+            
+            {/* Statements List */}
+            <StatementsList
+              statements={statements}
+              creditCards={creditCards}
+              onSelectStatement={setSelectedStatement}
+              onDeleteStatement={deleteStatement}
+            />
+          </div>
         )}
       </div>
     </AppLayout>
