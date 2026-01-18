@@ -1,16 +1,19 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { CreditCard, TrendingDown, Receipt, Upload } from "lucide-react";
+import { CreditCard, TrendingDown, Receipt, Upload, Settings2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { StatementsList } from "@/components/credit-cards/StatementsList";
 import { StatementDetail } from "@/components/credit-cards/StatementDetail";
 import { InstallmentProjectionPanel } from "@/components/credit-cards/InstallmentProjectionPanel";
 import { ImportStatementDialog } from "@/components/credit-cards/ImportStatementDialog";
+import { AddCreditCardDialog } from "@/components/credit-cards/AddCreditCardDialog";
+import { CreditCardsList } from "@/components/credit-cards/CreditCardsList";
 import { useCreditCardStatements, StatementImport } from "@/hooks/useCreditCardStatements";
 import { useCreditCardsData } from "@/hooks/useCreditCardsData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Category {
   id: string;
@@ -26,7 +29,7 @@ const CreditCards = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const { statements, loading, refetch, deleteStatement } = useCreditCardStatements(userId);
-  const { creditCards } = useCreditCardsData(userId);
+  const { creditCards, addCreditCard, deleteCreditCard } = useCreditCardsData(userId);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -92,14 +95,18 @@ const CreditCards = () => {
           />
         ) : (
           <Tabs defaultValue="proyeccion" className="space-y-6">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-lg grid-cols-3">
               <TabsTrigger value="proyeccion" className="gap-2">
                 <TrendingDown className="h-4 w-4" />
-                Proyección de Cuotas
+                Proyección
               </TabsTrigger>
               <TabsTrigger value="resumenes" className="gap-2">
                 <Receipt className="h-4 w-4" />
-                Resúmenes de Cuenta
+                Resúmenes
+              </TabsTrigger>
+              <TabsTrigger value="tarjetas" className="gap-2">
+                <Settings2 className="h-4 w-4" />
+                Mis Tarjetas
               </TabsTrigger>
             </TabsList>
 
@@ -129,6 +136,24 @@ const CreditCards = () => {
                 )}
               </div>
             </TabsContent>
+
+            <TabsContent value="tarjetas">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Administrar Tarjetas
+                  </CardTitle>
+                  <CardDescription>
+                    Registra tus tarjetas de crédito para importar resúmenes y hacer seguimiento de gastos
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <AddCreditCardDialog onAdd={addCreditCard} />
+                  <CreditCardsList creditCards={creditCards} onDelete={deleteCreditCard} />
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         )}
 
@@ -138,6 +163,7 @@ const CreditCards = () => {
           userId={userId}
           creditCards={creditCards}
           onSuccess={refetch}
+          onAddCard={addCreditCard}
         />
       </div>
     </AppLayout>
