@@ -207,29 +207,21 @@ export const StatementDetail = ({
   // Build categoryOptions as union of: categories table + saved itemCategories + learnedCategories
   const categoryOptions = useMemo(() => {
     const expenseCats = categories.filter(c => c.type === "expense" || c.type === "both");
-    const namesFromTable = new Set(expenseCats.map(c => c.name));
-    
-    // Add any saved categories not in the table
-    const additionalNames = new Set<string>();
-    Object.values(itemCategories).forEach(cat => {
-      if (cat && !namesFromTable.has(cat)) {
-        additionalNames.add(cat);
-      }
-    });
-    Object.values(learnedCategories).forEach(cat => {
-      if (cat && !namesFromTable.has(cat)) {
-        additionalNames.add(cat);
-      }
-    });
+    return expenseCats.map(c => ({ id: c.id, name: c.name }));
+  }, [categories]);
 
-    // Combine: table categories first, then additional
-    const options = expenseCats.map(c => ({ id: c.id, name: c.name }));
-    additionalNames.forEach(name => {
-      options.push({ id: `custom_${name}`, name });
-    });
+  // Build category ID to name map for display
+  const categoryNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    categories.forEach(c => map.set(c.id, c.name));
+    return map;
+  }, [categories]);
 
-    return options;
-  }, [categories, itemCategories, learnedCategories]);
+  // Helper to get category name from ID
+  const getCategoryName = useCallback((categoryId: string | undefined): string => {
+    if (!categoryId) return "";
+    return categoryNameMap.get(categoryId) || categoryId;
+  }, [categoryNameMap]);
 
   // Persist categories to database with proper error handling
   const persistCategories = useCallback(async (newCategories: Record<string, string>) => {
@@ -506,7 +498,7 @@ export const StatementDetail = ({
       </Card>
 
       {/* Spending by Category Chart */}
-      <StatementSpendingChart items={chartItems} itemCategories={itemCategories} />
+      <StatementSpendingChart items={chartItems} itemCategories={itemCategories} categories={categories} />
 
       {/* Filters and Search */}
       <div className="flex flex-col md:flex-row gap-4">
@@ -546,7 +538,7 @@ export const StatementDetail = ({
               </SelectTrigger>
               <SelectContent>
                 {categoryOptions.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.name}>
+                  <SelectItem key={cat.id} value={cat.id}>
                     {cat.name}
                   </SelectItem>
                 ))}
@@ -633,11 +625,13 @@ export const StatementDetail = ({
                         onValueChange={(value) => handleCategoryChange(item.id, value)}
                       >
                         <SelectTrigger className="w-[150px]">
-                          <SelectValue placeholder="Sin categoría" />
+                          <SelectValue placeholder="Sin categoría">
+                            {getCategoryName(itemCategories[item.id]) || "Sin categoría"}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {categoryOptions.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.name}>
+                            <SelectItem key={cat.id} value={cat.id}>
                               {cat.name}
                             </SelectItem>
                           ))}

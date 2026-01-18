@@ -3,6 +3,12 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
+interface Category {
+  id: string;
+  name: string;
+  type: string;
+}
+
 interface StatementSpendingChartProps {
   items: Array<{
     descripcion: string;
@@ -11,6 +17,7 @@ interface StatementSpendingChartProps {
     category?: string;
   }>;
   itemCategories: Record<string, string>;
+  categories: Category[];
 }
 
 const COLORS = [
@@ -29,30 +36,41 @@ const COLORS = [
 export const StatementSpendingChart = ({
   items,
   itemCategories,
+  categories,
 }: StatementSpendingChartProps) => {
   const [selectedCurrency, setSelectedCurrency] = useState<"ARS" | "USD">("ARS");
 
+  // Build category ID to name map
+  const categoryNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    categories.forEach(c => map.set(c.id, c.name));
+    return map;
+  }, [categories]);
+
   // Calculate spending by category for items with categories
   const { chartData, total, hasBothCurrencies } = useMemo(() => {
-    const categoryMap = new Map<string, number>();
+    const categoryAmountMap = new Map<string, number>();
     let arsTotal = 0;
     let usdTotal = 0;
 
     items.forEach((item, index) => {
       const itemId = `consumo_${index}`;
-      const category = itemCategories[itemId] || "Sin categoría";
+      const categoryId = itemCategories[itemId];
+      // Look up category name, fallback to ID or "Sin categoría"
+      const categoryName = categoryId 
+        ? (categoryNameMap.get(categoryId) || categoryId) 
+        : "Sin categoría";
       const currency = item.moneda || "ARS";
 
       if (currency === "ARS") arsTotal += item.monto;
       else usdTotal += item.monto;
 
       if (currency === selectedCurrency) {
-        const key = category;
-        categoryMap.set(key, (categoryMap.get(key) || 0) + item.monto);
+        categoryAmountMap.set(categoryName, (categoryAmountMap.get(categoryName) || 0) + item.monto);
       }
     });
 
-    const data = Array.from(categoryMap.entries())
+    const data = Array.from(categoryAmountMap.entries())
       .map(([category, amount]) => ({ category, amount }))
       .sort((a, b) => b.amount - a.amount);
 
@@ -61,7 +79,7 @@ export const StatementSpendingChart = ({
       total: selectedCurrency === "ARS" ? arsTotal : usdTotal,
       hasBothCurrencies: arsTotal > 0 && usdTotal > 0,
     };
-  }, [items, itemCategories, selectedCurrency]);
+  }, [items, itemCategories, selectedCurrency, categoryNameMap]);
 
   const formatAmount = (value: number) => {
     return new Intl.NumberFormat("es-AR", {
