@@ -68,17 +68,17 @@ export const SpendingChart = ({ data }: SpendingChartProps) => {
           Sin datos aún. ¡Empezá a registrar tus gastos!
         </p>
       ) : (
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Pie Chart */}
-          <div className="flex-shrink-0">
-            <ResponsiveContainer width={220} height={220}>
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-center">
+          {/* Pie Chart - Larger */}
+          <div className="flex-shrink-0 flex items-center justify-center">
+            <ResponsiveContainer width={320} height={320}>
               <PieChart>
                 <Pie
                   data={filteredData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={50}
-                  outerRadius={90}
+                  innerRadius={80}
+                  outerRadius={140}
                   paddingAngle={2}
                   dataKey="amount"
                   nameKey="category"
@@ -108,35 +108,44 @@ export const SpendingChart = ({ data }: SpendingChartProps) => {
             </ResponsiveContainer>
           </div>
 
-          {/* Legend as list */}
-          <div className="flex-1 space-y-2 overflow-y-auto max-h-[220px]">
-            {filteredData.map((item, index) => {
-              const percentage = ((item.amount / total) * 100).toFixed(1);
-              return (
-                <div 
-                  key={item.category} 
-                  className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div 
-                      className="w-3 h-3 rounded-full flex-shrink-0" 
-                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                    />
-                    <span className="text-sm truncate" title={item.category}>
-                      {item.category}
-                    </span>
+          {/* Legend as list - takes remaining space */}
+          <div className="flex-1 w-full lg:w-auto">
+            {/* Total */}
+            <div className="mb-4 p-3 rounded-lg bg-muted/30 border border-border/50">
+              <p className="text-sm text-muted-foreground">Total del mes</p>
+              <p className="text-2xl font-bold">{formatAmount(total)}</p>
+            </div>
+            
+            {/* Categories */}
+            <div className="space-y-2 overflow-y-auto max-h-[240px]">
+              {filteredData.map((item, index) => {
+                const percentage = ((item.amount / total) * 100).toFixed(1);
+                return (
+                  <div 
+                    key={item.category} 
+                    className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <span className="text-sm truncate" title={item.category}>
+                        {item.category}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className="text-sm font-medium">
+                        {formatAmount(item.amount)}
+                      </span>
+                      <span className="text-xs text-muted-foreground w-12 text-right">
+                        {percentage}%
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-sm font-medium">
-                      {formatAmount(item.amount)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      ({percentage}%)
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
