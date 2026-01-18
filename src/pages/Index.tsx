@@ -470,7 +470,6 @@ const Index = () => {
           onOpenChange={setImportDialogOpen}
           userId={user?.id || ""}
           creditCards={creditCards}
-          categories={categories}
           onSuccess={refetch}
         />
 
