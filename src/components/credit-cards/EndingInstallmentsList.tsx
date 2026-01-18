@@ -99,23 +99,11 @@ export const EndingInstallmentsList = ({ projections }: EndingInstallmentsListPr
                           const displayNames = names.slice(0, 2).join(', ');
                           const remaining = names.length - 2;
                           
-                          const namesPart = names.length === 1 
+                          return names.length === 1 
                             ? `Última cuota de ${displayNames}`
                             : remaining > 0 
                               ? `Últimas cuotas de ${displayNames} y ${remaining} más`
                               : `Últimas cuotas de ${displayNames}`;
-                          
-                          const amountParts: string[] = [];
-                          if (totalFreedARS > 0) {
-                            amountParts.push(`$${totalFreedARS.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-                          }
-                          if (totalFreedUSD > 0) {
-                            amountParts.push(`US$${totalFreedUSD.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-                          }
-                          
-                          return amountParts.length > 0 
-                            ? `${namesPart} por ${amountParts.join(' y ')}`
-                            : namesPart;
                         })()}
                       </span>
                     </div>
