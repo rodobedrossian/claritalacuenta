@@ -5,12 +5,27 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const EXTRACTION_PROMPT = `Eres un experto en analizar resúmenes de tarjetas de crédito argentinas. Analiza el siguiente texto extraído de un PDF de resumen de tarjeta de crédito y extrae TODOS los consumos, cuotas e impuestos.
+const EXTRACTION_PROMPT = `Eres un experto en analizar resúmenes de tarjetas de crédito argentinas. Analiza el siguiente PDF de resumen de tarjeta de crédito y extrae TODOS los consumos, cuotas e impuestos.
 
-IMPORTANTE:
-- Extrae TODOS los consumos del período actual
-- Extrae TODAS las cuotas de compras en cuotas (formato "CUOTA X/Y")
-- Extrae TODOS los impuestos, cargos administrativos y gastos bancarios
+REGLAS CRÍTICAS PARA CLASIFICACIÓN:
+1. **CUOTAS**: Cualquier compra que tenga formato "X/Y" o "CUOTA X DE Y" va SOLO en el array "cuotas". 
+   - Ejemplos: "ZARA (1/3)", "MEGATLON (8/12)", "FRAVEGA CUOTA 2 DE 6"
+   - IMPORTANTE: Si una línea tiene patrón de cuota, va ÚNICAMENTE en "cuotas", NUNCA en "consumos"
+   - Extrae cuota_actual (el primer número) y total_cuotas (el segundo número)
+   
+2. **CONSUMOS**: SOLO compras que NO tienen ningún patrón de cuota
+   - Son pagos en un solo pago, sin cuotas
+   - cuota_actual y total_cuotas deben ser null
+   
+3. **IMPUESTOS**: IVA, percepciones, impuesto PAIS, sellados, cargos administrativos
+
+IMPORTANTE - EVITAR DUPLICADOS:
+- Una transacción va en UN SOLO array (consumos O cuotas O impuestos)
+- Si tiene patrón (X/Y) → solo va en cuotas
+- Si es un impuesto/cargo → solo va en impuestos
+- Todo lo demás → solo va en consumos
+
+DATOS A EXTRAER:
 - Los montos pueden estar en ARS o USD (fijate la sección donde aparecen)
 - Las fechas suelen estar en formato DD/MM o DD/MM/YYYY
 - IGNORA: pagos anteriores, límites de crédito, tasas de interés, info institucional, avisos legales
@@ -20,7 +35,7 @@ Retorna un JSON válido con esta estructura exacta:
   "consumos": [
     {
       "fecha": "DD/MM/YYYY",
-      "descripcion": "texto descriptivo",
+      "descripcion": "texto descriptivo SIN el patrón de cuota",
       "monto": 12345.67,
       "moneda": "ARS" o "USD",
       "cuota_actual": null,
@@ -30,7 +45,7 @@ Retorna un JSON válido con esta estructura exacta:
   "cuotas": [
     {
       "fecha": "DD/MM/YYYY",
-      "descripcion": "texto descriptivo",
+      "descripcion": "texto descriptivo SIN el patrón de cuota",
       "monto": 12345.67,
       "moneda": "ARS" o "USD",
       "cuota_actual": 2,
