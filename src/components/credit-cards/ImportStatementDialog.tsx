@@ -6,12 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Upload, FileText, CreditCard } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Upload, FileText, CreditCard, Plus } from "lucide-react";
 import { useStatementImport, ExtractedItem } from "@/hooks/useStatementImport";
 import { format, startOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
+import { toast } from "sonner";
 
-interface CreditCard {
+interface CreditCardType {
   id: string;
   name: string;
   bank?: string;
@@ -21,8 +23,9 @@ interface ImportStatementDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
-  creditCards: CreditCard[];
+  creditCards: CreditCardType[];
   onSuccess: () => void;
+  onAddCard?: (card: { name: string; bank: string | null; closing_day: number | null }) => Promise<void>;
 }
 
 const MONTHS_OPTIONS = Array.from({ length: 12 }, (_, i) => {
@@ -39,11 +42,15 @@ export function ImportStatementDialog({
   userId,
   creditCards,
   onSuccess,
+  onAddCard,
 }: ImportStatementDialogProps) {
-  const [step, setStep] = useState<"upload" | "preview" | "importing">("upload");
+  const [step, setStep] = useState<"upload" | "preview" | "importing" | "add-card">("upload");
   const [selectedCardId, setSelectedCardId] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>(MONTHS_OPTIONS[0].value);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [newCardName, setNewCardName] = useState("");
+  const [newCardBank, setNewCardBank] = useState("");
+  const [addingCard, setAddingCard] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -63,8 +70,35 @@ export function ImportStatementDialog({
     setSelectedCardId("");
     setSelectedMonth(MONTHS_OPTIONS[0].value);
     setSelectedFile(null);
+    setNewCardName("");
+    setNewCardBank("");
     reset();
     onOpenChange(false);
+  };
+
+  const handleAddCard = async () => {
+    if (!newCardName.trim()) {
+      toast.error("Ingresa un nombre para la tarjeta");
+      return;
+    }
+    if (!onAddCard) return;
+
+    setAddingCard(true);
+    try {
+      await onAddCard({
+        name: newCardName.trim(),
+        bank: newCardBank.trim() || null,
+        closing_day: null
+      });
+      toast.success("Tarjeta agregada correctamente");
+      setNewCardName("");
+      setNewCardBank("");
+      setStep("upload");
+    } catch {
+      // Error handled in hook
+    } finally {
+      setAddingCard(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,28 +165,111 @@ export function ImportStatementDialog({
             {step === "upload" && "Subí el PDF de tu resumen de tarjeta para extraer los consumos automáticamente"}
             {step === "preview" && "Revisá los consumos extraídos. Las categorías se asignarán automáticamente."}
             {step === "importing" && "Importando transacciones..."}
+            {step === "add-card" && "Agregá una nueva tarjeta para continuar con la importación"}
           </DialogDescription>
         </DialogHeader>
+
+        {step === "add-card" && onAddCard && (
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newCardName">Nombre de la tarjeta *</Label>
+              <Input
+                id="newCardName"
+                placeholder="Ej: VISA Oro"
+                value={newCardName}
+                onChange={(e) => setNewCardName(e.target.value)}
+                className="bg-muted border-border"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="newCardBank">Banco (opcional)</Label>
+              <Input
+                id="newCardBank"
+                placeholder="Ej: Galicia"
+                value={newCardBank}
+                onChange={(e) => setNewCardBank(e.target.value)}
+                className="bg-muted border-border"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setStep("upload")}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleAddCard}
+                disabled={addingCard || !newCardName.trim()}
+                className="flex-1"
+              >
+                {addingCard ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Agregando...
+                  </>
+                ) : (
+                  "Agregar y Continuar"
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {step === "upload" && (
           <div className="space-y-6 py-4">
             <div className="space-y-2">
               <Label>Tarjeta de Crédito</Label>
-              <Select value={selectedCardId} onValueChange={setSelectedCardId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccioná una tarjeta" />
-                </SelectTrigger>
-                <SelectContent>
-                  {creditCards.map((card) => (
-                    <SelectItem key={card.id} value={card.id}>
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4" />
-                        {card.name} {card.bank && `(${card.bank})`}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {creditCards.length === 0 ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-muted-foreground text-sm">
+                    <CreditCard className="h-4 w-4" />
+                    No tenés tarjetas registradas
+                  </div>
+                  {onAddCard && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setStep("add-card")}
+                      className="w-full gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Agregar Tarjeta
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Select value={selectedCardId} onValueChange={setSelectedCardId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccioná una tarjeta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {creditCards.map((card) => (
+                        <SelectItem key={card.id} value={card.id}>
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="h-4 w-4" />
+                            {card.name} {card.bank && `(${card.bank})`}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {onAddCard && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setStep("add-card")}
+                      className="gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Agregar otra tarjeta
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
