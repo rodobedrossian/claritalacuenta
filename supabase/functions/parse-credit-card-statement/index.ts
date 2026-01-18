@@ -27,16 +27,17 @@ IMPORTANTE - EVITAR DUPLICADOS:
 
 DATOS A EXTRAER:
 - Los montos pueden estar en ARS o USD (fijate la sección donde aparecen)
+- **MONTOS NEGATIVOS**: Si un monto tiene signo negativo (ej: "-200.883,89"), ES UNA BONIFICACIÓN/DEVOLUCIÓN. MANTENER el signo negativo en el valor.
 - Las fechas suelen estar en formato DD/MM o DD/MM/YYYY
 - IGNORA: pagos anteriores, límites de crédito, tasas de interés, info institucional, avisos legales
 
 Retorna un JSON válido con esta estructura exacta:
 {
-  "consumos": [
+"consumos": [
     {
       "fecha": "DD/MM/YYYY",
       "descripcion": "texto descriptivo SIN el patrón de cuota",
-      "monto": 12345.67,
+      "monto": 12345.67,  // PUEDE SER NEGATIVO si es bonificación/devolución
       "moneda": "ARS" o "USD",
       "cuota_actual": null,
       "total_cuotas": null
