@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Upload, FileText, CreditCard, Check, X } from "lucide-react";
+import { Loader2, Upload, FileText, CreditCard } from "lucide-react";
 import { useStatementImport, ExtractedItem } from "@/hooks/useStatementImport";
 import { format, startOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
@@ -17,18 +17,11 @@ interface CreditCard {
   bank?: string;
 }
 
-interface Category {
-  id: string;
-  name: string;
-  type: string;
-}
-
 interface ImportStatementDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
   creditCards: CreditCard[];
-  categories: Category[];
   onSuccess: () => void;
 }
 
@@ -45,7 +38,6 @@ export function ImportStatementDialog({
   onOpenChange,
   userId,
   creditCards,
-  categories,
   onSuccess,
 }: ImportStatementDialogProps) {
   const [step, setStep] = useState<"upload" | "preview" | "importing">("upload");
@@ -62,7 +54,6 @@ export function ImportStatementDialog({
     uploadAndParse,
     toggleItemSelection,
     toggleAllSelection,
-    updateItemCategory,
     importTransactions,
     reset,
   } = useStatementImport();
@@ -83,22 +74,6 @@ export function ImportStatementDialog({
     }
   };
 
-  const handleAnalyze = async () => {
-    if (!selectedFile || !selectedCardId) return;
-
-    const success = await uploadAndParse(
-      selectedFile,
-      userId,
-      selectedCardId,
-      new Date(selectedMonth)
-    );
-
-    if (success && extractedItems.length > 0) {
-      setStep("preview");
-    }
-  };
-
-  // Wait for extractedItems to be populated after parsing
   const handleAnalyzeAndCheck = async () => {
     if (!selectedFile || !selectedCardId) return;
 
@@ -146,7 +121,7 @@ export function ImportStatementDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -154,7 +129,7 @@ export function ImportStatementDialog({
           </DialogTitle>
           <DialogDescription>
             {step === "upload" && "Subí el PDF de tu resumen de tarjeta para extraer los consumos automáticamente"}
-            {step === "preview" && "Revisá los consumos extraídos y seleccioná cuáles importar"}
+            {step === "preview" && "Revisá los consumos extraídos. Las categorías se asignarán automáticamente."}
             {step === "importing" && "Importando transacciones..."}
           </DialogDescription>
         </DialogHeader>
@@ -268,16 +243,19 @@ export function ImportStatementDialog({
               </div>
             </div>
 
+            {/* Info about auto-categorization */}
+            <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg text-sm text-primary">
+              💡 Las categorías se asignarán automáticamente después de importar, basándose en tu historial y usando IA.
+            </div>
+
             {/* Items list */}
-            <ScrollArea className="h-[400px] -mx-6 px-6">
+            <ScrollArea className="h-[350px] -mx-6 px-6">
               <div className="space-y-2 pr-4">
                 {extractedItems.map((item) => (
                   <ItemRow
                     key={item.id}
                     item={item}
-                    categories={categories}
                     onToggle={() => toggleItemSelection(item.id)}
-                    onCategoryChange={(cat) => updateItemCategory(item.id, cat)}
                   />
                 ))}
               </div>
@@ -313,12 +291,10 @@ export function ImportStatementDialog({
 
 interface ItemRowProps {
   item: ExtractedItem;
-  categories: Category[];
   onToggle: () => void;
-  onCategoryChange: (category: string) => void;
 }
 
-function ItemRow({ item, categories, onToggle, onCategoryChange }: ItemRowProps) {
+function ItemRow({ item, onToggle }: ItemRowProps) {
   const getBadgeVariant = (tipo: string) => {
     switch (tipo) {
       case "consumo":
@@ -356,19 +332,6 @@ function ItemRow({ item, categories, onToggle, onCategoryChange }: ItemRowProps)
           <span className="text-sm text-muted-foreground">{item.fecha}</span>
         )}
       </div>
-
-      <Select value={item.categoria} onValueChange={onCategoryChange} disabled={!item.selected}>
-        <SelectTrigger className="w-36">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {categories.map((cat) => (
-            <SelectItem key={cat.id} value={cat.name}>
-              {cat.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
 
       <div className="w-28 text-right font-mono">
         <span className={item.moneda === "USD" ? "text-green-600" : ""}>

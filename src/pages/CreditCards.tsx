@@ -137,7 +137,6 @@ const CreditCards = () => {
           onOpenChange={setImportDialogOpen}
           userId={userId}
           creditCards={creditCards}
-          categories={categories}
           onSuccess={refetch}
         />
       </div>

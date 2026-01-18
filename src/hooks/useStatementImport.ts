@@ -11,7 +11,6 @@ export interface ExtractedItem {
   cuota_actual?: number | null;
   total_cuotas?: number | null;
   tipo: "consumo" | "cuota" | "impuesto";
-  categoria: string;
   selected: boolean;
 }
 
@@ -62,33 +61,9 @@ interface UseStatementImportReturn {
   uploadAndParse: (file: File, userId: string, creditCardId: string, statementMonth: Date) => Promise<boolean>;
   toggleItemSelection: (id: string) => void;
   toggleAllSelection: (selected: boolean) => void;
-  updateItemCategory: (id: string, category: string) => void;
   importTransactions: (userId: string, creditCardId: string, statementMonth: Date, cardName: string) => Promise<boolean>;
   reset: () => void;
 }
-
-// Category suggestions based on common patterns - normalized to match categories table
-const suggestCategory = (descripcion: string, tipo: string): string => {
-  const desc = descripcion.toUpperCase();
-  
-  if (tipo === "impuesto") return "Taxes";
-  
-  // Common Argentine merchants - using normalized category names that match the categories table
-  if (desc.includes("MERCADOPAGO") || desc.includes("MERPAGO") || desc.includes("AMAZON")) return "Shopping";
-  if (desc.includes("NETFLIX") || desc.includes("SPOTIFY") || desc.includes("DISNEY") || desc.includes("HBO") || desc.includes("APPLE.COM") || desc.includes("GOOGLE")) return "Subscriptions";
-  if (desc.includes("UBER") || desc.includes("CABIFY") || desc.includes("DIDI")) return "Transportation";
-  if (desc.includes("RAPPI") || desc.includes("PEDIDOSYA") || desc.includes("DELIVERY")) return "Dining";
-  if (desc.includes("SUPERMERCADO") || desc.includes("JUMBO") || desc.includes("CARREFOUR") || desc.includes("DIA") || desc.includes("COTO")) return "Groceries";
-  if (desc.includes("FARMACIA") || desc.includes("FARMACITY")) return "Healthcare";
-  if (desc.includes("RESTAURANTE") || desc.includes("REST ") || desc.includes("CAFE") || desc.includes("BAR ")) return "Dining";
-  if (desc.includes("MEGATLON") || desc.includes("SPORTCLUB") || desc.includes("GYM")) return "Fitness";
-  if (desc.includes("HOTEL") || desc.includes("AIRBNB") || desc.includes("BOOKING")) return "Travel";
-  if (desc.includes("COMBUSTIBLE") || desc.includes("YPF") || desc.includes("SHELL") || desc.includes("AXION")) return "Transportation";
-  if (desc.includes("SEGURO")) return "Insurance";
-  if (desc.includes("STEAM") || desc.includes("PLAYSTATION") || desc.includes("XBOX") || desc.includes("NINTENDO")) return "Entertainment";
-  
-  return "General";
-};
 
 export function useStatementImport(): UseStatementImportReturn {
   const [uploading, setUploading] = useState(false);
@@ -205,7 +180,6 @@ export function useStatementImport(): UseStatementImportReturn {
           cuota_actual: c.cuota_actual,
           total_cuotas: c.total_cuotas,
           tipo: "consumo",
-          categoria: suggestCategory(c.descripcion, "consumo"),
           selected: true,
         });
       });
@@ -221,7 +195,6 @@ export function useStatementImport(): UseStatementImportReturn {
           cuota_actual: c.cuota_actual,
           total_cuotas: c.total_cuotas,
           tipo: "cuota",
-          categoria: suggestCategory(c.descripcion, "cuota"),
           selected: true,
         });
       });
@@ -237,7 +210,6 @@ export function useStatementImport(): UseStatementImportReturn {
           cuota_actual: null,
           total_cuotas: null,
           tipo: "impuesto",
-          categoria: "Impuestos",
           selected: true,
         });
       });
@@ -280,14 +252,6 @@ export function useStatementImport(): UseStatementImportReturn {
   const toggleAllSelection = useCallback((selected: boolean) => {
     setExtractedItems((prev) =>
       prev.map((item) => ({ ...item, selected }))
-    );
-  }, []);
-
-  const updateItemCategory = useCallback((id: string, category: string) => {
-    setExtractedItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, categoria: category } : item
-      )
     );
   }, []);
 
@@ -361,6 +325,7 @@ export function useStatementImport(): UseStatementImportReturn {
       }
 
       // 1. Insert consumption transactions into dedicated credit_card_transactions table
+      // category_id is null - will be auto-assigned later by AI
       const creditCardTransactions = selectedItems.map((item) => ({
         user_id: userId,
         statement_import_id: statementImportId,
@@ -368,7 +333,7 @@ export function useStatementImport(): UseStatementImportReturn {
         description: item.descripcion,
         amount: Math.abs(item.monto),
         currency: item.moneda,
-        category_id: item.categoria || null, // Now stores category UUID directly
+        category_id: null, // Will be auto-assigned by AI post-import
         date: parseDate(item.fecha, statementMonth).toISOString().split("T")[0],
         transaction_type: item.tipo,
         installment_current: item.cuota_actual || null,
@@ -385,7 +350,21 @@ export function useStatementImport(): UseStatementImportReturn {
         return false;
       }
 
-      // 2. Create payment transactions in main transactions table (impacts cashflow)
+      // 2. Trigger auto-categorization in background
+      supabase.functions.invoke("auto-categorize-transactions", {
+        body: {
+          statement_import_id: statementImportId,
+          user_id: userId,
+        },
+      }).then(({ error }) => {
+        if (error) {
+          console.error("Auto-categorize error:", error);
+        } else {
+          console.log("Auto-categorization completed");
+        }
+      });
+
+      // 3. Create payment transactions in main transactions table (impacts cashflow)
       const paymentDate = parsePaymentDate(statementSummary?.fechaVencimiento || null, statementMonth);
       const monthLabel = statementMonth.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
 
@@ -462,6 +441,12 @@ export function useStatementImport(): UseStatementImportReturn {
         }
       }
 
+      // Update statement_imports with transaction count
+      await supabase
+        .from("statement_imports")
+        .update({ transactions_created: selectedItems.length })
+        .eq("id", statementImportId);
+
       const paymentCount = paymentTransactions.length;
       toast.success(
         `Se importaron ${selectedItems.length} consumos y ${paymentCount} pago${paymentCount > 1 ? 's' : ''} de tarjeta`
@@ -486,7 +471,6 @@ export function useStatementImport(): UseStatementImportReturn {
     uploadAndParse,
     toggleItemSelection,
     toggleAllSelection,
-    updateItemCategory,
     importTransactions,
     reset,
   };
