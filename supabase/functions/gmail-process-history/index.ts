@@ -387,6 +387,34 @@ Deno.serve(async (req) => {
             processedEmail.status = "processed";
             transactionsCreated++;
             console.log("Transaction created:", transaction.id);
+
+            // Send push notification for pending transaction
+            try {
+              const formattedAmount = `${matchedParser.currency === 'USD' ? 'US$' : '$'}${amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+              const notificationResponse = await fetch(`${SUPABASE_URL}/functions/v1/send-push-notification`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                },
+                body: JSON.stringify({
+                  user_id: connection.user_id,
+                  title: '📬 Nueva transacción pendiente',
+                  body: `${matchedParser.transaction_type === 'income' ? 'Ingreso' : 'Gasto'} de ${formattedAmount} - ${matchedParser.name}`,
+                  type: 'pending_transaction',
+                  url: '/pending',
+                }),
+              });
+              
+              if (!notificationResponse.ok) {
+                const errorText = await notificationResponse.text();
+                console.error('Failed to send push notification:', errorText);
+              } else {
+                console.log('Push notification sent for pending transaction');
+              }
+            } catch (notifError) {
+              console.error('Error sending push notification:', notifError);
+            }
           }
         } else {
           processedEmail.status = "no_amount";
