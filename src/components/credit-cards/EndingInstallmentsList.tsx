@@ -92,23 +92,44 @@ export const EndingInstallmentsList = ({ projections }: EndingInstallmentsListPr
                         📅 {formatMonth(month.month)}
                       </Badge>
                       <span className="text-sm text-muted-foreground truncate">
-                        {month.endingInstallments.length === 1 
-                          ? `Última cuota de ${month.endingInstallments[0].description.replace(/^\*\s*/, '').substring(0, 30)}${month.endingInstallments[0].description.length > 30 ? '...' : ''}`
-                          : `Últimas cuotas de ${month.endingInstallments.map(i => i.description.replace(/^\*\s*/, '').split(' ')[0]).slice(0, 2).join(', ')}${month.endingInstallments.length > 2 ? ` y ${month.endingInstallments.length - 2} más` : ''}`
-                        }
+                        {(() => {
+                          const names = month.endingInstallments.map(i => 
+                            i.description.replace(/^\*\s*/, '').split(' ')[0]
+                          );
+                          const displayNames = names.slice(0, 2).join(', ');
+                          const remaining = names.length - 2;
+                          
+                          const namesPart = names.length === 1 
+                            ? `Última cuota de ${displayNames}`
+                            : remaining > 0 
+                              ? `Últimas cuotas de ${displayNames} y ${remaining} más`
+                              : `Últimas cuotas de ${displayNames}`;
+                          
+                          const amountParts: string[] = [];
+                          if (totalFreedARS > 0) {
+                            amountParts.push(`$${totalFreedARS.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+                          }
+                          if (totalFreedUSD > 0) {
+                            amountParts.push(`US$${totalFreedUSD.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+                          }
+                          
+                          return amountParts.length > 0 
+                            ? `${namesPart} por ${amountParts.join(' y ')}`
+                            : namesPart;
+                        })()}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
                       {totalFreedARS > 0 && (
                         <Badge className="bg-success/20 text-success hover:bg-success/30 border-0">
                           <ArrowUp className="h-3 w-3 mr-1" />
-                          ${totalFreedARS.toLocaleString()}
+                          ${totalFreedARS.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </Badge>
                       )}
                       {totalFreedUSD > 0 && (
                         <Badge className="bg-success/20 text-success hover:bg-success/30 border-0">
                           <ArrowUp className="h-3 w-3 mr-1" />
-                          US${totalFreedUSD.toLocaleString()}
+                          US${totalFreedUSD.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </Badge>
                       )}
                     </div>
