@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { CreditCard, TrendingDown, Receipt } from "lucide-react";
+import { CreditCard, TrendingDown, Receipt, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { StatementsList } from "@/components/credit-cards/StatementsList";
 import { StatementDetail } from "@/components/credit-cards/StatementDetail";
 import { InstallmentProjectionPanel } from "@/components/credit-cards/InstallmentProjectionPanel";
+import { ImportStatementDialog } from "@/components/credit-cards/ImportStatementDialog";
 import { useCreditCardStatements, StatementImport } from "@/hooks/useCreditCardStatements";
 import { useCreditCardsData } from "@/hooks/useCreditCardsData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 
 interface Category {
   id: string;
@@ -21,6 +23,7 @@ const CreditCards = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedStatement, setSelectedStatement] = useState<StatementImport | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const { statements, loading, refetch, deleteStatement } = useCreditCardStatements(userId);
   const { creditCards } = useCreditCardsData(userId);
@@ -105,21 +108,38 @@ const CreditCards = () => {
             </TabsContent>
 
             <TabsContent value="resumenes">
-              {loading ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  Cargando resúmenes...
+              <div className="space-y-4">
+                <div className="flex justify-end">
+                  <Button onClick={() => setImportDialogOpen(true)} className="gap-2">
+                    <Upload className="h-4 w-4" />
+                    Importar Resumen
+                  </Button>
                 </div>
-              ) : (
-                <StatementsList
-                  statements={statements}
-                  creditCards={creditCards}
-                  onSelectStatement={setSelectedStatement}
-                  onDeleteStatement={deleteStatement}
-                />
-              )}
+                {loading ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    Cargando resúmenes...
+                  </div>
+                ) : (
+                  <StatementsList
+                    statements={statements}
+                    creditCards={creditCards}
+                    onSelectStatement={setSelectedStatement}
+                    onDeleteStatement={deleteStatement}
+                  />
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         )}
+
+        <ImportStatementDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          userId={userId}
+          creditCards={creditCards}
+          categories={categories}
+          onSuccess={refetch}
+        />
       </div>
     </AppLayout>
   );
