@@ -64,7 +64,7 @@ export const InstallmentProjectionChart = ({ projections }: InstallmentProjectio
         </p>
       </CardHeader>
       <CardContent>
-        <div className="h-[280px]">
+        <div className="h-[350px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
