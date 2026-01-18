@@ -25,27 +25,27 @@ interface TransactionsListProps {
 export const TransactionsList = ({ transactions, onEdit, showViewAll, onViewAll }: TransactionsListProps) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return date.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
   };
 
   const formatAmount = (amount: number, currency: "USD" | "ARS") => {
-    return `${currency} ${new Intl.NumberFormat("en-US").format(amount)}`;
+    return `${currency} ${new Intl.NumberFormat("es-AR").format(amount)}`;
   };
 
   return (
     <Card className="p-6 gradient-card border-border/50">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Recent Transactions</h3>
+        <h3 className="text-lg font-semibold">Transacciones Recientes</h3>
         {showViewAll && onViewAll && (
           <Button variant="ghost" onClick={onViewAll} className="text-sm">
-            View All →
+            Ver Todas →
           </Button>
         )}
       </div>
       <div className="space-y-3">
         {transactions.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">
-            No transactions yet. Add your first one!
+            Sin transacciones aún. ¡Agregá la primera!
           </p>
         ) : (
           transactions.map((transaction) => (

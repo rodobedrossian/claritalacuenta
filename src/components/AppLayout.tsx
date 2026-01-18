@@ -40,7 +40,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   // Close sidebar when navigating on mobile
   useEffect(() => {

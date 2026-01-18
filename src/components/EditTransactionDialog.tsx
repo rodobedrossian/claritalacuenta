@@ -78,7 +78,7 @@ export const EditTransactionDialog = ({
 
   const handleDelete = async () => {
     if (!transaction) return;
-    if (window.confirm("Are you sure you want to delete this transaction?")) {
+    if (window.confirm("¿Estás seguro de que querés eliminar esta transacción?")) {
       await onDelete(transaction.id);
       onOpenChange(false);
     }
@@ -90,11 +90,11 @@ export const EditTransactionDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Transaction</DialogTitle>
+          <DialogTitle>Editar Transacción</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="edit-type">Type</Label>
+            <Label htmlFor="edit-type">Tipo</Label>
             <Select
               value={formData.type}
               onValueChange={(value: "income" | "expense") =>
@@ -105,14 +105,14 @@ export const EditTransactionDialog = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="income">Income</SelectItem>
-                <SelectItem value="expense">Expense</SelectItem>
+                <SelectItem value="income">Ingreso</SelectItem>
+                <SelectItem value="expense">Gasto</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-amount">Amount</Label>
+            <Label htmlFor="edit-amount">Monto</Label>
             <Input
               id="edit-amount"
               type="number"
@@ -124,7 +124,7 @@ export const EditTransactionDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-currency">Currency</Label>
+            <Label htmlFor="edit-currency">Moneda</Label>
             <Select
               value={formData.currency}
               onValueChange={(value: "USD" | "ARS") =>
@@ -142,13 +142,13 @@ export const EditTransactionDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-category">Category</Label>
+            <Label htmlFor="edit-category">Categoría</Label>
             <Select
               value={formData.category}
               onValueChange={(value) => setFormData({ ...formData, category: value })}
             >
               <SelectTrigger id="edit-category">
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder="Seleccionar categoría" />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (
@@ -161,18 +161,18 @@ export const EditTransactionDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-user">User</Label>
+            <Label htmlFor="edit-user">Responsable</Label>
             <Select
               value={formData.user_id}
               onValueChange={(value) => setFormData({ ...formData, user_id: value })}
             >
               <SelectTrigger id="edit-user">
-                <SelectValue placeholder="Select user" />
+                <SelectValue placeholder="Seleccionar responsable" />
               </SelectTrigger>
               <SelectContent>
                 {users.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
-                    {user.full_name || "Unknown"}
+                    {user.full_name || "Desconocido"}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -180,7 +180,7 @@ export const EditTransactionDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-description">Description</Label>
+            <Label htmlFor="edit-description">Descripción</Label>
             <Input
               id="edit-description"
               value={formData.description}
@@ -192,7 +192,7 @@ export const EditTransactionDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-date">Date</Label>
+            <Label htmlFor="edit-date">Fecha</Label>
             <Input
               id="edit-date"
               type="date"
@@ -204,14 +204,14 @@ export const EditTransactionDialog = ({
 
           <div className="flex gap-2">
             <Button type="submit" className="flex-1">
-              Update Transaction
+              Actualizar Transacción
             </Button>
             <Button
               type="button"
               variant="destructive"
               size="icon"
               onClick={handleDelete}
-              title="Delete transaction"
+              title="Eliminar transacción"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
