@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Transactions from "./pages/Transactions";
@@ -23,15 +24,15 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/pending" element={<PendingTransactions />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/savings" element={<Savings />} />
-          <Route path="/budgets" element={<Budgets />} />
-          <Route path="/credit-cards" element={<CreditCards />} />
-          <Route path="/insights" element={<Insights />} />
+          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+          <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
+          <Route path="/pending" element={<ProtectedRoute><PendingTransactions /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/savings" element={<ProtectedRoute><Savings /></ProtectedRoute>} />
+          <Route path="/budgets" element={<ProtectedRoute><Budgets /></ProtectedRoute>} />
+          <Route path="/credit-cards" element={<ProtectedRoute><CreditCards /></ProtectedRoute>} />
+          <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

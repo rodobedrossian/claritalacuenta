@@ -53,18 +53,21 @@ export type Database = {
           id: string
           name: string
           type: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
           type: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
           type?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -487,6 +490,7 @@ export type Database = {
           updated_at: string
           usd_amount: number
           usd_cash: number | null
+          user_id: string | null
         }
         Insert: {
           ars_amount?: number
@@ -495,6 +499,7 @@ export type Database = {
           updated_at?: string
           usd_amount?: number
           usd_cash?: number | null
+          user_id?: string | null
         }
         Update: {
           ars_amount?: number
@@ -503,6 +508,7 @@ export type Database = {
           updated_at?: string
           usd_amount?: number
           usd_cash?: number | null
+          user_id?: string | null
         }
         Relationships: []
       }
