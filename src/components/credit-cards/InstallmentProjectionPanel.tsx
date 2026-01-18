@@ -74,16 +74,16 @@ export const InstallmentProjectionPanel = ({ userId }: InstallmentProjectionPane
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Current Monthly Total */}
+        {/* Next Month Total */}
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Compromiso mensual actual</p>
-                <p className="text-2xl font-bold">{formatCurrency(summary.currentMonthlyTotalARS)}</p>
-                {summary.currentMonthlyTotalUSD > 0 && (
+                <p className="text-sm text-muted-foreground mb-1">Compromiso del próximo mes</p>
+                <p className="text-2xl font-bold">{formatCurrency(summary.nextMonthTotalARS)}</p>
+                {summary.nextMonthTotalUSD > 0 && (
                   <p className="text-sm text-muted-foreground">
-                    + US${summary.currentMonthlyTotalUSD.toLocaleString()}
+                    + US${summary.nextMonthTotalUSD.toLocaleString()}
                   </p>
                 )}
               </div>
@@ -162,11 +162,11 @@ export const InstallmentProjectionPanel = ({ userId }: InstallmentProjectionPane
         </Card>
       </div>
 
-      {/* Chart and Ending List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <InstallmentProjectionChart projections={projections} />
-        <EndingInstallmentsList projections={projections} />
-      </div>
+      {/* Chart - Full Width */}
+      <InstallmentProjectionChart projections={projections} />
+      
+      {/* Ending Installments List */}
+      <EndingInstallmentsList projections={projections} />
     </div>
   );
 };

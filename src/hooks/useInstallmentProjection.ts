@@ -29,6 +29,8 @@ export interface MonthlyProjection {
 export interface InstallmentProjectionSummary {
   currentMonthlyTotalARS: number;
   currentMonthlyTotalUSD: number;
+  nextMonthTotalARS: number;
+  nextMonthTotalUSD: number;
   nextMonthFreedARS: number;
   nextMonthFreedUSD: number;
   sixMonthReductionARS: number;
@@ -50,6 +52,8 @@ export function useInstallmentProjection(userId: string | null): UseInstallmentP
   const [summary, setSummary] = useState<InstallmentProjectionSummary>({
     currentMonthlyTotalARS: 0,
     currentMonthlyTotalUSD: 0,
+    nextMonthTotalARS: 0,
+    nextMonthTotalUSD: 0,
     nextMonthFreedARS: 0,
     nextMonthFreedUSD: 0,
     sixMonthReductionARS: 0,
@@ -107,21 +111,23 @@ export function useInstallmentProjection(userId: string | null): UseInstallmentP
       });
     }
 
-    // Calculate summary
+    // Calculate summary - use next month as reference since current month is already paid
     const currentMonthData = monthlyData[0];
     const nextMonthData = monthlyData[1];
-    const sixthMonthData = monthlyData[5];
+    const seventhMonthData = monthlyData[6]; // 6 months from next month
 
     const summaryData: InstallmentProjectionSummary = {
       currentMonthlyTotalARS: currentMonthData?.totalAmountARS || 0,
       currentMonthlyTotalUSD: currentMonthData?.totalAmountUSD || 0,
+      nextMonthTotalARS: nextMonthData?.totalAmountARS || 0,
+      nextMonthTotalUSD: nextMonthData?.totalAmountUSD || 0,
       nextMonthFreedARS: nextMonthData?.freedAmountARS || 0,
       nextMonthFreedUSD: nextMonthData?.freedAmountUSD || 0,
-      sixMonthReductionARS: currentMonthData && sixthMonthData 
-        ? currentMonthData.totalAmountARS - sixthMonthData.totalAmountARS 
+      sixMonthReductionARS: nextMonthData && seventhMonthData 
+        ? nextMonthData.totalAmountARS - seventhMonthData.totalAmountARS 
         : 0,
-      sixMonthReductionPercent: currentMonthData && sixthMonthData && currentMonthData.totalAmountARS > 0
-        ? Math.round(((currentMonthData.totalAmountARS - sixthMonthData.totalAmountARS) / currentMonthData.totalAmountARS) * 100)
+      sixMonthReductionPercent: nextMonthData && seventhMonthData && nextMonthData.totalAmountARS > 0
+        ? Math.round(((nextMonthData.totalAmountARS - seventhMonthData.totalAmountARS) / nextMonthData.totalAmountARS) * 100)
         : 0,
       totalActiveInstallments: installments.length,
     };

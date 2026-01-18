@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { CreditCard } from "lucide-react";
+import { CreditCard, TrendingDown, Receipt } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { StatementsList } from "@/components/credit-cards/StatementsList";
@@ -8,7 +8,7 @@ import { StatementDetail } from "@/components/credit-cards/StatementDetail";
 import { InstallmentProjectionPanel } from "@/components/credit-cards/InstallmentProjectionPanel";
 import { useCreditCardStatements, StatementImport } from "@/hooks/useCreditCardStatements";
 import { useCreditCardsData } from "@/hooks/useCreditCardsData";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Category {
   id: string;
@@ -87,25 +87,38 @@ const CreditCards = () => {
             userId={userId}
             onBack={() => setSelectedStatement(null)}
           />
-        ) : loading ? (
-          <div className="text-center py-12 text-muted-foreground">
-            Cargando resúmenes...
-          </div>
         ) : (
-          <div className="space-y-8">
-            {/* Installment Projection Panel */}
-            <InstallmentProjectionPanel userId={userId} />
-            
-            <Separator className="my-6" />
-            
-            {/* Statements List */}
-            <StatementsList
-              statements={statements}
-              creditCards={creditCards}
-              onSelectStatement={setSelectedStatement}
-              onDeleteStatement={deleteStatement}
-            />
-          </div>
+          <Tabs defaultValue="proyeccion" className="space-y-6">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="proyeccion" className="gap-2">
+                <TrendingDown className="h-4 w-4" />
+                Proyección de Cuotas
+              </TabsTrigger>
+              <TabsTrigger value="resumenes" className="gap-2">
+                <Receipt className="h-4 w-4" />
+                Resúmenes de Cuenta
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="proyeccion">
+              <InstallmentProjectionPanel userId={userId} />
+            </TabsContent>
+
+            <TabsContent value="resumenes">
+              {loading ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  Cargando resúmenes...
+                </div>
+              ) : (
+                <StatementsList
+                  statements={statements}
+                  creditCards={creditCards}
+                  onSelectStatement={setSelectedStatement}
+                  onDeleteStatement={deleteStatement}
+                />
+              )}
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </AppLayout>
