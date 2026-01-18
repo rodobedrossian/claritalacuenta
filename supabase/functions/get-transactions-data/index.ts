@@ -104,18 +104,13 @@ Deno.serve(async (req) => {
     // Execute transaction query
     const transactionsResult = await transactionsQuery;
 
-    // Only fetch categories/users on first page
-    let categoriesResult = null;
-    let usersResult = null;
-    
-    if (page === 0) {
-      const [catRes, usrRes] = await Promise.all([
-        supabase.from("categories").select("id, name, type").order("name"),
-        supabase.from("profiles").select("id, full_name").order("full_name")
-      ]);
-      categoriesResult = catRes;
-      usersResult = usrRes;
-    }
+    // Always fetch categories for name lookup, users only on first page
+    const [categoriesResult, usersResult] = await Promise.all([
+      supabase.from("categories").select("id, name, type").order("name"),
+      page === 0 
+        ? supabase.from("profiles").select("id, full_name").order("full_name")
+        : Promise.resolve({ data: null, error: null })
+    ]);
 
     // Log errors
     if (transactionsResult.error) {
@@ -128,11 +123,18 @@ Deno.serve(async (req) => {
       console.error("Users error:", usersResult.error);
     }
 
-    // Parse transactions
+    // Build category ID to name map
+    const categoryMap = new Map<string, string>();
+    for (const c of (categoriesResult.data || [])) {
+      categoryMap.set(c.id, c.name);
+    }
+
+    // Parse transactions and enrich with category name
     const transactions: Transaction[] = (transactionsResult.data || []).map((t: any) => ({
       ...t,
       amount: typeof t.amount === "string" ? parseFloat(t.amount) : t.amount,
-      from_savings: t.from_savings || false
+      from_savings: t.from_savings || false,
+      categoryName: categoryMap.get(t.category) || t.category
     }));
 
     const totalCount = transactionsResult.count || 0;
@@ -145,9 +147,9 @@ Deno.serve(async (req) => {
       page
     };
 
-    // Include categories and users only on first page
+    // Include categories (with id and name) and users only on first page
     if (page === 0) {
-      response.categories = (categoriesResult?.data || []).map((c: any) => c.name);
+      response.categories = (categoriesResult?.data || []).map((c: any) => ({ id: c.id, name: c.name, type: c.type }));
       response.users = usersResult?.data || [];
     }
 

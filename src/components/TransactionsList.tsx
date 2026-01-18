@@ -8,6 +8,7 @@ interface Transaction {
   amount: number;
   currency: "USD" | "ARS";
   category: string;
+  categoryName?: string;
   description: string;
   date: string;
   user_id: string;
@@ -70,7 +71,7 @@ export const TransactionsList = ({ transactions, onEdit, showViewAll, onViewAll 
                 <div className="flex-1">
                   <p className="font-medium">{transaction.description}</p>
                   <p className="text-sm text-muted-foreground">
-                    {transaction.category} • {formatDate(transaction.date)}
+                    {transaction.categoryName || transaction.category} • {formatDate(transaction.date)}
                   </p>
                 </div>
               </div>

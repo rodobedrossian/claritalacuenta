@@ -9,6 +9,7 @@ export interface Transaction {
   amount: number;
   currency: "USD" | "ARS";
   category: string;
+  categoryName?: string;
   description: string;
   date: string;
   user_id: string;
@@ -103,7 +104,8 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
         currency: t.currency as "USD" | "ARS",
         from_savings: t.from_savings || false,
         payment_method: t.payment_method || "cash",
-        is_projected: t.is_projected || false
+        is_projected: t.is_projected || false,
+        categoryName: t.categoryName || t.category
       }));
 
       setData({

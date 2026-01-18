@@ -8,6 +8,7 @@ export interface Transaction {
   amount: number;
   currency: "USD" | "ARS";
   category: string;
+  categoryName?: string;
   description: string;
   date: string;
   user_id: string;
@@ -93,7 +94,8 @@ export function useTransactionsData(
         ...t,
         type: t.type as "income" | "expense",
         currency: t.currency as "USD" | "ARS",
-        from_savings: t.from_savings || false
+        from_savings: t.from_savings || false,
+        categoryName: t.categoryName || t.category
       }));
 
       // Update state
