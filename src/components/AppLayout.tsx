@@ -56,7 +56,9 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const sidebarWidth = isCollapsed ? "w-16" : "w-64";
+  // On mobile, always show expanded when open
+  const showExpanded = isMobile || !isCollapsed;
+  const sidebarWidth = showExpanded ? "w-64" : "w-16";
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -86,12 +88,12 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
       )}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className={cn("p-4 border-b border-border/50", isCollapsed ? "px-2" : "p-6")}>
+          <div className={cn("p-4 border-b border-border/50", !showExpanded ? "px-2" : "p-6")}>
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg gradient-primary shrink-0">
                 <PiggyBank className="h-6 w-6 text-primary-foreground" />
               </div>
-              {!isCollapsed && (
+              {showExpanded && (
                 <h1 className="text-lg font-bold text-foreground truncate">
                   ¿Y si ahorramos?
                 </h1>
@@ -100,7 +102,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
           </div>
 
           {/* Navigation */}
-          <nav className={cn("flex-1 space-y-2", isCollapsed ? "p-2" : "p-4")}>
+          <nav className={cn("flex-1 space-y-2", !showExpanded ? "p-2" : "p-4")}>
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -110,31 +112,31 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
                     navigate(item.path);
                     if (isMobile) setIsOpen(false);
                   }}
-                  title={isCollapsed ? item.title : undefined}
+                  title={!showExpanded ? item.title : undefined}
                   className={cn(
                     "w-full flex items-center gap-3 rounded-lg text-left transition-all",
-                    isCollapsed ? "px-3 py-3 justify-center" : "px-4 py-3",
+                    !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
                     isActive(item.path)
                       ? "bg-primary/10 text-primary border border-primary/20"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
-                  {!isCollapsed && <span className="font-medium">{item.title}</span>}
+                  {showExpanded && <span className="font-medium">{item.title}</span>}
                 </button>
               );
             })}
           </nav>
 
           {/* Footer */}
-          <div className={cn("border-t border-border/50", isCollapsed ? "p-2" : "p-4")}>
+          <div className={cn("border-t border-border/50", !showExpanded ? "p-2" : "p-4")}>
             {/* Desktop collapse toggle */}
             {!isMobile && (
               <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 className={cn(
                   "w-full flex items-center gap-3 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all mb-2",
-                  isCollapsed ? "px-3 py-3 justify-center" : "px-4 py-3"
+                  !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3"
                 )}
                 title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
               >
@@ -150,14 +152,14 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
             )}
             <button
               onClick={handleSignOut}
-              title={isCollapsed ? "Cerrar Sesión" : undefined}
+              title={!showExpanded ? "Cerrar Sesión" : undefined}
               className={cn(
                 "w-full flex items-center gap-3 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all",
-                isCollapsed ? "px-3 py-3 justify-center" : "px-4 py-3"
+                !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3"
               )}
             >
               <LogOut className="h-5 w-5 shrink-0" />
-              {!isCollapsed && <span className="font-medium">Cerrar Sesión</span>}
+              {showExpanded && <span className="font-medium">Cerrar Sesión</span>}
             </button>
           </div>
         </div>
