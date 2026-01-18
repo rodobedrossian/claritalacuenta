@@ -32,9 +32,7 @@ export const InstallmentProjectionPanel = ({ userId }: InstallmentProjectionPane
   if (error) {
     return (
       <Card className="bg-destructive/10 border-destructive/20">
-        <CardContent className="py-6 text-center text-destructive">
-          {error}
-        </CardContent>
+        <CardContent className="py-6 text-center text-destructive">{error}</CardContent>
       </Card>
     );
   }
@@ -55,7 +53,7 @@ export const InstallmentProjectionPanel = ({ userId }: InstallmentProjectionPane
   };
 
   // Find next month with freed money
-  const nextMonthWithFreed = projections.find(p => p.freedAmountARS > 0 || p.freedAmountUSD > 0);
+  const nextMonthWithFreed = projections.find((p) => p.freedAmountARS > 0 || p.freedAmountUSD > 0);
 
   return (
     <div className="space-y-6">
@@ -66,9 +64,7 @@ export const InstallmentProjectionPanel = ({ userId }: InstallmentProjectionPane
         </div>
         <div>
           <h2 className="text-xl font-bold">Proyección de Cuotas</h2>
-          <p className="text-muted-foreground text-sm">
-            Visualizá cómo disminuye tu compromiso mensual
-          </p>
+          <p className="text-muted-foreground text-sm">Visualizá cómo disminuye tu compromiso mensual</p>
         </div>
       </div>
 
@@ -79,21 +75,17 @@ export const InstallmentProjectionPanel = ({ userId }: InstallmentProjectionPane
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Compromiso del próximo mes</p>
+                <p className="text-sm text-muted-foreground mb-1">Cuotas del próximo mes</p>
                 <p className="text-2xl font-bold">{formatCurrency(summary.nextMonthTotalARS)}</p>
                 {summary.nextMonthTotalUSD > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    + US${summary.nextMonthTotalUSD.toLocaleString()}
-                  </p>
+                  <p className="text-sm text-muted-foreground">+ US${summary.nextMonthTotalUSD.toLocaleString()}</p>
                 )}
               </div>
               <div className="p-2 rounded-lg bg-primary/10">
                 <CreditCard className="h-5 w-5 text-primary" />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {summary.totalActiveInstallments} cuotas activas
-            </p>
+            <p className="text-xs text-muted-foreground mt-2">{summary.totalActiveInstallments} cuotas activas</p>
           </CardContent>
         </Card>
 
@@ -103,11 +95,7 @@ export const InstallmentProjectionPanel = ({ userId }: InstallmentProjectionPane
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">
-                  {nextMonthWithFreed ? (
-                    <>En {nextMonthWithFreed.monthLabel} liberás</>
-                  ) : (
-                    "Próxima liberación"
-                  )}
+                  {nextMonthWithFreed ? <>En {nextMonthWithFreed.monthLabel} liberás</> : "Próxima liberación"}
                 </p>
                 {nextMonthWithFreed ? (
                   <>
@@ -115,9 +103,7 @@ export const InstallmentProjectionPanel = ({ userId }: InstallmentProjectionPane
                       {formatCurrency(nextMonthWithFreed.freedAmountARS)}
                     </p>
                     {nextMonthWithFreed.freedAmountUSD > 0 && (
-                      <p className="text-sm text-success">
-                        + US${nextMonthWithFreed.freedAmountUSD.toLocaleString()}
-                      </p>
+                      <p className="text-sm text-success">+ US${nextMonthWithFreed.freedAmountUSD.toLocaleString()}</p>
                     )}
                   </>
                 ) : (
@@ -130,7 +116,9 @@ export const InstallmentProjectionPanel = ({ userId }: InstallmentProjectionPane
             </div>
             {nextMonthWithFreed && nextMonthWithFreed.endingInstallments.length > 0 && (
               <p className="text-xs text-muted-foreground mt-2">
-                {nextMonthWithFreed.endingInstallments.length} cuota{nextMonthWithFreed.endingInstallments.length > 1 ? 's' : ''} termina{nextMonthWithFreed.endingInstallments.length > 1 ? 'n' : ''}
+                {nextMonthWithFreed.endingInstallments.length} cuota
+                {nextMonthWithFreed.endingInstallments.length > 1 ? "s" : ""} termina
+                {nextMonthWithFreed.endingInstallments.length > 1 ? "n" : ""}
               </p>
             )}
           </CardContent>
@@ -155,16 +143,14 @@ export const InstallmentProjectionPanel = ({ userId }: InstallmentProjectionPane
                 <Calendar className="h-5 w-5 text-secondary" />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Reducción proyectada de cuotas
-            </p>
+            <p className="text-xs text-muted-foreground mt-2">Reducción proyectada de cuotas</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Chart - Full Width */}
       <InstallmentProjectionChart projections={projections} />
-      
+
       {/* Ending Installments List */}
       <EndingInstallmentsList projections={projections} />
     </div>
