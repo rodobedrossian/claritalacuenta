@@ -98,8 +98,10 @@ export const SpendingChart = ({ data }: SpendingChartProps) => {
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "0.5rem",
                     padding: "8px 12px",
+                    color: "hsl(var(--foreground))",
                   }}
                   labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
+                  itemStyle={{ color: "hsl(var(--foreground))" }}
                   formatter={(value: number, name: string) => [formatAmount(value), name]}
                 />
               </PieChart>
