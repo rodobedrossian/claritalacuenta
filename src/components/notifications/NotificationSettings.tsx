@@ -200,8 +200,8 @@ export function NotificationSettings({
             <AlertDescription className="text-xs space-y-2 mt-2">
               <p>Verifica estos puntos:</p>
               <ol className="list-decimal list-inside space-y-1">
-                <li>Abre <strong>Ajustes → Notificaciones → FinanceFlow</strong> y activa "Permitir notificaciones"</li>
-                <li>Si usas <strong>Modo Enfoque</strong> (Focus), verifica que FinanceFlow esté permitido</li>
+                <li>Abre <strong>Ajustes → Notificaciones → Clarita</strong> y activa "Permitir notificaciones"</li>
+                <li>Si usas <strong>Modo Enfoque</strong> (Focus), verifica que Clarita esté permitido</li>
                 <li>Asegúrate de abrir la app desde el <strong>ícono en pantalla de inicio</strong> (no Safari)</li>
                 <li>Si sigue sin funcionar, usa el botón <strong>Resetear</strong> y luego <strong>Probar</strong></li>
               </ol>

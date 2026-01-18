@@ -23,18 +23,18 @@ self.addEventListener('push', (event) => {
   } catch (e) {
     // Fallback if not JSON
     data = {
-      title: 'FinanceFlow',
+      title: 'Clarita la cuenta',
       body: event.data.text(),
     };
     console.log('[SW] Push data as text:', data);
   }
 
-  const title = data.title || 'FinanceFlow';
+  const title = data.title || 'Clarita la cuenta';
   const options: NotificationOptions & { renotify?: boolean } = {
     body: data.body || '',
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
-    tag: 'financeflow-notification',
+    tag: 'clarita-notification',
     data: {
       url: data.data?.url || '/',
     },
