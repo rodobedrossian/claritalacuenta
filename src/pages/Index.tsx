@@ -463,7 +463,7 @@ const Index = () => {
         <AddTransactionDialog 
           onAdd={handleAddTransaction} 
           categories={categories} 
-          users={users} 
+          currentUserId={user?.id || ""}
           currentSavings={currentSavings} 
           creditCards={creditCards}
           open={addTransactionDialogOpen}

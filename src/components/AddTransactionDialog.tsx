@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, CalendarIcon, Wallet, CreditCard } from "lucide-react";
+import { CalendarIcon, Wallet, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,7 +50,7 @@ interface AddTransactionDialogProps {
     credit_card_id?: string;
   }) => void;
   categories: Array<{ id: string; name: string; type: string }>;
-  users: Array<{ id: string; full_name: string | null }>;
+  currentUserId: string;
   currentSavings?: { usd: number; ars: number };
   creditCards?: CreditCardOption[];
   open?: boolean;
@@ -61,7 +60,7 @@ interface AddTransactionDialogProps {
 export const AddTransactionDialog = ({ 
   onAdd, 
   categories, 
-  users, 
+  currentUserId,
   currentSavings, 
   creditCards = [],
   open: controlledOpen,
@@ -78,7 +77,6 @@ export const AddTransactionDialog = ({
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
-  const [userId, setUserId] = useState("");
   const [date, setDate] = useState<Date>(new Date());
   const [fromSavings, setFromSavings] = useState(false);
   const [savingsSource, setSavingsSource] = useState<"cash" | "bank" | "other" | "">("");
@@ -92,7 +90,7 @@ export const AddTransactionDialog = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!amount || !currency || !category || !description || !userId) {
+    if (!amount || !currency || !category || !description) {
       toast.error("Completa todos los campos");
       return;
     }
@@ -123,7 +121,7 @@ export const AddTransactionDialog = ({
       category,
       description,
       date: date.toISOString(),
-      user_id: userId,
+      user_id: currentUserId,
       from_savings: fromSavings,
       savings_source: fromSavings ? savingsSource : undefined,
       payment_method: paymentMethod,
@@ -136,7 +134,6 @@ export const AddTransactionDialog = ({
     setAmount("");
     setCategory("");
     setDescription("");
-    setUserId("");
     setDate(new Date());
     setFromSavings(false);
     setSavingsSource("");
@@ -210,22 +207,6 @@ export const AddTransactionDialog = ({
                 {categories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.name}>
                     {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="owner">Responsable</Label>
-            <Select value={userId} onValueChange={setUserId}>
-              <SelectTrigger id="owner" className="bg-muted border-border">
-                <SelectValue placeholder="Seleccionar responsable" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.full_name || "Usuario desconocido"}
                   </SelectItem>
                 ))}
               </SelectContent>
