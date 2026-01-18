@@ -186,14 +186,27 @@ Deno.serve(async (req) => {
       else totals.savingsTransfersARS += amount;
     }
 
+    // Build category ID to name map for lookups
+    const categoryMap = new Map<string, string>();
+    for (const c of (categoriesResult.data || [])) {
+      categoryMap.set(c.id, c.name);
+    }
+
     // Filter effective transactions (exclude projected/credit card) for dashboard display
-    const effectiveTransactions = transactions.filter(t => !t.is_projected);
+    // and enrich with category name
+    const effectiveTransactions = transactions
+      .filter(t => !t.is_projected)
+      .map(t => ({
+        ...t,
+        categoryName: categoryMap.get(t.category) || t.category
+      }));
 
     // Calculate spending by category (only EFFECTIVE expenses for dashboard)
     const spendingMap = new Map<string, number>();
     for (const t of effectiveTransactions) {
       if (t.type === "expense") {
-        const key = `${t.category} (${t.currency})`;
+        const categoryName = categoryMap.get(t.category) || t.category;
+        const key = `${categoryName} (${t.currency})`;
         spendingMap.set(key, (spendingMap.get(key) || 0) + t.amount);
       }
     }
