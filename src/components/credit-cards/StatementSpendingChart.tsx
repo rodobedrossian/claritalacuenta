@@ -53,9 +53,9 @@ export const StatementSpendingChart = ({
     let arsTotal = 0;
     let usdTotal = 0;
 
-    items.forEach((item, index) => {
-      const itemId = `consumo_${index}`;
-      const categoryId = itemCategories[itemId];
+    items.forEach((item) => {
+      // itemCategories is keyed by description for the new structure
+      const categoryId = itemCategories[item.descripcion];
       // Look up category name, fallback to ID or "Sin categoría"
       const categoryName = categoryId 
         ? (categoryNameMap.get(categoryId) || categoryId) 

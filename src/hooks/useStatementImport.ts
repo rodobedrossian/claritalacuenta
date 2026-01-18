@@ -360,25 +360,32 @@ export function useStatementImport(): UseStatementImportReturn {
         return false;
       }
 
-      // 1. Create individual consumption transactions (is_projected: true - for analysis and budgets)
-      const detailTransactions = selectedItems.map((item) => ({
+      // 1. Insert consumption transactions into dedicated credit_card_transactions table
+      const creditCardTransactions = selectedItems.map((item) => ({
         user_id: userId,
-        type: "expense",
+        statement_import_id: statementImportId,
+        credit_card_id: creditCardId,
+        description: item.descripcion,
         amount: Math.abs(item.monto),
         currency: item.moneda,
-        category: item.categoria,
-        description: item.descripcion + (item.cuota_actual && item.total_cuotas ? ` (${item.cuota_actual}/${item.total_cuotas})` : ""),
-        date: parseDate(item.fecha, statementMonth).toISOString(),
-        payment_method: "credit_card",
-        credit_card_id: creditCardId,
-        source: "pdf_import",
-        status: "confirmed",
-        statement_import_id: statementImportId,
-        is_projected: true, // Does NOT impact balance - for analysis/budgets only
+        category_id: item.categoria || null, // Now stores category UUID directly
+        date: parseDate(item.fecha, statementMonth).toISOString().split("T")[0],
+        transaction_type: item.tipo,
+        installment_current: item.cuota_actual || null,
+        installment_total: item.total_cuotas || null,
       }));
 
-      // 2. Create payment transactions (is_projected: false - impacts balance on due date)
-      const paymentTransactions: typeof detailTransactions = [];
+      const { error: ccInsertError } = await supabase
+        .from("credit_card_transactions")
+        .insert(creditCardTransactions);
+
+      if (ccInsertError) {
+        console.error("Insert credit card transactions error:", ccInsertError);
+        toast.error("Error al crear las transacciones de tarjeta");
+        return false;
+      }
+
+      // 2. Create payment transactions in main transactions table (impacts cashflow)
       const paymentDate = parsePaymentDate(statementSummary?.fechaVencimiento || null, statementMonth);
       const monthLabel = statementMonth.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
 
@@ -394,6 +401,22 @@ export function useStatementImport(): UseStatementImportReturn {
       const totalARS = statementSummary?.totalARS || selectedTotalARS;
       const totalUSD = statementSummary?.totalUSD || selectedTotalUSD;
 
+      const paymentTransactions: Array<{
+        user_id: string;
+        type: string;
+        amount: number;
+        currency: string;
+        category: string;
+        description: string;
+        date: string;
+        payment_method: string;
+        credit_card_id: string;
+        source: string;
+        status: string;
+        statement_import_id: string | null;
+        is_projected: boolean;
+      }> = [];
+
       if (totalARS > 0) {
         paymentTransactions.push({
           user_id: userId,
@@ -403,12 +426,12 @@ export function useStatementImport(): UseStatementImportReturn {
           category: "Credit Card Payment",
           description: `Pago tarjeta ${cardName} - ${monthLabel}`,
           date: paymentDate.toISOString(),
-          payment_method: "debit", // Payment comes from debit/cash
+          payment_method: "debit",
           credit_card_id: creditCardId,
           source: "pdf_import",
           status: "confirmed",
           statement_import_id: statementImportId,
-          is_projected: false, // DOES impact balance
+          is_projected: false,
         });
       }
 
@@ -430,17 +453,16 @@ export function useStatementImport(): UseStatementImportReturn {
         });
       }
 
-      // Insert all transactions
-      const allTransactions = [...detailTransactions, ...paymentTransactions];
-      
-      const { error: insertError } = await supabase
-        .from("transactions")
-        .insert(allTransactions);
+      if (paymentTransactions.length > 0) {
+        const { error: paymentInsertError } = await supabase
+          .from("transactions")
+          .insert(paymentTransactions);
 
-      if (insertError) {
-        console.error("Insert transactions error:", insertError);
-        toast.error("Error al crear las transacciones");
-        return false;
+        if (paymentInsertError) {
+          console.error("Insert payment transactions error:", paymentInsertError);
+          toast.error("Error al crear las transacciones de pago");
+          return false;
+        }
       }
 
       const paymentCount = paymentTransactions.length;

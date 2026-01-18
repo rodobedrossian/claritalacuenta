@@ -42,15 +42,18 @@ export interface StatementImport {
   updated_at: string;
 }
 
-export interface StatementTransaction {
+export interface CreditCardTransaction {
   id: string;
   description: string;
   amount: number;
   currency: string;
-  category: string;
+  category_id: string | null;
   date: string;
   credit_card_id: string | null;
   statement_import_id: string | null;
+  transaction_type: string;
+  installment_current: number | null;
+  installment_total: number | null;
 }
 
 interface UseCreditCardStatementsReturn {
@@ -58,9 +61,9 @@ interface UseCreditCardStatementsReturn {
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-  getStatementTransactions: (statementImportId: string) => Promise<StatementTransaction[]>;
-  updateTransactionCategory: (transactionId: string, category: string) => Promise<boolean>;
-  bulkUpdateCategories: (transactionIds: string[], category: string) => Promise<boolean>;
+  getStatementTransactions: (statementImportId: string) => Promise<CreditCardTransaction[]>;
+  updateTransactionCategory: (transactionId: string, categoryId: string) => Promise<boolean>;
+  bulkUpdateCategories: (transactionIds: string[], categoryId: string) => Promise<boolean>;
   deleteStatement: (statementId: string) => Promise<boolean>;
 }
 
@@ -109,10 +112,10 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
     fetchStatements();
   }, [fetchStatements]);
 
-  const getStatementTransactions = useCallback(async (statementImportId: string): Promise<StatementTransaction[]> => {
+  const getStatementTransactions = useCallback(async (statementImportId: string): Promise<CreditCardTransaction[]> => {
     const { data, error: fetchError } = await supabase
-      .from("transactions")
-      .select("id, description, amount, currency, category, date, credit_card_id, statement_import_id")
+      .from("credit_card_transactions")
+      .select("id, description, amount, currency, category_id, date, credit_card_id, statement_import_id, transaction_type, installment_current, installment_total")
       .eq("statement_import_id", statementImportId)
       .order("date", { ascending: false });
 
@@ -124,10 +127,10 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
     return data || [];
   }, []);
 
-  const updateTransactionCategory = useCallback(async (transactionId: string, category: string): Promise<boolean> => {
+  const updateTransactionCategory = useCallback(async (transactionId: string, categoryId: string): Promise<boolean> => {
     const { error: updateError } = await supabase
-      .from("transactions")
-      .update({ category })
+      .from("credit_card_transactions")
+      .update({ category_id: categoryId })
       .eq("id", transactionId);
 
     if (updateError) {
@@ -138,10 +141,10 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
     return true;
   }, []);
 
-  const bulkUpdateCategories = useCallback(async (transactionIds: string[], category: string): Promise<boolean> => {
+  const bulkUpdateCategories = useCallback(async (transactionIds: string[], categoryId: string): Promise<boolean> => {
     const { error: updateError } = await supabase
-      .from("transactions")
-      .update({ category })
+      .from("credit_card_transactions")
+      .update({ category_id: categoryId })
       .in("id", transactionIds);
 
     if (updateError) {
@@ -154,14 +157,25 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
 
   const deleteStatement = useCallback(async (statementId: string): Promise<boolean> => {
     try {
-      // First delete associated transactions
+      // First delete associated credit card transactions
+      const { error: ccTxError } = await supabase
+        .from("credit_card_transactions")
+        .delete()
+        .eq("statement_import_id", statementId);
+
+      if (ccTxError) {
+        console.error("Error deleting credit card transactions:", ccTxError);
+        return false;
+      }
+
+      // Then delete payment transactions from transactions table
       const { error: txError } = await supabase
         .from("transactions")
         .delete()
         .eq("statement_import_id", statementId);
 
       if (txError) {
-        console.error("Error deleting statement transactions:", txError);
+        console.error("Error deleting statement payment transactions:", txError);
         return false;
       }
 
