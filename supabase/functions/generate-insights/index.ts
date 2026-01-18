@@ -13,7 +13,6 @@ interface Transaction {
   description: string;
   date: string;
   type: string;
-  is_projected: boolean;
   user_id: string;
   payment_method?: string;
   statement_import_id?: string;
@@ -93,7 +92,6 @@ Deno.serve(async (req) => {
       .select("*")
       .eq("user_id", user.id)
       .eq("type", "expense")
-      .eq("is_projected", false)
       .gte("date", sixMonthsAgo.toISOString().split("T")[0])
       .order("date", { ascending: false });
 
@@ -124,25 +122,25 @@ Deno.serve(async (req) => {
       console.error("Error fetching statement imports:", stmtError);
     }
 
-    // Fetch detailed credit card consumption transactions (they are stored in public.transactions as is_projected=true)
+    // Fetch credit card consumption transactions from dedicated table
     let ccConsumptionTransactions: Transaction[] = [];
     if (statementImports && statementImports.length > 0) {
       const statementIds = statementImports.map((s: StatementImport) => s.id);
       const { data: ccTxs, error: ccTxError } = await supabase
-        .from("transactions")
-        .select(
-          "id, description, amount, currency, category, date, type, is_projected, user_id, payment_method, statement_import_id, credit_card_id"
-        )
+        .from("credit_card_transactions")
+        .select("id, description, amount, currency, category_id, date, transaction_type, user_id, statement_import_id, credit_card_id")
         .eq("user_id", user.id)
-        .eq("type", "expense")
-        .eq("is_projected", true)
-        .eq("payment_method", "credit_card")
         .in("statement_import_id", statementIds);
 
       if (ccTxError) {
         console.error("Error fetching CC consumption transactions:", ccTxError);
       } else {
-        ccConsumptionTransactions = (ccTxs || []) as Transaction[];
+        // Map to Transaction interface
+        ccConsumptionTransactions = (ccTxs || []).map((t: any) => ({
+          ...t,
+          type: "expense",
+          category: t.category_id || "Uncategorized"
+        })) as Transaction[];
       }
     }
 
