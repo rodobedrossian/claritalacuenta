@@ -177,9 +177,9 @@ Deno.serve(async (req) => {
     // 2. CONSUMPTION DATA: Direct expenses + CC consumptions (excluding CC Payment category)
     const consumptionData: Record<string, ConsumptionData> = {};
     
-    // Add direct expenses (excluding Credit Card Payment)
+    // Add direct expenses (excluding Tarjeta category - these are CC payment summaries)
     allTransactions
-      .filter((tx: Transaction) => tx.category !== "Credit Card Payment")
+      .filter((tx: Transaction) => tx.category !== "Tarjeta")
       .forEach((tx: Transaction) => {
         const month = tx.date.substring(0, 7);
         if (!consumptionData[month]) {
@@ -250,7 +250,7 @@ Deno.serve(async (req) => {
       const currentData = consumptionData[consumptionCurrentMonth];
       const previousData = consumptionData[consumptionPreviousMonth];
 
-      // Check each category for significant changes (excluding Credit Card Payment which is already filtered)
+      // Check each category for significant changes (excluding Tarjeta which is already filtered)
       const allCategories = new Set([
         ...Object.keys(currentData.byCategory),
         ...Object.keys(previousData.byCategory),
@@ -340,11 +340,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2. PATTERN DETECTION: Recurring expenses (using direct transactions excluding CC Payment)
+    // 2. PATTERN DETECTION: Recurring expenses (using direct transactions excluding Tarjeta)
     const descriptionMap: Record<string, { amounts: number[]; months: Set<string>; category: string }> = {};
     
-    // Use direct transactions (excluding CC Payment) for pattern detection
-    const directTransactions = allTransactions.filter((tx: Transaction) => tx.category !== "Credit Card Payment");
+    // Use direct transactions (excluding Tarjeta) for pattern detection
+    const directTransactions = allTransactions.filter((tx: Transaction) => tx.category !== "Tarjeta");
     
     directTransactions.forEach((tx: Transaction) => {
       // Normalize description for matching
