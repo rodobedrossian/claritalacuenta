@@ -290,6 +290,7 @@ const Index = () => {
           <NotificationSetupBanner
             isSupported={pushNotifications.isSupported}
             isPWA={pushNotifications.isPWA}
+            platform={pushNotifications.platform}
             hasSubscription={pushNotifications.subscriptions.length > 0}
             permission={pushNotifications.permission}
             onSubscribe={pushNotifications.subscribe}

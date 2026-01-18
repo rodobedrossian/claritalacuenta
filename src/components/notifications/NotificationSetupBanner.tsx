@@ -1,4 +1,4 @@
-import { Bell, Smartphone, X } from "lucide-react";
+import { Bell, Smartphone, X, Monitor, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
@@ -6,6 +6,7 @@ import { useState } from "react";
 interface NotificationSetupBannerProps {
   isSupported: boolean;
   isPWA: boolean;
+  platform: 'android' | 'ios' | 'desktop';
   hasSubscription: boolean;
   permission: NotificationPermission;
   onSubscribe: () => Promise<boolean>;
@@ -15,6 +16,7 @@ interface NotificationSetupBannerProps {
 export function NotificationSetupBanner({
   isSupported,
   isPWA,
+  platform,
   hasSubscription,
   permission,
   onSubscribe,
@@ -27,8 +29,54 @@ export function NotificationSetupBanner({
     return null;
   }
 
-  // Show PWA installation instructions if not in standalone mode
-  if (!isPWA && isSupported) {
+  // Android can receive notifications without PWA installation
+  // Show direct subscription prompt for Android
+  if (platform === 'android' && isSupported) {
+    return (
+      <Card className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
+        <CardContent className="py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-primary/20">
+                <Bell className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm">Activa las notificaciones</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Recibe alertas de presupuesto, recordatorios de gastos y más directamente en tu Android.
+                </p>
+                {!isPWA && (
+                  <p className="text-xs text-muted-foreground/70 mt-2 flex items-center gap-1">
+                    <Download className="h-3 w-3" />
+                    Tip: Instala la app desde el menú (⋮) → "Instalar app" para mejor experiencia
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDismissed(true)}
+              >
+                Ahora no
+              </Button>
+              <Button
+                size="sm"
+                onClick={onSubscribe}
+                disabled={subscribing}
+              >
+                {subscribing ? "Activando..." : "Activar"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // iOS requires PWA installation first
+  if (platform === 'ios' && !isPWA && isSupported) {
     return (
       <Card className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
         <CardContent className="py-4">
@@ -63,8 +111,47 @@ export function NotificationSetupBanner({
     );
   }
 
-  // Show subscription prompt for PWA users
-  if (isPWA && isSupported) {
+  // Desktop can receive notifications without PWA
+  if (platform === 'desktop' && isSupported) {
+    return (
+      <Card className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
+        <CardContent className="py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-primary/20">
+                <Monitor className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm">Activa las notificaciones de escritorio</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Recibe alertas de presupuesto y recordatorios de gastos en tu computadora.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDismissed(true)}
+              >
+                Ahora no
+              </Button>
+              <Button
+                size="sm"
+                onClick={onSubscribe}
+                disabled={subscribing}
+              >
+                {subscribing ? "Activando..." : "Activar"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // iOS PWA - show subscription prompt
+  if (platform === 'ios' && isPWA && isSupported) {
     return (
       <Card className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
         <CardContent className="py-4">
@@ -76,7 +163,7 @@ export function NotificationSetupBanner({
               <div>
                 <h3 className="font-semibold text-sm">Activa las notificaciones</h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Recibe alertas de presupuesto, recordatorios de gastos y más directamente en tu dispositivo.
+                  Recibe alertas de presupuesto, recordatorios de gastos y más directamente en tu iPhone.
                 </p>
               </div>
             </div>

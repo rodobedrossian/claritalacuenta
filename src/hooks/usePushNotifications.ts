@@ -31,9 +31,45 @@ const defaultSettings: NotificationSettings = {
   timezone: "America/Argentina/Buenos_Aires",
 };
 
+// Helper to detect platform
+const detectPlatform = (): 'android' | 'ios' | 'desktop' => {
+  const ua = navigator.userAgent.toLowerCase();
+  if (/android/.test(ua)) return 'android';
+  if (/iphone|ipad|ipod/.test(ua)) return 'ios';
+  return 'desktop';
+};
+
+// Helper to get browser name
+const getBrowserName = (): string => {
+  const ua = navigator.userAgent;
+  if (/CriOS/.test(ua)) return 'Chrome';
+  if (/FxiOS/.test(ua)) return 'Firefox';
+  if (/OPiOS/.test(ua)) return 'Opera';
+  if (/EdgiOS|Edg/.test(ua)) return 'Edge';
+  if (/Chrome/.test(ua)) return 'Chrome';
+  if (/Firefox/.test(ua)) return 'Firefox';
+  if (/Safari/.test(ua)) return 'Safari';
+  return 'Browser';
+};
+
+// Helper to get descriptive device name
+const getDeviceName = (): string => {
+  const ua = navigator.userAgent;
+  const browser = getBrowserName();
+  
+  if (/android/i.test(ua)) return `Android - ${browser}`;
+  if (/iphone/i.test(ua)) return 'iPhone';
+  if (/ipad/i.test(ua)) return 'iPad';
+  if (/macintosh/i.test(ua)) return `Mac - ${browser}`;
+  if (/windows/i.test(ua)) return `Windows - ${browser}`;
+  if (/linux/i.test(ua)) return `Linux - ${browser}`;
+  return `Web - ${browser}`;
+};
+
 export function usePushNotifications(userId: string | null) {
   const [isSupported, setIsSupported] = useState(false);
   const [isPWA, setIsPWA] = useState(false);
+  const [platform, setPlatform] = useState<'android' | 'ios' | 'desktop'>('desktop');
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [subscriptions, setSubscriptions] = useState<PushSubscriptionData[]>([]);
   const [settings, setSettings] = useState<NotificationSettings>(defaultSettings);
@@ -45,6 +81,9 @@ export function usePushNotifications(userId: string | null) {
     const checkSupport = () => {
       const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
       setIsSupported(supported);
+
+      // Detect platform
+      setPlatform(detectPlatform());
 
       // Check if running as PWA
       const standalone = window.matchMedia("(display-mode: standalone)").matches 
@@ -173,12 +212,8 @@ export function usePushNotifications(userId: string | null) {
         throw new Error("Invalid subscription data");
       }
 
-      // Detect device name
-      const deviceName = /iPhone|iPad/.test(navigator.userAgent) 
-        ? "iPhone" 
-        : /Android/.test(navigator.userAgent)
-          ? "Android"
-          : "Dispositivo web";
+      // Detect device name with more detail
+      const deviceName = getDeviceName();
 
       // Save to database
       const { error } = await supabase.from("push_subscriptions").upsert({
@@ -336,6 +371,7 @@ export function usePushNotifications(userId: string | null) {
   return {
     isSupported,
     isPWA,
+    platform,
     permission,
     subscriptions,
     settings,
