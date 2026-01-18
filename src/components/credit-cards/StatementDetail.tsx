@@ -200,10 +200,12 @@ export const StatementDetail = ({
   }, [categoryNameMap]);
 
   const formatCurrency = (amount: number, currency: string) => {
-    return `${currency} ${new Intl.NumberFormat("es-AR", {
+    const isNegative = amount < 0;
+    const formattedAmount = new Intl.NumberFormat("es-AR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(amount)}`;
+    }).format(Math.abs(amount));
+    return `${currency} ${isNegative ? "-" : ""}${formattedAmount}`;
   };
 
   const getBadgeVariant = (type: string) => {
@@ -374,8 +376,16 @@ export const StatementDetail = ({
   };
 
   const extractedData = statement.extracted_data as ExtractedDataType | null;
-  const totalArs = extractedData?.resumen?.total_ars || 0;
-  const totalUsd = extractedData?.resumen?.total_usd || 0;
+  
+  // Calculate totals dynamically from transactions (respects negative amounts for bonificaciones)
+  const totalArs = useMemo(() => 
+    transactions.filter(t => t.currency === "ARS").reduce((sum, t) => sum + t.amount, 0),
+    [transactions]
+  );
+  const totalUsd = useMemo(() => 
+    transactions.filter(t => t.currency === "USD").reduce((sum, t) => sum + t.amount, 0),
+    [transactions]
+  );
 
   // Build chart data from transactions
   const chartItems = useMemo(() => {
@@ -442,13 +452,13 @@ export const StatementDetail = ({
           <div>
             <p className="text-sm text-muted-foreground">Total ARS</p>
             <p className="text-lg font-bold text-warning">
-              {totalArs > 0 ? formatCurrency(totalArs, "ARS") : "-"}
+              {transactions.some(t => t.currency === "ARS") ? formatCurrency(totalArs, "ARS") : "-"}
             </p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Total USD</p>
             <p className="text-lg font-bold text-warning">
-              {totalUsd > 0 ? formatCurrency(totalUsd, "USD") : "-"}
+              {transactions.some(t => t.currency === "USD") ? formatCurrency(totalUsd, "USD") : "-"}
             </p>
           </div>
           <div>
@@ -600,7 +610,7 @@ export const StatementDetail = ({
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell className="whitespace-nowrap font-medium">
+                  <TableCell className={`whitespace-nowrap font-medium ${item.amount < 0 ? "text-green-500" : ""}`}>
                     {formatCurrency(item.amount, item.currency)}
                   </TableCell>
                   <TableCell>

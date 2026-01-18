@@ -331,7 +331,7 @@ export function useStatementImport(): UseStatementImportReturn {
         statement_import_id: statementImportId,
         credit_card_id: creditCardId,
         description: item.descripcion,
-        amount: Math.abs(item.monto),
+        amount: item.monto, // Keep negative amounts for bonificaciones/refunds
         currency: item.moneda,
         category_id: null, // Will be auto-assigned by AI post-import
         date: parseDate(item.fecha, statementMonth).toISOString().split("T")[0],
@@ -368,13 +368,13 @@ export function useStatementImport(): UseStatementImportReturn {
       const paymentDate = parsePaymentDate(statementSummary?.fechaVencimiento || null, statementMonth);
       const monthLabel = statementMonth.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
 
-      // Calculate totals from selected items (or use statement summary if available)
+      // Calculate totals from selected items (sum respects negative amounts for bonificaciones)
       const selectedTotalARS = selectedItems
         .filter(item => item.moneda === "ARS")
-        .reduce((sum, item) => sum + Math.abs(item.monto), 0);
+        .reduce((sum, item) => sum + item.monto, 0);
       const selectedTotalUSD = selectedItems
         .filter(item => item.moneda === "USD")
-        .reduce((sum, item) => sum + Math.abs(item.monto), 0);
+        .reduce((sum, item) => sum + item.monto, 0);
 
       // Use statement summary totals if available, otherwise use selected items total
       const totalARS = statementSummary?.totalARS || selectedTotalARS;
