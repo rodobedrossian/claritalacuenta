@@ -1,19 +1,19 @@
 import { ReactNode, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Receipt, 
-  Clock, 
-  PiggyBank, 
+import {
+  LayoutDashboard,
+  Receipt,
+  Clock,
+  PiggyBank,
   Target,
-  Settings, 
+  Settings,
   LogOut,
   Menu,
   X,
   PanelLeftClose,
   PanelLeft,
   CreditCard,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -74,18 +74,20 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
 
       {/* Overlay for mobile */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 md:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={cn(
-        "fixed md:sticky top-0 left-0 z-40 h-screen border-r border-border/50 bg-card backdrop-blur-sm transition-all duration-300",
-        sidebarWidth,
-        isMobile ? (isOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0"
-      )}>
+      <aside
+        className={cn(
+          "fixed md:sticky top-0 left-0 z-40 h-screen border-r border-border/50 bg-card backdrop-blur-sm transition-all duration-300",
+          sidebarWidth,
+          isMobile ? (isOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0",
+        )}
+      >
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className={cn("p-4 border-b border-border/50", !showExpanded ? "px-2" : "p-6")}>
@@ -93,11 +95,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
               <div className="p-2 rounded-lg gradient-primary shrink-0">
                 <PiggyBank className="h-6 w-6 text-primary-foreground" />
               </div>
-              {showExpanded && (
-                <h1 className="text-lg font-bold text-foreground truncate">
-                  ¿Y si ahorramos?
-                </h1>
-              )}
+              {showExpanded && <h1 className="text-lg font-bold text-foreground truncate">Clarita la cuenta</h1>}
             </div>
           </div>
 
@@ -118,7 +116,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
                     !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
                     isActive(item.path)
                       ? "bg-primary/10 text-primary border border-primary/20"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
@@ -136,7 +134,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 className={cn(
                   "w-full flex items-center gap-3 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all mb-2",
-                  !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3"
+                  !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
                 )}
                 title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
               >
@@ -155,7 +153,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
               title={!showExpanded ? "Cerrar Sesión" : undefined}
               className={cn(
                 "w-full flex items-center gap-3 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all",
-                !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3"
+                !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
               )}
             >
               <LogOut className="h-5 w-5 shrink-0" />
@@ -166,9 +164,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 min-w-0">
-        {children}
-      </main>
+      <main className="flex-1 min-w-0">{children}</main>
     </div>
   );
 };
