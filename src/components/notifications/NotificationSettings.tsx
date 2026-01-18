@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Smartphone, Trash2, Send, Clock, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
+import { Bell, Smartphone, Trash2, Send, Clock, Loader2, RefreshCw, AlertTriangle, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 interface NotificationSettingsProps {
   isSupported: boolean;
   isPWA: boolean;
+  platform: 'android' | 'ios' | 'desktop';
   permission: NotificationPermission;
   subscriptions: Array<{
     id: string;
@@ -36,9 +37,20 @@ interface NotificationSettingsProps {
   onSendTest: () => Promise<void>;
 }
 
+// Helper to get device icon based on device name
+const getDeviceIcon = (deviceName: string | null) => {
+  if (!deviceName) return <Smartphone className="h-4 w-4 text-muted-foreground" />;
+  const name = deviceName.toLowerCase();
+  if (name.includes('android')) return <Smartphone className="h-4 w-4 text-green-500" />;
+  if (name.includes('iphone') || name.includes('ipad')) return <Smartphone className="h-4 w-4 text-blue-500" />;
+  if (name.includes('mac') || name.includes('windows') || name.includes('linux')) return <Monitor className="h-4 w-4 text-muted-foreground" />;
+  return <Smartphone className="h-4 w-4 text-muted-foreground" />;
+};
+
 export function NotificationSettings({
   isSupported,
   isPWA,
+  platform,
   permission,
   subscriptions,
   settings,
@@ -106,7 +118,7 @@ export function NotificationSettings({
               </p>
             </div>
             {permission !== "denied" && !hasSubscription && (
-              <Button onClick={onSubscribe} disabled={subscribing || !isPWA}>
+              <Button onClick={onSubscribe} disabled={subscribing || (platform === 'ios' && !isPWA)}>
                 {subscribing ? "Activando..." : "Activar notificaciones"}
               </Button>
             )}
@@ -154,7 +166,7 @@ export function NotificationSettings({
             )}
           </div>
 
-          {!isPWA && (
+          {platform === 'ios' && !isPWA && (
             <div className="p-3 rounded-lg bg-muted text-sm">
               <p className="font-medium mb-1">Para activar notificaciones en iOS:</p>
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
@@ -165,6 +177,15 @@ export function NotificationSettings({
             </div>
           )}
 
+          {platform === 'android' && !isPWA && (
+            <div className="p-3 rounded-lg bg-muted text-sm">
+              <p className="font-medium mb-1">💡 Tip para mejor experiencia:</p>
+              <p className="text-muted-foreground">
+                Instala la app desde el menú (⋮) → "Instalar app" o "Agregar a pantalla de inicio"
+              </p>
+            </div>
+          )}
+
           {permission === "denied" && (
             <div className="p-3 rounded-lg bg-destructive/10 text-sm text-destructive">
               Las notificaciones están bloqueadas. Por favor, habilítalas en la configuración de tu navegador.
@@ -172,7 +193,7 @@ export function NotificationSettings({
         )}
 
         {/* iOS Troubleshooting Checklist */}
-        {hasSubscription && (
+        {hasSubscription && platform === 'ios' && (
           <Alert className="bg-muted/50 border-muted-foreground/20">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle className="text-sm">¿No ves las notificaciones en iPhone?</AlertTitle>
@@ -182,6 +203,22 @@ export function NotificationSettings({
                 <li>Abre <strong>Ajustes → Notificaciones → FinanceFlow</strong> y activa "Permitir notificaciones"</li>
                 <li>Si usas <strong>Modo Enfoque</strong> (Focus), verifica que FinanceFlow esté permitido</li>
                 <li>Asegúrate de abrir la app desde el <strong>ícono en pantalla de inicio</strong> (no Safari)</li>
+                <li>Si sigue sin funcionar, usa el botón <strong>Resetear</strong> y luego <strong>Probar</strong></li>
+              </ol>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Android Troubleshooting Checklist */}
+        {hasSubscription && platform === 'android' && (
+          <Alert className="bg-muted/50 border-muted-foreground/20">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle className="text-sm">¿No ves las notificaciones en Android?</AlertTitle>
+            <AlertDescription className="text-xs space-y-2 mt-2">
+              <p>Verifica estos puntos:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Abre <strong>Ajustes → Apps → Chrome → Notificaciones</strong> y asegúrate que estén activadas</li>
+                <li>Verifica que el <strong>Modo No Molestar</strong> esté desactivado</li>
                 <li>Si sigue sin funcionar, usa el botón <strong>Resetear</strong> y luego <strong>Probar</strong></li>
               </ol>
             </AlertDescription>
@@ -203,11 +240,14 @@ export function NotificationSettings({
                   key={sub.id}
                   className="flex items-center justify-between p-3 border rounded-lg"
                 >
-                  <div>
-                    <p className="font-medium text-sm">{sub.device_name || "Dispositivo"}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Registrado: {new Date(sub.created_at).toLocaleDateString()}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    {getDeviceIcon(sub.device_name)}
+                    <div>
+                      <p className="font-medium text-sm">{sub.device_name || "Dispositivo"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Registrado: {new Date(sub.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
                   <Button
                     variant="ghost"

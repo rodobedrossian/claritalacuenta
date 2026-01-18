@@ -539,6 +539,7 @@ export default function Settings() {
             <NotificationSettings
               isSupported={pushNotifications.isSupported}
               isPWA={pushNotifications.isPWA}
+              platform={pushNotifications.platform}
               permission={pushNotifications.permission}
               subscriptions={pushNotifications.subscriptions}
               settings={pushNotifications.settings}
