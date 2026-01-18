@@ -25,6 +25,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { StatementImport } from "@/hooks/useCreditCardStatements";
 import { supabase } from "@/integrations/supabase/client";
+import { StatementSpendingChart } from "./StatementSpendingChart";
 
 interface Category {
   id: string;
@@ -411,6 +412,42 @@ export const StatementDetail = ({
   const totalArs = extractedData?.resumen?.total_ars || 0;
   const totalUsd = extractedData?.resumen?.total_usd || 0;
 
+  // Build items array for the spending chart
+  const chartItems = useMemo(() => {
+    const items: Array<{ descripcion: string; monto: number; moneda: string }> = [];
+    const data = localExtractedData;
+    if (!data) return items;
+
+    // Add consumos
+    (data.consumos || []).forEach((c) => {
+      items.push({
+        descripcion: c.descripcion,
+        monto: c.monto,
+        moneda: c.moneda || "ARS",
+      });
+    });
+
+    // Add cuotas
+    (data.cuotas || []).forEach((c) => {
+      items.push({
+        descripcion: c.descripcion,
+        monto: c.monto,
+        moneda: c.moneda || "ARS",
+      });
+    });
+
+    // Add impuestos
+    (data.impuestos || []).forEach((i) => {
+      items.push({
+        descripcion: i.descripcion,
+        monto: i.monto,
+        moneda: i.moneda || "ARS",
+      });
+    });
+
+    return items;
+  }, [localExtractedData]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -467,6 +504,9 @@ export const StatementDetail = ({
           </div>
         </div>
       </Card>
+
+      {/* Spending by Category Chart */}
+      <StatementSpendingChart items={chartItems} itemCategories={itemCategories} />
 
       {/* Filters and Search */}
       <div className="flex flex-col md:flex-row gap-4">

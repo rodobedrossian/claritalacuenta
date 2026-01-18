@@ -186,9 +186,12 @@ Deno.serve(async (req) => {
       else totals.savingsTransfersARS += amount;
     }
 
-    // Calculate spending by category (includes ALL expenses for budget tracking)
+    // Filter effective transactions (exclude projected/credit card) for dashboard display
+    const effectiveTransactions = transactions.filter(t => !t.is_projected);
+
+    // Calculate spending by category (only EFFECTIVE expenses for dashboard)
     const spendingMap = new Map<string, number>();
-    for (const t of transactions) {
+    for (const t of effectiveTransactions) {
       if (t.type === "expense") {
         const key = `${t.category} (${t.currency})`;
         spendingMap.set(key, (spendingMap.get(key) || 0) + t.amount);
@@ -197,7 +200,6 @@ Deno.serve(async (req) => {
     const spendingByCategory = Array.from(spendingMap.entries())
       .map(([category, amount]) => ({ category, amount }))
       .sort((a, b) => b.amount - a.amount);
-
 
     // Format current savings
     const currentSavings = {
@@ -227,14 +229,14 @@ Deno.serve(async (req) => {
       totals,
       currentSavings,
       exchangeRate,
-      transactions,
+      transactions: effectiveTransactions, // Only return effective transactions for dashboard
       spendingByCategory,
       categories: (categoriesResult.data || []).map((c: any) => ({ id: c.id, name: c.name, type: c.type })),
       users: usersResult.data || [],
       creditCards: creditCardsResult.data || []
     };
 
-    console.log(`Dashboard data fetched successfully. Transactions: ${transactions.length}`);
+    console.log(`Dashboard data fetched successfully. Total transactions: ${transactions.length}, Effective: ${effectiveTransactions.length}`);
 
     return new Response(
       JSON.stringify(response),
