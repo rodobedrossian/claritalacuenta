@@ -21,8 +21,8 @@ export default defineConfig(({ mode }) => ({
       injectRegister: false,
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
-        name: "FinanceFlow - Gestión de Finanzas",
-        short_name: "FinanceFlow",
+        name: "Clarita la cuenta - Gestión de Finanzas",
+        short_name: "Clarita",
         description: "Gestiona tus finanzas personales con presupuestos, gastos y notificaciones",
         theme_color: "#1e3a5f",
         background_color: "#0f172a",

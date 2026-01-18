@@ -55,7 +55,7 @@ export function PWAInstallInstructions() {
             App Instalada
           </CardTitle>
           <CardDescription>
-            FinanceFlow ya está instalada en tu dispositivo. ¡Disfruta de la experiencia completa!
+            Clarita ya está instalada en tu dispositivo. ¡Disfruta de la experiencia completa!
           </CardDescription>
         </CardHeader>
       </Card>
@@ -70,7 +70,7 @@ export function PWAInstallInstructions() {
           Instalar App
         </CardTitle>
         <CardDescription>
-          Agrega FinanceFlow a tu pantalla de inicio para acceder rápidamente y recibir notificaciones.
+          Agrega Clarita a tu pantalla de inicio para acceder rápidamente y recibir notificaciones.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -82,7 +82,7 @@ export function PWAInstallInstructions() {
               className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
             >
               <Download className="h-5 w-5" />
-              Instalar FinanceFlow
+              Instalar Clarita
             </button>
             <p className="text-sm text-muted-foreground text-center mt-2">
               Haz clic para instalar la app directamente
