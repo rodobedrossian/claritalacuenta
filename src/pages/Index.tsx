@@ -437,15 +437,13 @@ const Index = () => {
           {/* Charts and Transactions */}
           <div className="space-y-6 animate-slide-up">
             <TimelineChart transactions={transactions} />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <SpendingChart data={spendingByCategory} />
-              <TransactionsList 
-                transactions={transactions.slice(0, 5)} 
-                onEdit={handleEditTransaction}
-                showViewAll={transactions.length > 5}
-                onViewAll={() => navigate("/transactions")}
-              />
-            </div>
+            <SpendingChart data={spendingByCategory} />
+            <TransactionsList 
+              transactions={transactions.slice(0, 5)} 
+              onEdit={handleEditTransaction}
+              showViewAll={transactions.length > 5}
+              onViewAll={() => navigate("/transactions")}
+            />
           </div>
         </main>
 
