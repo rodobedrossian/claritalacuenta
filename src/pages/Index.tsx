@@ -78,7 +78,6 @@ const Index = () => {
   // Voice transaction hook
   const voiceTransaction = useVoiceTransaction({
     categories: dashboardData?.categories || [],
-    users: (dashboardData?.users || []).map(u => ({ name: u.full_name })),
     userName: user?.user_metadata?.full_name || user?.email || "Usuario",
     userId: user?.id
   });
@@ -251,7 +250,7 @@ const Index = () => {
   const lastUpdated = dashboardData?.exchangeRate.updatedAt;
   const transactions = dashboardData?.transactions || [];
   const categories = dashboardData?.categories || [];
-  const users = dashboardData?.users || [];
+  
   const creditCards = dashboardData?.creditCards || [];
   const totals = dashboardData?.totals || {
     incomeUSD: 0,
@@ -453,7 +452,6 @@ const Index = () => {
           onUpdate={handleUpdateTransaction}
           onDelete={handleDeleteTransaction}
           categories={categories}
-          users={users}
         />
 
 
@@ -483,7 +481,6 @@ const Index = () => {
           transaction={voiceTransaction.parsedTransaction}
           transcribedText={voiceTransaction.transcribedText}
           categories={categories}
-          users={users.map(u => ({ id: u.id, name: u.full_name }))}
           currentUserId={user?.id}
           onConfirm={async (transaction) => {
             await handleAddTransaction({
@@ -493,7 +490,7 @@ const Index = () => {
               category: transaction.category,
               description: transaction.description,
               date: transaction.date,
-              user_id: transaction.owner_id || user?.id || "",
+              user_id: user?.id || "",
               payment_method: "cash",
               from_savings: false
             });

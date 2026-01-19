@@ -35,7 +35,6 @@ const Transactions = () => {
   const {
     transactions,
     categories,
-    users,
     totalCount,
     hasMore,
     loading,
@@ -244,7 +243,6 @@ const Transactions = () => {
           onUpdate={updateTransaction}
           onDelete={deleteTransaction}
           categories={categories}
-          users={users}
         />
       </div>
     </AppLayout>

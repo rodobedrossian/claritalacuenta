@@ -24,7 +24,6 @@ interface EditTransactionDialogProps {
   onUpdate: (id: string, transaction: Omit<Transaction, "id">) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   categories: Array<{ id: string; name: string; type: string }>;
-  users: Array<{ id: string; full_name: string | null }>;
 }
 
 export const EditTransactionDialog = ({
@@ -34,7 +33,6 @@ export const EditTransactionDialog = ({
   onUpdate,
   onDelete,
   categories,
-  users,
 }: EditTransactionDialogProps) => {
   const [formData, setFormData] = useState({
     type: "expense" as "income" | "expense",
@@ -160,24 +158,6 @@ export const EditTransactionDialog = ({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="edit-user">Responsable</Label>
-            <Select
-              value={formData.user_id}
-              onValueChange={(value) => setFormData({ ...formData, user_id: value })}
-            >
-              <SelectTrigger id="edit-user">
-                <SelectValue placeholder="Seleccionar responsable" />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.full_name || "Desconocido"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
           <div className="space-y-2">
             <Label htmlFor="edit-description">Descripción</Label>
