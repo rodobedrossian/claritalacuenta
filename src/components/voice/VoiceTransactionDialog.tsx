@@ -36,7 +36,6 @@ interface VoiceTransactionDialogProps {
   transaction: VoiceTransactionData | null;
   transcribedText: string;
   categories: Array<{ name: string; type: string }>;
-  users: Array<{ id: string; name: string }>;
   currentUserId?: string;
   onConfirm: (transaction: {
     type: "income" | "expense";
@@ -45,7 +44,6 @@ interface VoiceTransactionDialogProps {
     category: string;
     description: string;
     date: string;
-    owner_id?: string;
   }) => void;
   onCancel: () => void;
 }
@@ -56,7 +54,6 @@ export const VoiceTransactionDialog = ({
   transaction,
   transcribedText,
   categories,
-  users,
   currentUserId,
   onConfirm,
   onCancel,
@@ -67,7 +64,6 @@ export const VoiceTransactionDialog = ({
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState<Date>(new Date());
-  const [ownerId, setOwnerId] = useState<string>("");
 
   // Match category with fuzzy matching
   const matchCategory = (aiCategory: string, availableCategories: Array<{ name: string; type: string }>) => {
@@ -101,23 +97,8 @@ export const VoiceTransactionDialog = ({
       const filteredCats = categories.filter(c => c.type === transaction.type);
       const matchedCategory = matchCategory(transaction.category, filteredCats);
       setCategory(matchedCategory);
-      
-      // Find owner ID by name, or default to current user
-      if (transaction.owner) {
-        const owner = users.find(u => 
-          u.name.toLowerCase() === transaction.owner?.toLowerCase()
-        );
-        if (owner) {
-          setOwnerId(owner.id);
-        } else if (currentUserId) {
-          setOwnerId(currentUserId);
-        }
-      } else if (currentUserId) {
-        // Default to logged-in user if no owner specified
-        setOwnerId(currentUserId);
-      }
     }
-  }, [transaction, users, categories, currentUserId]);
+  }, [transaction, categories]);
 
   const handleSubmit = () => {
     const numAmount = parseFloat(amount);
@@ -132,7 +113,6 @@ export const VoiceTransactionDialog = ({
       category,
       description,
       date: format(date, "yyyy-MM-dd"),
-      owner_id: ownerId || undefined,
     });
   };
 
@@ -264,25 +244,6 @@ export const VoiceTransactionDialog = ({
               </PopoverContent>
             </Popover>
           </div>
-
-          {/* Owner */}
-          {users.length > 0 && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Usuario</Label>
-              <Select value={ownerId} onValueChange={setOwnerId}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Seleccionar..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           {/* AI Notes */}
           {transaction?.notes && (

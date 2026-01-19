@@ -103,13 +103,8 @@ Deno.serve(async (req) => {
     // Execute transaction query
     const transactionsResult = await transactionsQuery;
 
-    // Always fetch categories for name lookup, users only on first page
-    const [categoriesResult, usersResult] = await Promise.all([
-      supabase.from("categories").select("id, name, type").order("name"),
-      page === 0 
-        ? supabase.from("profiles").select("id, full_name").order("full_name")
-        : Promise.resolve({ data: null, error: null })
-    ]);
+    // Fetch categories for name lookup
+    const categoriesResult = await supabase.from("categories").select("id, name, type").order("name");
 
     // Log errors
     if (transactionsResult.error) {
@@ -117,9 +112,6 @@ Deno.serve(async (req) => {
     }
     if (categoriesResult?.error) {
       console.error("Categories error:", categoriesResult.error);
-    }
-    if (usersResult?.error) {
-      console.error("Users error:", usersResult.error);
     }
 
     // Build category ID to name map
@@ -146,10 +138,9 @@ Deno.serve(async (req) => {
       page
     };
 
-    // Include categories (with id and name) and users only on first page
+    // Include categories on first page
     if (page === 0) {
       response.categories = (categoriesResult?.data || []).map((c: any) => ({ id: c.id, name: c.name, type: c.type }));
-      response.users = usersResult?.data || [];
     }
 
     console.log(`Transactions fetched: ${transactions.length} of ${totalCount}, hasMore: ${hasMore}`);

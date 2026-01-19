@@ -27,7 +27,6 @@ export interface TransactionFilters {
 interface UseTransactionsDataReturn {
   transactions: Transaction[];
   categories: Array<{ id: string; name: string; type: string }>;
-  users: Array<{ id: string; full_name: string | null }>;
   totalCount: number;
   hasMore: boolean;
   loading: boolean;
@@ -47,7 +46,6 @@ export function useTransactionsData(
 ): UseTransactionsDataReturn {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Array<{ id: string; name: string; type: string }>>([]);
-  const [users, setUsers] = useState<Array<{ id: string; full_name: string | null }>>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
@@ -101,12 +99,9 @@ export function useTransactionsData(
       // Update state
       if (pageNum === 0) {
         setTransactions(typedTransactions);
-        // Only update categories and users on first page
+        // Only update categories on first page
         if (responseData.categories) {
           setCategories(responseData.categories);
-        }
-        if (responseData.users) {
-          setUsers(responseData.users);
         }
       } else {
         setTransactions(prev => [...prev, ...typedTransactions]);
@@ -204,7 +199,6 @@ export function useTransactionsData(
   return {
     transactions,
     categories,
-    users,
     totalCount,
     hasMore,
     loading,

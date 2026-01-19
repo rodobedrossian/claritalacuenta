@@ -16,14 +16,13 @@ export interface VoiceTransactionData {
 
 interface UseVoiceTransactionProps {
   categories: Array<{ name: string; type: string }>;
-  users: Array<{ name: string }>;
   userName?: string;
   userId?: string;
 }
 
 type RecordingState = "idle" | "recording" | "processing";
 
-export const useVoiceTransaction = ({ categories, users, userName }: UseVoiceTransactionProps) => {
+export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactionProps) => {
   const [state, setState] = useState<RecordingState>("idle");
   const [transcribedText, setTranscribedText] = useState<string>("");
   const [parsedTransaction, setParsedTransaction] = useState<VoiceTransactionData | null>(null);
@@ -212,7 +211,6 @@ export const useVoiceTransaction = ({ categories, users, userName }: UseVoiceTra
           body: { 
             text, 
             categories,
-            users,
             userName 
           } 
         }
