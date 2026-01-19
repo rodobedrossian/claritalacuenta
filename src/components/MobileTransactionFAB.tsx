@@ -93,14 +93,14 @@ export const MobileTransactionFAB = ({
         <DropdownMenuContent 
           align="end" 
           side="top" 
-          className="w-56 mb-2"
+          className="w-64 mb-2"
         >
           <DropdownMenuItem 
             onClick={handleAddManual}
             className="cursor-pointer py-3"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Agregar manualmente
+            Agregar transacción a mano
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={handleVoiceRecord}
@@ -112,7 +112,7 @@ export const MobileTransactionFAB = ({
             ) : (
               <Mic className="h-4 w-4 mr-2" />
             )}
-            {isRecording ? "Grabando..." : isProcessing ? "Procesando..." : "Grabar por voz"}
+            {isRecording ? "Grabando..." : isProcessing ? "Procesando..." : "Grabar por voz / Dictar transacción"}
           </DropdownMenuItem>
           {(showImport || hasCreditCards) && (
             <DropdownMenuItem 
@@ -120,7 +120,7 @@ export const MobileTransactionFAB = ({
               className="cursor-pointer py-3"
             >
               <FileUp className="h-4 w-4 mr-2" />
-              Importar resumen
+              Importar resumen de cuenta
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
