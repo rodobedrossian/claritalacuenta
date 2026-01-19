@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { sanitizeFilename } from "@/lib/utils";
 
 export interface ExtractedItem {
   id: string;
@@ -102,15 +103,22 @@ export function useStatementImport(): UseStatementImportReturn {
         return false;
       }
 
-      // Upload to storage
-      const filePath = `${userId}/${Date.now()}_${file.name}`;
+      // Upload to storage with sanitized filename to avoid InvalidKey errors
+      const safeFilename = sanitizeFilename(file.name);
+      const filePath = `${userId}/${Date.now()}_${safeFilename}`;
       const { error: uploadError } = await supabase.storage
         .from("credit-card-statements")
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          contentType: "application/pdf",
+          upsert: false,
+        });
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
-        toast.error("Error al subir el archivo");
+        const errorMessage = (uploadError as any)?.error === "InvalidKey"
+          ? "El nombre del archivo contiene caracteres no válidos"
+          : "Error al subir el archivo";
+        toast.error(errorMessage);
         return false;
       }
 
