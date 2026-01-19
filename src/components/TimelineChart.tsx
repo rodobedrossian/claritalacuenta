@@ -24,8 +24,9 @@ export const TimelineChart = ({ transactions }: TimelineChartProps) => {
   const timelineData = transactions
     .filter(t => t.currency === currency)
     .reduce((acc, transaction) => {
-      const date = format(parseISO(transaction.date), "dd MMM", { locale: es });
-      const existing = acc.find(item => item.date === date);
+      const dateKey = transaction.date; // Keep original date for sorting
+      const dateLabel = format(parseISO(transaction.date), "dd MMM", { locale: es });
+      const existing = acc.find(item => item.dateKey === dateKey);
       
       if (existing) {
         if (transaction.type === "income") {
@@ -35,19 +36,18 @@ export const TimelineChart = ({ transactions }: TimelineChartProps) => {
         }
       } else {
         acc.push({
-          date,
+          dateKey,
+          date: dateLabel,
           income: transaction.type === "income" ? transaction.amount : 0,
           expenses: transaction.type === "expense" ? transaction.amount : 0,
         });
       }
       
       return acc;
-    }, [] as Array<{ date: string; income: number; expenses: number }>)
+    }, [] as Array<{ dateKey: string; date: string; income: number; expenses: number }>)
     .sort((a, b) => {
-      // Sort by date chronologically
-      const dateA = new Date(a.date + " 2024");
-      const dateB = new Date(b.date + " 2024");
-      return dateA.getTime() - dateB.getTime();
+      // Sort by original date string chronologically (ascending)
+      return a.dateKey.localeCompare(b.dateKey);
     });
 
   return (
