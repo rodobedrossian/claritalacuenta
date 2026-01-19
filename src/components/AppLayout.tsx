@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileTransactionFAB } from "@/components/MobileTransactionFAB";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -165,6 +166,9 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
 
       {/* Main content */}
       <main className="flex-1 min-w-0">{children}</main>
+
+      {/* Mobile FAB for transactions */}
+      <MobileTransactionFAB />
     </div>
   );
 };

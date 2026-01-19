@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Wallet, TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StatCard } from "@/components/StatCard";
@@ -31,6 +31,7 @@ import { useBudgetsData } from "@/hooks/useBudgetsData";
 
 const Index = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isRefreshingRate, setIsRefreshingRate] = useState(false);
@@ -88,6 +89,21 @@ const Index = () => {
       setVoiceDialogOpen(true);
     }
   }, [voiceTransaction.parsedTransaction]);
+
+  // Handle URL action params from FAB navigation
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const action = params.get("action");
+    
+    if (action === "add-transaction") {
+      setAddTransactionDialogOpen(true);
+      // Clean up URL
+      navigate("/", { replace: true });
+    } else if (action === "voice-record") {
+      voiceTransaction.startRecording();
+      navigate("/", { replace: true });
+    }
+  }, [location.search, navigate, voiceTransaction]);
 
   useEffect(() => {
     // Check authentication
@@ -334,14 +350,16 @@ const Index = () => {
                   onTransferFromBalance={(currency, amount, savingsType, notes) => handleAddSavings(currency, amount, "deposit", savingsType, notes)}
                   onAddSavings={handleAddSavings}
                 />
-                <TransactionActionsDropdown
-                  onAddManual={() => setAddTransactionDialogOpen(true)}
-                  onVoiceRecord={voiceTransaction.isRecording ? voiceTransaction.stopRecording : voiceTransaction.startRecording}
-                  onImportStatement={() => setImportDialogOpen(true)}
-                  isRecording={voiceTransaction.isRecording}
-                  isProcessing={voiceTransaction.isProcessing}
-                  showImport={creditCards.length > 0}
-                />
+                <div className="hidden md:block">
+                  <TransactionActionsDropdown
+                    onAddManual={() => setAddTransactionDialogOpen(true)}
+                    onVoiceRecord={voiceTransaction.isRecording ? voiceTransaction.stopRecording : voiceTransaction.startRecording}
+                    onImportStatement={() => setImportDialogOpen(true)}
+                    isRecording={voiceTransaction.isRecording}
+                    isProcessing={voiceTransaction.isProcessing}
+                    showImport={creditCards.length > 0}
+                  />
+                </div>
               </div>
             </div>
           </div>
