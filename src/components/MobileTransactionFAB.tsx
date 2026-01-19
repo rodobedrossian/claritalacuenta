@@ -36,10 +36,7 @@ export const MobileTransactionFAB = ({
   // Check if user has credit cards for import option
   useEffect(() => {
     const checkCreditCards = async () => {
-      const { data } = await supabase
-        .from("credit_cards")
-        .select("id")
-        .limit(1);
+      const { data } = await supabase.from("credit_cards").select("id").limit(1);
       setHasCreditCards((data?.length || 0) > 0);
     };
     checkCreditCards();
@@ -79,46 +76,28 @@ export const MobileTransactionFAB = ({
     <div className="fixed bottom-6 right-6 z-50 md:hidden">
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             className="h-14 w-14 rounded-full shadow-lg gradient-primary hover:opacity-90 transition-all"
           >
-            {isOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Plus className="h-6 w-6" />
-            )}
+            {isOpen ? <X className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent 
-          align="end" 
-          side="top" 
-          className="w-64 mb-2"
-        >
-          <DropdownMenuItem 
-            onClick={handleAddManual}
-            className="cursor-pointer py-3"
-          >
+        <DropdownMenuContent align="end" side="top" className="w-64 mb-2">
+          <DropdownMenuItem onClick={handleAddManual} className="cursor-pointer py-3">
             <Plus className="h-4 w-4 mr-2" />
             Agregar transacción a mano
           </DropdownMenuItem>
-          <DropdownMenuItem 
+          <DropdownMenuItem
             onClick={handleVoiceRecord}
             disabled={isRecording || isProcessing}
             className="cursor-pointer py-3"
           >
-            {isProcessing ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Mic className="h-4 w-4 mr-2" />
-            )}
-            {isRecording ? "Grabando..." : isProcessing ? "Procesando..." : "Grabar por voz / Dictar transacción"}
+            {isProcessing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Mic className="h-4 w-4 mr-2" />}
+            {isRecording ? "Grabando..." : isProcessing ? "Procesando..." : "Dictar transacción"}
           </DropdownMenuItem>
           {(showImport || hasCreditCards) && (
-            <DropdownMenuItem 
-              onClick={handleImportStatement}
-              className="cursor-pointer py-3"
-            >
+            <DropdownMenuItem onClick={handleImportStatement} className="cursor-pointer py-3">
               <FileUp className="h-4 w-4 mr-2" />
               Importar resumen de cuenta
             </DropdownMenuItem>
