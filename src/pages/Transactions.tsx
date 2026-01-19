@@ -26,7 +26,7 @@ const Transactions = () => {
   const [filters, setFilters] = useState<TransactionFilters>({
     type: "all",
     category: "all",
-    userId: "all",
+    userId: "",
     startDate: "",
     endDate: ""
   });
@@ -92,7 +92,7 @@ const Transactions = () => {
     setFilters({
       type: "all",
       category: "all",
-      userId: "all",
+      userId: "",
       startDate: "",
       endDate: ""
     });
@@ -110,7 +110,7 @@ const Transactions = () => {
   }
 
   const hasActiveFilters = filters.type !== "all" || filters.category !== "all" || 
-    filters.userId !== "all" || filters.startDate !== "" || filters.endDate !== "";
+    filters.startDate !== "" || filters.endDate !== "";
 
   return (
     <AppLayout>
@@ -173,23 +173,6 @@ const Transactions = () => {
                           {categories.map(category => (
                             <SelectItem key={category.id} value={category.name}>
                               {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Dueño</label>
-                      <Select value={filters.userId} onValueChange={(v) => handleUpdateFilter("userId", v)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Todos" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos</SelectItem>
-                          {users.map(user => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.full_name || "Desconocido"}
                             </SelectItem>
                           ))}
                         </SelectContent>
