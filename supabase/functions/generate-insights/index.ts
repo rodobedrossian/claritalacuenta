@@ -122,24 +122,24 @@ Deno.serve(async (req) => {
       console.error("Error fetching statement imports:", stmtError);
     }
 
-    // Fetch credit card consumption transactions from dedicated table
+    // Fetch credit card consumption transactions from dedicated table with category names
     let ccConsumptionTransactions: Transaction[] = [];
     if (statementImports && statementImports.length > 0) {
       const statementIds = statementImports.map((s: StatementImport) => s.id);
       const { data: ccTxs, error: ccTxError } = await supabase
         .from("credit_card_transactions")
-        .select("id, description, amount, currency, category_id, date, transaction_type, user_id, statement_import_id, credit_card_id")
+        .select("id, description, amount, currency, category_id, date, transaction_type, user_id, statement_import_id, credit_card_id, categories(name)")
         .eq("user_id", user.id)
         .in("statement_import_id", statementIds);
 
       if (ccTxError) {
         console.error("Error fetching CC consumption transactions:", ccTxError);
       } else {
-        // Map to Transaction interface
+        // Map to Transaction interface, using category name from join
         ccConsumptionTransactions = (ccTxs || []).map((t: any) => ({
           ...t,
           type: "expense",
-          category: t.category_id || "Uncategorized"
+          category: t.categories?.name || "Sin categoría"
         })) as Transaction[];
       }
     }
