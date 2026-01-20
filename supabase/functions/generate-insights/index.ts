@@ -83,11 +83,21 @@ Deno.serve(async (req) => {
 
     const { months_to_analyze = 6 } = await req.json().catch(() => ({}));
 
+    // Fetch categories to build a name map
+    const { data: categoriesData } = await supabase
+      .from("categories")
+      .select("id, name");
+    
+    const categoryMap = new Map<string, string>();
+    for (const c of (categoriesData || [])) {
+      categoryMap.set(c.id, c.name);
+    }
+
     // Fetch historical transactions (for cashflow analysis - includes CC payments)
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - months_to_analyze);
     
-    const { data: allTransactions, error: txError } = await supabase
+    const { data: rawTransactions, error: txError } = await supabase
       .from("transactions")
       .select("*")
       .eq("user_id", user.id)
@@ -100,6 +110,11 @@ Deno.serve(async (req) => {
       throw txError;
     }
 
+    // Map category IDs to names
+    const allTransactions: Transaction[] = (rawTransactions || []).map((t: any) => ({
+      ...t,
+      category: categoryMap.get(t.category) || t.category
+    }));
     // Fetch exchange rate for USD conversion
     const { data: exchangeRate } = await supabase
       .from("exchange_rates")
