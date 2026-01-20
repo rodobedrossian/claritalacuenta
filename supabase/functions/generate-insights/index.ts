@@ -89,9 +89,14 @@ Deno.serve(async (req) => {
       .select("id, name");
     
     const categoryMap = new Map<string, string>();
+    const nameToIdMap = new Map<string, string>();
     for (const c of (categoriesData || [])) {
       categoryMap.set(c.id, c.name);
+      nameToIdMap.set(c.name, c.id);
     }
+    
+    // Get the UUID for "Tarjeta" category to filter CC payment transactions
+    const tarjetaCategoryId = nameToIdMap.get("Tarjeta") || "2eee47f0-252a-4580-8672-0ec0bdd6f11d";
 
     // Fetch historical transactions (for cashflow analysis - includes CC payments)
     const sixMonthsAgo = new Date();
@@ -193,8 +198,9 @@ Deno.serve(async (req) => {
     const consumptionData: Record<string, ConsumptionData> = {};
     
     // Add direct expenses (excluding Tarjeta category - these are CC payment summaries)
+    // Filter by both UUID and name to handle any legacy data
     allTransactions
-      .filter((tx: Transaction) => tx.category !== "Tarjeta")
+      .filter((tx: Transaction) => tx.category !== "Tarjeta" && tx.category !== tarjetaCategoryId)
       .forEach((tx: Transaction) => {
         const month = tx.date.substring(0, 7);
         if (!consumptionData[month]) {
@@ -359,7 +365,10 @@ Deno.serve(async (req) => {
     const descriptionMap: Record<string, { amounts: number[]; months: Set<string>; category: string }> = {};
     
     // Use direct transactions (excluding Tarjeta) for pattern detection
-    const directTransactions = allTransactions.filter((tx: Transaction) => tx.category !== "Tarjeta");
+    // Filter by both UUID and name to handle any legacy data
+    const directTransactions = allTransactions.filter((tx: Transaction) => 
+      tx.category !== "Tarjeta" && tx.category !== tarjetaCategoryId
+    );
     
     directTransactions.forEach((tx: Transaction) => {
       // Normalize description for matching
@@ -555,7 +564,7 @@ Deno.serve(async (req) => {
         const [topCategory, topAmount] = categoryTotals[0] as [string, number];
         const percentage = (topAmount / consumptionData[consumptionCurrentMonth].total) * 100;
 
-        if (percentage > 30) {
+        if (percentage > 20) {
           const isFixed = FIXED_CATEGORIES.has(topCategory);
 
           insights.push({
