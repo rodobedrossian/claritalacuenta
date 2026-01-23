@@ -57,26 +57,24 @@ const Transactions = () => {
 
   // Intersection observer for infinite scroll
   useEffect(() => {
+    const currentTarget = observerTarget.current;
+    if (!currentTarget) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loadingMore && hasMore) {
+        if (entries[0].isIntersecting) {
           loadMore();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1, rootMargin: "100px" }
     );
 
-    const currentTarget = observerTarget.current;
-    if (currentTarget) {
-      observer.observe(currentTarget);
-    }
+    observer.observe(currentTarget);
 
     return () => {
-      if (currentTarget) {
-        observer.unobserve(currentTarget);
-      }
+      observer.disconnect();
     };
-  }, [loadMore, loadingMore, hasMore]);
+  }, [loadMore]);
 
   const handleEditTransaction = (transaction: Transaction) => {
     setEditingTransaction(transaction);
@@ -227,9 +225,18 @@ const Transactions = () => {
               </div>
 
               {/* Infinite scroll trigger */}
-              <div ref={observerTarget} className="py-8 flex justify-center">
+              <div ref={observerTarget} className="py-6 flex flex-col items-center gap-3">
                 {loadingMore && (
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                )}
+                {hasMore && !loadingMore && (
+                  <Button 
+                    variant="outline" 
+                    onClick={loadMore}
+                    className="w-full max-w-xs"
+                  >
+                    Cargar más transacciones
+                  </Button>
                 )}
                 {!hasMore && transactions.length > 0 && (
                   <p className="text-sm text-muted-foreground">No hay más transacciones</p>
