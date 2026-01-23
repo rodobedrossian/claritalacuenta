@@ -23,6 +23,9 @@ interface Transaction {
   amount: number;
   currency: string;
   category: string;
+  categoryName?: string;
+  categoryIcon?: string | null;
+  categoryColor?: string | null;
   description: string;
   date: string;
   user_id: string;
@@ -103,8 +106,8 @@ Deno.serve(async (req) => {
     // Execute transaction query
     const transactionsResult = await transactionsQuery;
 
-    // Fetch categories for name lookup
-    const categoriesResult = await supabase.from("categories").select("id, name, type").order("name");
+    // Fetch categories for name, icon, and color lookup
+    const categoriesResult = await supabase.from("categories").select("id, name, type, icon, color").order("name");
 
     // Log errors
     if (transactionsResult.error) {
@@ -114,19 +117,24 @@ Deno.serve(async (req) => {
       console.error("Categories error:", categoriesResult.error);
     }
 
-    // Build category ID to name map
-    const categoryMap = new Map<string, string>();
+    // Build category ID to data map
+    const categoryMap = new Map<string, { name: string; icon: string | null; color: string | null }>();
     for (const c of (categoriesResult.data || [])) {
-      categoryMap.set(c.id, c.name);
+      categoryMap.set(c.id, { name: c.name, icon: c.icon, color: c.color });
     }
 
-    // Parse transactions and enrich with category name
-    const transactions: Transaction[] = (transactionsResult.data || []).map((t: any) => ({
-      ...t,
-      amount: typeof t.amount === "string" ? parseFloat(t.amount) : t.amount,
-      from_savings: t.from_savings || false,
-      categoryName: categoryMap.get(t.category) || t.category
-    }));
+    // Parse transactions and enrich with category data
+    const transactions: Transaction[] = (transactionsResult.data || []).map((t: any) => {
+      const categoryData = categoryMap.get(t.category);
+      return {
+        ...t,
+        amount: typeof t.amount === "string" ? parseFloat(t.amount) : t.amount,
+        from_savings: t.from_savings || false,
+        categoryName: categoryData?.name || t.category,
+        categoryIcon: categoryData?.icon || null,
+        categoryColor: categoryData?.color || null,
+      };
+    });
 
     const totalCount = transactionsResult.count || 0;
     const hasMore = transactions.length === limit;
@@ -140,7 +148,13 @@ Deno.serve(async (req) => {
 
     // Include categories on first page
     if (page === 0) {
-      response.categories = (categoriesResult?.data || []).map((c: any) => ({ id: c.id, name: c.name, type: c.type }));
+      response.categories = (categoriesResult?.data || []).map((c: any) => ({ 
+        id: c.id, 
+        name: c.name, 
+        type: c.type,
+        icon: c.icon,
+        color: c.color
+      }));
     }
 
     console.log(`Transactions fetched: ${transactions.length} of ${totalCount}, hasMore: ${hasMore}`);

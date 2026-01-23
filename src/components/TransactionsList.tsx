@@ -1,6 +1,7 @@
-import { ArrowDownCircle, ArrowUpCircle, Pencil, PiggyBank } from "lucide-react";
+import { Pencil, PiggyBank } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getCategoryIcon, getCategoryColor, DEFAULT_CATEGORY_COLORS, DEFAULT_CATEGORY_ICONS } from "@/lib/categoryIcons";
 
 interface Transaction {
   id: string;
@@ -9,6 +10,8 @@ interface Transaction {
   currency: "USD" | "ARS";
   category: string;
   categoryName?: string;
+  categoryIcon?: string | null;
+  categoryColor?: string | null;
   description: string;
   date: string;
   user_id: string;
@@ -21,92 +24,144 @@ interface TransactionsListProps {
   onEdit: (transaction: Transaction) => void;
   showViewAll?: boolean;
   onViewAll?: () => void;
+  showCard?: boolean;
 }
 
-export const TransactionsList = ({ transactions, onEdit, showViewAll, onViewAll }: TransactionsListProps) => {
+export const TransactionsList = ({ 
+  transactions, 
+  onEdit, 
+  showViewAll, 
+  onViewAll,
+  showCard = true 
+}: TransactionsListProps) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // Check if it's today
+    if (date.toDateString() === today.toDateString()) {
+      return "Hoy";
+    }
+    // Check if it's yesterday
+    if (date.toDateString() === yesterday.toDateString()) {
+      return "Ayer";
+    }
+    
     return date.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
   };
 
   const formatAmount = (amount: number, currency: "USD" | "ARS") => {
-    return `${currency} ${new Intl.NumberFormat("es-AR").format(amount)}`;
+    return new Intl.NumberFormat("es-AR", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
-  return (
-    <Card className="p-6 gradient-card border-border/50">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Transacciones Recientes</h3>
-        {showViewAll && onViewAll && (
-          <Button variant="ghost" onClick={onViewAll} className="text-sm">
-            Ver Todas →
-          </Button>
-        )}
-      </div>
-      <div className="space-y-3">
+  const getIconAndColor = (transaction: Transaction) => {
+    const categoryName = transaction.categoryName || transaction.category;
+    
+    // Try to get icon from transaction data, then fallback to defaults
+    const iconName = transaction.categoryIcon || DEFAULT_CATEGORY_ICONS[categoryName] || "circle";
+    const color = transaction.categoryColor || DEFAULT_CATEGORY_COLORS[categoryName] || "#6366f1";
+    
+    return { iconName, color };
+  };
+
+  const content = (
+    <>
+      {showCard && (
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Transacciones Recientes</h3>
+          {showViewAll && onViewAll && (
+            <Button variant="ghost" onClick={onViewAll} className="text-sm">
+              Ver Todas →
+            </Button>
+          )}
+        </div>
+      )}
+      <div className="space-y-1">
         {transactions.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">
             Sin transacciones aún. ¡Agregá la primera!
           </p>
         ) : (
-          transactions.map((transaction) => (
-            <div
-              key={transaction.id}
-              className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-smooth group"
-            >
-              <div className="flex items-center gap-3 flex-1">
-                <div
-                  className={`p-2 rounded-lg ${
-                    transaction.type === "income"
-                      ? "bg-success/10 border border-success/20"
-                      : "bg-destructive/10 border border-destructive/20"
-                  }`}
+          transactions.map((transaction) => {
+            const { iconName, color } = getIconAndColor(transaction);
+            const IconComponent = getCategoryIcon(iconName);
+            const categoryDisplay = transaction.categoryName || transaction.category;
+            
+            return (
+              <div
+                key={transaction.id}
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group cursor-pointer"
+                onClick={() => onEdit(transaction)}
+              >
+                {/* Category Icon */}
+                <div 
+                  className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: `${color}20` }}
                 >
-                  {transaction.type === "income" ? (
-                    <ArrowUpCircle className="h-4 w-4 text-success" />
-                  ) : (
-                    <ArrowDownCircle className="h-4 w-4 text-destructive" />
-                  )}
+                  <IconComponent 
+                    className="w-5 h-5" 
+                    style={{ color }} 
+                  />
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium">{transaction.description}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {transaction.categoryName || transaction.category} • {formatDate(transaction.date)}
+                
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-medium truncate text-sm">
+                      {transaction.description}
+                    </p>
+                    {transaction.from_savings && (
+                      <PiggyBank className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {categoryDisplay} · {formatDate(transaction.date)}
                   </p>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {transaction.from_savings && (
-                  <div 
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20"
-                    title={`Pagado desde ahorros (${transaction.savings_source === 'cash' ? 'efectivo' : transaction.savings_source === 'bank' ? 'banco' : 'otro'})`}
+                
+                {/* Amount */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <p
+                    className={`font-semibold text-sm tabular-nums ${
+                      transaction.type === "income" ? "text-success" : "text-foreground"
+                    }`}
                   >
-                    <PiggyBank className="h-3 w-3 text-primary" />
-                    <span className="text-xs text-primary">Ahorros</span>
-                  </div>
-                )}
-                <p
-                  className={`font-semibold ${
-                    transaction.type === "income" ? "text-success" : "text-destructive"
-                  }`}
-                >
-                  {transaction.type === "income" ? "+" : "-"}
-                  {formatAmount(transaction.amount, transaction.currency)}
-                </p>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => onEdit(transaction)}
-                  title="Editar transacción"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
+                    {transaction.type === "income" ? "+" : "-"}
+                    {transaction.currency} {formatAmount(transaction.amount, transaction.currency)}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(transaction);
+                    }}
+                    title="Editar transacción"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
-    </Card>
+    </>
   );
+
+  if (showCard) {
+    return (
+      <Card className="p-4 md:p-6 gradient-card border-border/50">
+        {content}
+      </Card>
+    );
+  }
+
+  return <div>{content}</div>;
 };
