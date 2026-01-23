@@ -98,6 +98,7 @@ export const VoiceRecordingOverlay = ({
   const isProcessing = state === "transcribing" || state === "parsing";
   const isRecording = state === "recording";
   const isConnecting = state === "connecting";
+  const isDismissible = state === "error";
 
   // Display text (live partial during recording, final after)
   const displayText = isRecording ? partialText : transcribedText;
@@ -306,8 +307,8 @@ export const VoiceRecordingOverlay = ({
             animate={{ opacity: 1 }}
             className="flex items-center justify-center gap-2 text-muted-foreground"
           >
-            <motion.span
-              className="inline-block w-2 h-2 rounded-full bg-red-500"
+             <motion.span
+               className="inline-block w-2 h-2 rounded-full bg-destructive"
               animate={{ opacity: [1, 0.3, 1] }}
               transition={{ duration: 1, repeat: Infinity }}
             />
@@ -364,7 +365,14 @@ export const VoiceRecordingOverlay = ({
   // Use Drawer on mobile for native feel
   if (isMobile) {
     return (
-      <Drawer open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+      <Drawer
+        open={isOpen}
+        dismissible={isDismissible}
+        onOpenChange={(open) => {
+          // Prevent accidental swipe-to-close while recording/processing.
+          if (!open && isDismissible) onCancel();
+        }}
+      >
         <DrawerContent className="h-[85vh]">
           {content}
         </DrawerContent>

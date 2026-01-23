@@ -38,30 +38,85 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
   const [parsedTransaction, setParsedTransaction] = useState<VoiceTransactionData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(0);
-  
-  const streamRef = useRef<MediaStream | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
+
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoStopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isParsingRef = useRef<boolean>(false);
   const committedTextsRef = useRef<string[]>([]);
+  const startInFlightRef = useRef(false);
+  const stopInFlightRef = useRef(false);
+  const stopIntentRef = useRef(false);
+  const stateRef = useRef<VoiceRecordingState>(state);
+
+  const MAX_DURATION_MS = 30_000;
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  const setFatalError = useCallback((message: string) => {
+    console.error("[Voice] Fatal:", message);
+    setError(message);
+    setState("error");
+    toast.error(message);
+  }, []);
 
   // ElevenLabs Scribe hook for real-time transcription
   const scribe = useScribe({
     modelId: "scribe_v2_realtime",
     commitStrategy: CommitStrategy.VAD, // Voice Activity Detection for automatic commits
+    // Make VAD a bit more tolerant so normal pauses don't cause weird behavior.
+    minSilenceDurationMs: 900,
+    minSpeechDurationMs: 200,
+    vadThreshold: 0.55,
     onPartialTranscript: (data) => {
-      console.log("Partial transcript:", data.text);
+      if (stateRef.current !== "recording") return;
+      console.log("[Voice] Partial transcript:", data.text);
       setPartialText(data.text);
     },
     onCommittedTranscript: (data) => {
-      console.log("Committed transcript:", data.text);
+      if (stateRef.current !== "recording") return;
+      console.log("[Voice] Committed transcript:", data.text);
       // Accumulate committed transcripts
       committedTextsRef.current.push(data.text);
       const fullText = committedTextsRef.current.join(" ");
       setTranscribedText(fullText);
       setPartialText("");
+    },
+    onConnect: () => {
+      console.log("[Voice] Scribe connected");
+    },
+    onDisconnect: () => {
+      console.log("[Voice] Scribe disconnected");
+      // If we disconnected intentionally (stop/cancel/reset), don't mark error.
+      if (stopIntentRef.current) return;
+
+      // If we were in a live state, this means the connection dropped.
+      const s = stateRef.current;
+      if (s === "connecting" || s === "recording") {
+        setFatalError("Se cortó la transcripción. Intentá de nuevo.");
+      }
+    },
+    onError: (e) => {
+      console.error("[Voice] Scribe error:", e);
+      if (stopIntentRef.current) return;
+      setFatalError("Error en la transcripción en tiempo real. Intentá de nuevo.");
+    },
+    onRateLimitedError: ({ error }) => {
+      if (stopIntentRef.current) return;
+      setFatalError(error || "Transcripción limitada por tasa. Probá de nuevo en unos segundos.");
+    },
+    onQuotaExceededError: ({ error }) => {
+      if (stopIntentRef.current) return;
+      setFatalError(error || "No hay cuota disponible para transcripción.");
+    },
+    onSessionTimeLimitExceededError: ({ error }) => {
+      if (stopIntentRef.current) return;
+      setFatalError(error || "Se alcanzó el límite de tiempo de la sesión.");
+    },
+    onInsufficientAudioActivityError: ({ error }) => {
+      if (stopIntentRef.current) return;
+      setFatalError(error || "No se detectó suficiente audio. Hablá más cerca del micrófono.");
     },
   });
 
@@ -75,24 +130,29 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       clearTimeout(autoStopTimeoutRef.current);
       autoStopTimeoutRef.current = null;
     }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-    analyserRef.current = null;
   }, []);
 
   // Get audio levels for visualization
   const getAudioLevels = useCallback((): Uint8Array => {
-    if (!analyserRef.current) return new Uint8Array(64).fill(0);
-    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-    analyserRef.current.getByteFrequencyData(dataArray);
-    return dataArray;
-  }, []);
+    // Avoid grabbing the microphone twice (common iOS issue). We keep the UI responsive
+    // with a synthetic waveform while Scribe owns the actual audio capture.
+    if (stateRef.current !== "recording") return new Uint8Array(64).fill(0);
+
+    const len = 64;
+    const arr = new Uint8Array(len);
+    const t = Date.now() / 1000;
+    const activity = Math.min(1, (partialText?.length || 0) / 24);
+
+    for (let i = 0; i < len; i++) {
+      const phase = (i / len) * Math.PI * 2;
+      const a = 0.35 + 0.35 * Math.sin(t * 6 + phase);
+      const b = 0.2 + 0.2 * Math.sin(t * 2.2 + phase * 2);
+      const noise = (Math.sin((t + i) * 12.9898) * 43758.5453) % 1;
+      const v = (a + b + noise * 0.25) * (0.35 + activity);
+      arr[i] = Math.max(0, Math.min(255, Math.floor(v * 255)));
+    }
+    return arr;
+  }, [partialText]);
 
   // Parse the final transcript
   const parseTranscript = useCallback(async (text: string) => {
@@ -136,6 +196,8 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
   }, [categories, userName]);
 
   const stopRecording = useCallback(async () => {
+    if (stopInFlightRef.current) return;
+    stopInFlightRef.current = true;
     console.log("[Voice] Stopping recording...");
     
     // Stop timers
@@ -149,32 +211,52 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     }
     
     // Disconnect from scribe
-    if (scribe.isConnected) {
-      scribe.disconnect();
-    }
-    
-    cleanup();
-    
-    // Get the final text (committed + any remaining partial)
-    const finalText = [...committedTextsRef.current, partialText].filter(Boolean).join(" ").trim();
-    console.log("[Voice] Final transcribed text:", finalText);
-    
-    if (finalText && finalText.length >= 3) {
-      setTranscribedText(finalText);
-      setState("transcribing");
-      
-      // Small delay to show the transcribed text before parsing
+    stopIntentRef.current = true;
+    try {
+      if (scribe.isConnected) {
+        scribe.disconnect();
+      }
+
+      cleanup();
+
+      // Get the final text (committed + any remaining partial)
+      const finalText = [...committedTextsRef.current, partialText]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      console.log("[Voice] Final transcribed text:", finalText);
+
+      if (finalText && finalText.length >= 3) {
+        setTranscribedText(finalText);
+        setState("transcribing");
+
+        // Small delay to show the transcribed text before parsing
+        setTimeout(() => {
+          parseTranscript(finalText);
+        }, 350);
+      } else {
+        setError("No se detectó audio suficiente. Intenta hablar más tiempo.");
+        setState("error");
+      }
+    } finally {
+      // Let onDisconnect fire without turning this into an error.
       setTimeout(() => {
-        parseTranscript(finalText);
-      }, 500);
-    } else {
-      setError("No se detectó audio suficiente. Intenta hablar más tiempo.");
-      setState("error");
+        stopIntentRef.current = false;
+        stopInFlightRef.current = false;
+      }, 250);
     }
   }, [cleanup, scribe, partialText, parseTranscript]);
 
   const startRecording = useCallback(async () => {
+    if (startInFlightRef.current) return;
+    startInFlightRef.current = true;
     try {
+      // Ensure we always start from a clean slate
+      stopIntentRef.current = true;
+      if (scribe.isConnected) scribe.disconnect();
+      scribe.clearTranscripts();
+      stopIntentRef.current = false;
+
       setError(null);
       setParsedTransaction(null);
       setTranscribedText("");
@@ -184,27 +266,6 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       setState("connecting");
       
       console.log("[Voice] Starting recording flow...");
-      
-      // Request microphone permission first
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } 
-      });
-      
-      console.log("[Voice] Microphone access granted");
-      streamRef.current = stream;
-
-      // Setup audio context and analyser for visualization
-      const audioContext = new AudioContext();
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 128;
-      const source = audioContext.createMediaStreamSource(stream);
-      source.connect(analyser);
-      audioContextRef.current = audioContext;
-      analyserRef.current = analyser;
 
       // Get ElevenLabs scribe token
       console.log("[Voice] Fetching ElevenLabs scribe token...");
@@ -226,11 +287,13 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
 
       // Connect to ElevenLabs Scribe with real-time transcription
       try {
+        stopIntentRef.current = false;
         await scribe.connect({
           token: tokenData.token,
           microphone: {
             echoCancellation: true,
             noiseSuppression: true,
+            autoGainControl: true,
           },
         });
         console.log("[Voice] Connected to ElevenLabs Scribe successfully");
@@ -246,11 +309,11 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
         setDuration(prev => prev + 1);
       }, 1000);
       
-      // Auto-stop after 30 seconds
+      // Auto-stop after MAX_DURATION
       autoStopTimeoutRef.current = setTimeout(() => {
-        console.log("[Voice] Auto-stop triggered after 30s");
+        console.log("[Voice] Auto-stop triggered");
         stopRecording();
-      }, 30000);
+      }, MAX_DURATION_MS);
       
     } catch (err: any) {
       console.error("[Voice] Error starting recording:", err);
@@ -263,13 +326,16 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
         setError(err.message || "Error al iniciar la grabación");
       }
       setState("error");
+      toast.error(err.message || "Error al iniciar la grabación");
+    } finally {
+      startInFlightRef.current = false;
     }
   }, [cleanup, scribe, stopRecording]);
 
   const cancel = useCallback(() => {
-    if (scribe.isConnected) {
-      scribe.disconnect();
-    }
+    stopIntentRef.current = true;
+    if (scribe.isConnected) scribe.disconnect();
+    scribe.clearTranscripts();
     cleanup();
     setState("idle");
     setDuration(0);
@@ -277,12 +343,15 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     setPartialText("");
     setTranscribedText("");
     committedTextsRef.current = [];
+    setTimeout(() => {
+      stopIntentRef.current = false;
+    }, 0);
   }, [cleanup, scribe]);
 
   const reset = useCallback(() => {
-    if (scribe.isConnected) {
-      scribe.disconnect();
-    }
+    stopIntentRef.current = true;
+    if (scribe.isConnected) scribe.disconnect();
+    scribe.clearTranscripts();
     cleanup();
     setState("idle");
     setTranscribedText("");
@@ -292,6 +361,9 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     setDuration(0);
     isParsingRef.current = false;
     committedTextsRef.current = [];
+    setTimeout(() => {
+      stopIntentRef.current = false;
+    }, 0);
   }, [cleanup, scribe]);
 
   const retry = useCallback(() => {
@@ -305,9 +377,8 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (scribe.isConnected) {
-        scribe.disconnect();
-      }
+      stopIntentRef.current = true;
+      if (scribe.isConnected) scribe.disconnect();
       cleanup();
     };
   }, [cleanup, scribe]);
