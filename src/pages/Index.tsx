@@ -341,14 +341,18 @@ const Index = () => {
               onNextMonth={goToNextMonth}
               onCurrentMonth={goToCurrentMonth}
               netBalance={globalNetBalanceARS}
+              netBalanceBreakdown={{
+                usd: totals.incomeUSD - totals.expensesUSD - totals.savingsTransfersUSD,
+                ars: totals.incomeARS - totals.expensesARS - totals.savingsTransfersARS
+              }}
               formatCurrency={formatCurrency}
             />
 
             <main className="container mx-auto px-4 py-4 space-y-4">
               {/* Quick Stats */}
               <QuickStats
-                income={globalIncomeARS}
-                expenses={globalExpensesARS}
+                income={{ usd: totals.incomeUSD, ars: totals.incomeARS, total: globalIncomeARS }}
+                expenses={{ usd: totals.expensesUSD, ars: totals.expensesARS, total: globalExpensesARS }}
                 savings={currentSavings}
                 formatCurrency={formatCurrency}
               />
