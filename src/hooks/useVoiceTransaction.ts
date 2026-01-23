@@ -333,8 +333,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
           
           try {
             ws.send(JSON.stringify({
-              type: "audio",
-              audio_base_64: base64Audio
+              audio_chunk: base64Audio
             }));
           } catch (err) {
             console.error("[Voice] Error sending audio chunk:", err);
@@ -359,33 +358,35 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log("[Voice] WS message:", data.type, data.text ? `"${data.text}"` : "");
+          const msgType = data.type || data.message_type;
+          console.log("[Voice] WS message:", msgType, data.text ? `"${data.text}"` : "");
           
-          switch (data.type) {
-            case "transcript":
-              if (data.is_final) {
-                // This is a committed/final transcript
-                if (data.text && data.text.trim()) {
-                  committedTextsRef.current.push(data.text.trim());
-                  const fullText = committedTextsRef.current.join(" ");
-                  setTranscribedText(fullText);
-                  currentPartialRef.current = "";
-                  setPartialText(fullText);
-                }
-              } else {
-                // This is a partial transcript
-                currentPartialRef.current = data.text || "";
-                const displayText = [...committedTextsRef.current, currentPartialRef.current]
-                  .filter(Boolean)
-                  .join(" ");
-                setPartialText(displayText);
+          switch (msgType) {
+            case "partial_transcript":
+              // Live partial transcript
+              currentPartialRef.current = data.text || "";
+              const displayText = [...committedTextsRef.current, currentPartialRef.current]
+                .filter(Boolean)
+                .join(" ");
+              setPartialText(displayText);
+              break;
+              
+            case "committed_transcript":
+            case "final_transcript":
+              // Final committed transcript
+              if (data.text && data.text.trim()) {
+                committedTextsRef.current.push(data.text.trim());
+                const fullText = committedTextsRef.current.join(" ");
+                setTranscribedText(fullText);
+                currentPartialRef.current = "";
+                setPartialText(fullText);
               }
               break;
               
             case "error":
               console.error("[Voice] Server error:", data);
               if (!stopIntentRef.current) {
-                setFatalError(data.message || "Error en la transcripción");
+                setFatalError(data.message || data.error || "Error en la transcripción");
               }
               break;
               
@@ -396,6 +397,10 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
             case "session_ended":
               console.log("[Voice] Session ended");
               break;
+              
+            default:
+              // Log unknown message types for debugging
+              console.log("[Voice] Unknown message type:", msgType, data);
           }
         } catch (err) {
           console.error("[Voice] Error parsing WS message:", err);
