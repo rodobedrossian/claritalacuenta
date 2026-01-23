@@ -18,6 +18,17 @@ import {
   Baby,
   Sparkles,
   Circle,
+  CreditCard,
+  Percent,
+  PartyPopper,
+  Receipt,
+  Landmark,
+  Dumbbell,
+  Bike,
+  Repeat,
+  CircleEllipsis,
+  Shirt,
+  Palmtree,
   type LucideIcon,
 } from "lucide-react";
 
@@ -42,6 +53,17 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   "baby": Baby,
   "sparkles": Sparkles,
   "circle": Circle,
+  "credit-card": CreditCard,
+  "percent": Percent,
+  "party-popper": PartyPopper,
+  "receipt": Receipt,
+  "landmark": Landmark,
+  "dumbbell": Dumbbell,
+  "bike": Bike,
+  "repeat": Repeat,
+  "circle-ellipsis": CircleEllipsis,
+  "shirt": Shirt,
+  "palm-tree": Palmtree,
 };
 
 // Default fallback colors for categories without a custom color
