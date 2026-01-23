@@ -10,6 +10,7 @@ import { BudgetsTable } from "@/components/budgets/BudgetsTable";
 import { CategoriesTable } from "@/components/budgets/CategoriesTable";
 import { AddBudgetDialog } from "@/components/budgets/AddBudgetDialog";
 import { AddCategoryDialog } from "@/components/budgets/AddCategoryDialog";
+import { BudgetsSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useBudgetsData } from "@/hooks/useBudgetsData";
 import { useCategoriesData } from "@/hooks/useCategoriesData";
 import { format, startOfMonth, endOfMonth } from "date-fns";
@@ -84,12 +85,7 @@ const Budgets = () => {
   if (loading || categoriesLoading) {
     return (
       <AppLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-            <p className="mt-4 text-muted-foreground">Cargando...</p>
-          </div>
-        </div>
+        <BudgetsSkeleton />
       </AppLayout>
     );
   }
