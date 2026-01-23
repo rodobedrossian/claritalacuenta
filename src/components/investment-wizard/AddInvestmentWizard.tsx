@@ -76,21 +76,26 @@ export const AddInvestmentWizard = ({
   };
 
   const handleSubmit = async () => {
-    if (!name.trim()) {
-      toast.error("Ingresa un nombre para la inversión");
-      return;
-    }
-
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
       toast.error("Ingresa un monto válido");
       return;
     }
 
+    // Generate name from type + institution if not provided
+    const typeLabels: Record<InvestmentType, string> = {
+      plazo_fijo: "Plazo Fijo",
+      fci: "FCI",
+      cedear: "CEDEAR",
+      cripto: "Cripto",
+      otro: "Inversión",
+    };
+    const finalName = name.trim() || `${typeLabels[investmentType as InvestmentType]}${institution.trim() ? ` ${institution.trim()}` : ''}`;
+
     setIsSubmitting(true);
     try {
       await onAdd({
-        name: name.trim(),
+        name: finalName,
         investment_type: investmentType as InvestmentType,
         currency: currency as "USD" | "ARS",
         principal_amount: numAmount,
