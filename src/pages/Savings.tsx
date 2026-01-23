@@ -5,13 +5,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SavingsEntriesList } from "@/components/savings/SavingsEntriesList";
 import { InvestmentsList } from "@/components/savings/InvestmentsList";
 import { GoalsList } from "@/components/savings/GoalsList";
-import { AddSavingsEntryDialog } from "@/components/savings/AddSavingsEntryDialog";
+import { AddSavingsWizard } from "@/components/savings-wizard/AddSavingsWizard";
 import { AddInvestmentDialog } from "@/components/savings/AddInvestmentDialog";
 import { AddGoalDialog } from "@/components/savings/AddGoalDialog";
 import { EditSavingsEntryDialog } from "@/components/savings/EditSavingsEntryDialog";
 import { SavingsQuickStats } from "@/components/savings/SavingsQuickStats";
 import { SavingsQuickActions } from "@/components/savings/SavingsQuickActions";
-import { SavingsActionDropdown } from "@/components/SavingsActionDropdown";
 import { AppLayout } from "@/components/AppLayout";
 import { SavingsSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { MobileHeader } from "@/components/MobileHeader";
@@ -31,10 +30,9 @@ const Savings = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   // Dialog states for quick actions
-  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [savingsWizardOpen, setSavingsWizardOpen] = useState(false);
   const [investmentDialogOpen, setInvestmentDialogOpen] = useState(false);
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
-  const [manualSavingsDialogOpen, setManualSavingsDialogOpen] = useState(false);
 
   // Use the consolidated data hook
   const {
@@ -80,24 +78,6 @@ const Savings = () => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount)}`;
-  };
-
-  // Handler for manual savings (from SavingsActionDropdown)
-  const handleAddManualSavings = async (
-    currency: "USD" | "ARS",
-    amount: number,
-    entryType: "deposit" | "withdrawal",
-    savingsType: "cash" | "bank" | "other",
-    notes?: string
-  ) => {
-    await addEntry({
-      entry_type: entryType,
-      currency,
-      amount,
-      savings_type: savingsType,
-      notes: notes || null,
-    });
-    setManualSavingsDialogOpen(false);
   };
 
   if (loading || dataLoading) {
@@ -173,10 +153,10 @@ const Savings = () => {
 
             {/* Quick Actions */}
             <SavingsQuickActions
-              onAddDeposit={() => setDepositDialogOpen(true)}
+              onAddDeposit={() => setSavingsWizardOpen(true)}
               onAddInvestment={() => setInvestmentDialogOpen(true)}
               onAddGoal={() => setGoalDialogOpen(true)}
-              onRegisterPrevious={() => setManualSavingsDialogOpen(true)}
+              onRegisterPrevious={() => setSavingsWizardOpen(true)}
             />
 
             {/* Tabs */}
@@ -249,11 +229,11 @@ const Savings = () => {
           onDelete={deleteEntry}
         />
 
-        {/* Add Deposit Dialog */}
-        <AddSavingsEntryDialog 
-          open={depositDialogOpen}
-          onOpenChange={setDepositDialogOpen}
-          onAdd={addEntry} 
+        {/* Add Savings Wizard */}
+        <AddSavingsWizard
+          open={savingsWizardOpen}
+          onOpenChange={setSavingsWizardOpen}
+          onAdd={addEntry}
         />
 
         {/* Add Investment Dialog */}
@@ -268,17 +248,6 @@ const Savings = () => {
           open={goalDialogOpen}
           onOpenChange={setGoalDialogOpen}
           onAdd={addGoal} 
-        />
-
-        {/* Manual Savings Dialog (for registering previous savings) */}
-        <SavingsActionDropdown
-          availableBalanceUSD={0}
-          availableBalanceARS={0}
-          onTransferFromBalance={() => {}}
-          onAddSavings={handleAddManualSavings}
-          open={manualSavingsDialogOpen}
-          onOpenChange={setManualSavingsDialogOpen}
-          hideDropdownTrigger
         />
       </div>
     </AppLayout>
