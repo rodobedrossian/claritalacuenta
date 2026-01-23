@@ -256,7 +256,6 @@ export const TransactionsList = ({
                   {group.label}
                 </span>
                 <div className="flex-1 h-px bg-border/50" />
-                {renderGroupTotals(group.totals)}
               </div>
               
               {/* Group Transactions */}
