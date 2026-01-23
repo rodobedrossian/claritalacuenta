@@ -86,41 +86,43 @@ export const EndingInstallmentsList = ({ projections }: EndingInstallmentsListPr
                 className="border rounded-lg bg-muted/30 px-4"
               >
                 <AccordionTrigger className="hover:no-underline py-3">
-                  <div className="flex items-center justify-between w-full pr-4">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 shrink-0">
+                  <div className="flex flex-col items-start gap-2 w-full pr-4">
+                    {/* Row 1: Date badge + freed amounts */}
+                    <div className="flex items-center justify-between w-full gap-2">
+                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 shrink-0 text-xs">
                         📅 {formatMonth(month.month)}
                       </Badge>
-                      <span className="text-sm text-muted-foreground truncate">
-                        {(() => {
-                          const names = month.endingInstallments.map(i => 
-                            i.description.replace(/^\*\s*/, '').split(' ')[0]
-                          );
-                          const displayNames = names.slice(0, 2).join(', ');
-                          const remaining = names.length - 2;
-                          
-                          return names.length === 1 
-                            ? `Última cuota de ${displayNames}`
-                            : remaining > 0 
-                              ? `Últimas cuotas de ${displayNames} y ${remaining} más`
-                              : `Últimas cuotas de ${displayNames}`;
-                        })()}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {totalFreedARS > 0 && (
+                          <Badge className="bg-success/20 text-success hover:bg-success/30 border-0 text-xs px-1.5 py-0.5">
+                            <ArrowUp className="h-3 w-3 mr-0.5" />
+                            ${totalFreedARS.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                          </Badge>
+                        )}
+                        {totalFreedUSD > 0 && (
+                          <Badge className="bg-success/20 text-success hover:bg-success/30 border-0 text-xs px-1.5 py-0.5">
+                            <ArrowUp className="h-3 w-3 mr-0.5" />
+                            US${totalFreedUSD.toLocaleString('es-AR', { maximumFractionDigits: 2 })}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                      {totalFreedARS > 0 && (
-                        <Badge className="bg-success/20 text-success hover:bg-success/30 border-0">
-                          <ArrowUp className="h-3 w-3 mr-1" />
-                          ${totalFreedARS.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </Badge>
-                      )}
-                      {totalFreedUSD > 0 && (
-                        <Badge className="bg-success/20 text-success hover:bg-success/30 border-0">
-                          <ArrowUp className="h-3 w-3 mr-1" />
-                          US${totalFreedUSD.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </Badge>
-                      )}
-                    </div>
+                    {/* Row 2: Description */}
+                    <span className="text-sm text-muted-foreground text-left line-clamp-1">
+                      {(() => {
+                        const names = month.endingInstallments.map(i => 
+                          i.description.replace(/^\*\s*/, '').split(' ')[0]
+                        );
+                        const displayNames = names.slice(0, 2).join(', ');
+                        const remaining = names.length - 2;
+                        
+                        return names.length === 1 
+                          ? `Última cuota de ${displayNames}`
+                          : remaining > 0 
+                            ? `Últimas cuotas de ${displayNames} y ${remaining} más`
+                            : `Últimas cuotas de ${displayNames}`;
+                      })()}
+                    </span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-0 pb-3">
