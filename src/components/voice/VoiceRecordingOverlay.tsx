@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, X, Send, Loader2 } from "lucide-react";
+import { Mic, X, Send, Loader2, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -10,9 +10,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 interface VoiceRecordingOverlayProps {
   isOpen: boolean;
-  state: "idle" | "recording" | "transcribing" | "parsing" | "ready" | "error";
+  state: "idle" | "connecting" | "recording" | "transcribing" | "parsing" | "ready" | "error";
   duration: number;
   transcribedText?: string;
+  partialText?: string; // Live transcription text
   getAudioLevels: () => Uint8Array;
   onStop: () => void;
   onCancel: () => void;
@@ -26,6 +27,7 @@ export const VoiceRecordingOverlay = ({
   state,
   duration,
   transcribedText,
+  partialText,
   getAudioLevels,
   onStop,
   onCancel,
@@ -163,17 +165,19 @@ export const VoiceRecordingOverlay = ({
   useEffect(() => {
     if (state === "recording") {
       triggerHaptic('medium');
-    } else if (state === "transcribing" || state === "parsing") {
+    } else if (state === "transcribing" || state === "parsing" || state === "connecting") {
       triggerHaptic('light');
     }
   }, [state, triggerHaptic]);
 
   const getStatusText = () => {
     switch (state) {
+      case "connecting":
+        return "Conectando...";
       case "recording":
         return "Escuchando...";
       case "transcribing":
-        return "Transcribiendo...";
+        return "Finalizando...";
       case "parsing":
         return "Analizando...";
       case "error":
@@ -185,10 +189,12 @@ export const VoiceRecordingOverlay = ({
 
   const getStatusSubtext = () => {
     switch (state) {
+      case "connecting":
+        return "Iniciando transcripción en tiempo real";
       case "recording":
         return "Describe tu transacción con claridad";
       case "transcribing":
-        return "Convirtiendo audio a texto";
+        return "Procesando audio final";
       case "parsing":
         return "Extrayendo datos de la transacción";
       case "error":
@@ -198,13 +204,17 @@ export const VoiceRecordingOverlay = ({
     }
   };
 
-  const isProcessing = state === "transcribing" || state === "parsing";
+  const isProcessing = state === "transcribing" || state === "parsing" || state === "connecting";
   const isRecording = state === "recording";
+  const isConnecting = state === "connecting";
+
+  // Display text (live partial during recording, final after)
+  const displayText = isRecording ? partialText : transcribedText;
 
   const content = (
     <div className="flex flex-col items-center justify-center px-6 py-8 h-full min-h-[500px]">
       {/* Circular Progress Timer */}
-      <div className="relative mb-8">
+      <div className="relative mb-6">
         {/* Progress ring */}
         <svg className="w-72 h-72 -rotate-90" viewBox="0 0 280 280">
           {/* Background ring */}
@@ -248,7 +258,16 @@ export const VoiceRecordingOverlay = ({
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.3 }}
             >
-              {isProcessing ? (
+              {isConnecting ? (
+                <motion.div
+                  className="flex flex-col items-center gap-2"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <Wifi className="h-12 w-12 text-primary" />
+                  <span className="text-xs text-muted-foreground">Conectando</span>
+                </motion.div>
+              ) : isProcessing ? (
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
@@ -285,7 +304,7 @@ export const VoiceRecordingOverlay = ({
 
       {/* Timer Display */}
       <motion.div
-        className="text-center mb-6"
+        className="text-center mb-4"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -310,19 +329,42 @@ export const VoiceRecordingOverlay = ({
         </p>
       </motion.div>
 
-      {/* Transcribed text preview */}
-      <AnimatePresence>
-        {transcribedText && (state === "parsing" || state === "transcribing") && (
+      {/* Live Transcription Display */}
+      <AnimatePresence mode="wait">
+        {displayText && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
+            key="live-text"
+            initial={{ opacity: 0, y: 10, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: "auto" }}
+            exit={{ opacity: 0, y: -10, height: 0 }}
             className="w-full max-w-sm mb-6 overflow-hidden"
           >
-            <div className="bg-muted/50 rounded-xl p-4 border border-border/50">
-              <p className="text-sm text-foreground italic text-center line-clamp-3">
-                "{transcribedText}"
+            <div className="bg-muted/50 rounded-xl p-4 border border-border/50 min-h-[60px]">
+              <p className="text-sm text-foreground text-center">
+                {isRecording ? (
+                  <motion.span
+                    key={displayText}
+                    initial={{ opacity: 0.5 }}
+                    animate={{ opacity: 1 }}
+                    className="inline"
+                  >
+                    {displayText}
+                    <motion.span
+                      animate={{ opacity: [1, 0, 1] }}
+                      transition={{ duration: 0.8, repeat: Infinity }}
+                      className="ml-0.5 inline-block w-0.5 h-4 bg-primary align-middle"
+                    />
+                  </motion.span>
+                ) : (
+                  <span className="italic">"{displayText}"</span>
+                )}
               </p>
+              {isRecording && (
+                <p className="text-xs text-primary mt-2 text-center flex items-center justify-center gap-1">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  Transcripción en vivo
+                </p>
+              )}
             </div>
           </motion.div>
         )}
