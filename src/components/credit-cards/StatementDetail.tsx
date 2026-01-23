@@ -419,8 +419,8 @@ export const StatementDetail = ({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
+      {/* Header - with mobile margin to avoid menu button overlap */}
+      <div className="flex items-center gap-4 ml-12 md:ml-0">
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>

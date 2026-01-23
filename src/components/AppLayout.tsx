@@ -63,15 +63,17 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Mobile menu button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 left-4 z-50 md:hidden"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </Button>
+      {/* Mobile menu button - only show when sidebar is closed */}
+      {!isOpen && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="fixed top-4 left-4 z-50 md:hidden"
+          onClick={() => setIsOpen(true)}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+      )}
 
       {/* Overlay for mobile */}
       {isOpen && (
@@ -90,13 +92,26 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
         )}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
+          {/* Logo and mobile close button */}
           <div className={cn("p-4 border-b border-border/50", !showExpanded ? "px-2" : "p-6")}>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg gradient-primary shrink-0">
-                <PiggyBank className="h-6 w-6 text-primary-foreground" />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg gradient-primary shrink-0">
+                  <PiggyBank className="h-6 w-6 text-primary-foreground" />
+                </div>
+                {showExpanded && <h1 className="text-lg font-bold text-foreground truncate">Clarita la cuenta</h1>}
               </div>
-              {showExpanded && <h1 className="text-lg font-bold text-foreground truncate">Clarita la cuenta</h1>}
+              {/* Mobile close button - inside sidebar header */}
+              {isMobile && isOpen && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              )}
             </div>
           </div>
 

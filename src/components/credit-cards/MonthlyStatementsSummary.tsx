@@ -56,7 +56,7 @@ export const MonthlyStatementsSummary = ({
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex-1">
             {/* Month header */}
             <div className="flex items-center gap-2 mb-3">
@@ -96,8 +96,8 @@ export const MonthlyStatementsSummary = ({
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
+          {/* Actions - responsive layout */}
+          <div className="flex items-center gap-2 self-start">
             <Button
               variant="outline"
               size="sm"
@@ -105,17 +105,25 @@ export const MonthlyStatementsSummary = ({
               onClick={() => onViewAnalytics(group.month)}
             >
               <BarChart3 className="h-4 w-4" />
-              Ver analíticas
+              <span className="hidden sm:inline">Ver analíticas</span>
+              <span className="sm:hidden">Analíticas</span>
             </Button>
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
+              className="gap-1"
               onClick={() => setIsExpanded(!isExpanded)}
             >
               {isExpanded ? (
-                <ChevronUp className="h-4 w-4" />
+                <>
+                  <ChevronUp className="h-4 w-4" />
+                  <span className="hidden sm:inline">Ocultar</span>
+                </>
               ) : (
-                <ChevronDown className="h-4 w-4" />
+                <>
+                  <ChevronDown className="h-4 w-4" />
+                  <span className="hidden sm:inline">Ver resúmenes</span>
+                </>
               )}
             </Button>
           </div>
