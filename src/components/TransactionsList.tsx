@@ -31,6 +31,12 @@ interface TransactionsListProps {
 type DateGroup = {
   label: string;
   transactions: Transaction[];
+  totals: {
+    incomeARS: number;
+    expenseARS: number;
+    incomeUSD: number;
+    expenseUSD: number;
+  };
 };
 
 const getDateGroup = (dateString: string): string => {
@@ -80,10 +86,28 @@ const groupTransactionsByDate = (transactions: Transaction[]): DateGroup[] => {
     groups.get(groupLabel)!.push(transaction);
   }
   
-  return groupOrder.map(label => ({
-    label,
-    transactions: groups.get(label)!
-  }));
+  return groupOrder.map(label => {
+    const groupTransactions = groups.get(label)!;
+    const totals = groupTransactions.reduce(
+      (acc, t) => {
+        if (t.type === "income") {
+          if (t.currency === "ARS") acc.incomeARS += t.amount;
+          else acc.incomeUSD += t.amount;
+        } else {
+          if (t.currency === "ARS") acc.expenseARS += t.amount;
+          else acc.expenseUSD += t.amount;
+        }
+        return acc;
+      },
+      { incomeARS: 0, expenseARS: 0, incomeUSD: 0, expenseUSD: 0 }
+    );
+    
+    return {
+      label,
+      transactions: groupTransactions,
+      totals
+    };
+  });
 };
 
 export const TransactionsList = ({ 
@@ -177,6 +201,34 @@ export const TransactionsList = ({
     );
   };
 
+  const renderGroupTotals = (totals: DateGroup['totals']) => {
+    const parts: string[] = [];
+    
+    // Show expenses (negative)
+    if (totals.expenseARS > 0) {
+      parts.push(`-ARS ${formatAmount(totals.expenseARS)}`);
+    }
+    if (totals.expenseUSD > 0) {
+      parts.push(`-USD ${formatAmount(totals.expenseUSD)}`);
+    }
+    
+    // Show income (positive)
+    if (totals.incomeARS > 0) {
+      parts.push(`+ARS ${formatAmount(totals.incomeARS)}`);
+    }
+    if (totals.incomeUSD > 0) {
+      parts.push(`+USD ${formatAmount(totals.incomeUSD)}`);
+    }
+    
+    if (parts.length === 0) return null;
+    
+    return (
+      <span className="text-xs text-muted-foreground tabular-nums">
+        {parts.join(" · ")}
+      </span>
+    );
+  };
+
   const content = (
     <>
       {showCard && (
@@ -204,6 +256,7 @@ export const TransactionsList = ({
                   {group.label}
                 </span>
                 <div className="flex-1 h-px bg-border/50" />
+                {renderGroupTotals(group.totals)}
               </div>
               
               {/* Group Transactions */}
