@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useScribe, CommitStrategy } from "@elevenlabs/react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -31,6 +30,23 @@ export type VoiceRecordingState =
   | "ready" 
   | "error";
 
+// Audio encoding helper - converts Float32 to PCM16 Base64
+const encodeAudioForAPI = (float32Array: Float32Array): string => {
+  const int16Array = new Int16Array(float32Array.length);
+  for (let i = 0; i < float32Array.length; i++) {
+    const s = Math.max(-1, Math.min(1, float32Array[i]));
+    int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+  const uint8Array = new Uint8Array(int16Array.buffer);
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < uint8Array.length; i += chunkSize) {
+    const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
+  }
+  return btoa(binary);
+};
+
 export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactionProps) => {
   const [state, setState] = useState<VoiceRecordingState>("idle");
   const [transcribedText, setTranscribedText] = useState<string>("");
@@ -39,6 +55,12 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
   const [error, setError] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(0);
 
+  // Refs for managing resources
+  const wsRef = useRef<WebSocket | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoStopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isParsingRef = useRef<boolean>(false);
@@ -47,6 +69,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
   const stopInFlightRef = useRef(false);
   const stopIntentRef = useRef(false);
   const stateRef = useRef<VoiceRecordingState>(state);
+  const currentPartialRef = useRef<string>("");
 
   const MAX_DURATION_MS = 30_000;
 
@@ -61,65 +84,10 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     toast.error(message);
   }, []);
 
-  // ElevenLabs Scribe hook for real-time transcription
-  // Using MANUAL commit strategy - recording continues until user presses Send or 30s limit
-  const scribe = useScribe({
-    modelId: "scribe_v2_realtime",
-    commitStrategy: CommitStrategy.MANUAL, // Manual: user controls when to stop, not silence detection
-    onPartialTranscript: (data) => {
-      if (stateRef.current !== "recording") return;
-      console.log("[Voice] Partial transcript:", data.text);
-      setPartialText(data.text);
-    },
-    onCommittedTranscript: (data) => {
-      if (stateRef.current !== "recording") return;
-      console.log("[Voice] Committed transcript:", data.text);
-      // Accumulate committed transcripts
-      committedTextsRef.current.push(data.text);
-      const fullText = committedTextsRef.current.join(" ");
-      setTranscribedText(fullText);
-      setPartialText("");
-    },
-    onConnect: () => {
-      console.log("[Voice] Scribe connected");
-    },
-    onDisconnect: () => {
-      console.log("[Voice] Scribe disconnected");
-      // If we disconnected intentionally (stop/cancel/reset), don't mark error.
-      if (stopIntentRef.current) return;
-
-      // If we were in a live state, this means the connection dropped.
-      const s = stateRef.current;
-      if (s === "connecting" || s === "recording") {
-        setFatalError("Se cortó la transcripción. Intentá de nuevo.");
-      }
-    },
-    onError: (e) => {
-      console.error("[Voice] Scribe error:", e);
-      if (stopIntentRef.current) return;
-      setFatalError("Error en la transcripción en tiempo real. Intentá de nuevo.");
-    },
-    onRateLimitedError: ({ error }) => {
-      if (stopIntentRef.current) return;
-      setFatalError(error || "Transcripción limitada por tasa. Probá de nuevo en unos segundos.");
-    },
-    onQuotaExceededError: ({ error }) => {
-      if (stopIntentRef.current) return;
-      setFatalError(error || "No hay cuota disponible para transcripción.");
-    },
-    onSessionTimeLimitExceededError: ({ error }) => {
-      if (stopIntentRef.current) return;
-      setFatalError(error || "Se alcanzó el límite de tiempo de la sesión.");
-    },
-    // Don't treat silence as an error in manual mode - we want recording to continue
-    onInsufficientAudioActivityError: () => {
-      // Ignore this in manual mode - user controls when to stop
-      console.log("[Voice] Insufficient audio activity (ignored in manual mode)");
-    },
-  });
-
-  // Cleanup function
+  // Cleanup all resources
   const cleanup = useCallback(() => {
+    console.log("[Voice] Cleaning up resources...");
+    
     if (durationIntervalRef.current) {
       clearInterval(durationIntervalRef.current);
       durationIntervalRef.current = null;
@@ -128,18 +96,40 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       clearTimeout(autoStopTimeoutRef.current);
       autoStopTimeoutRef.current = null;
     }
+    if (sourceRef.current) {
+      try { sourceRef.current.disconnect(); } catch (e) { /* ignore */ }
+      sourceRef.current = null;
+    }
+    if (processorRef.current) {
+      try { processorRef.current.disconnect(); } catch (e) { /* ignore */ }
+      processorRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try { audioContextRef.current.close(); } catch (e) { /* ignore */ }
+      audioContextRef.current = null;
+    }
+    if (wsRef.current) {
+      try { 
+        if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+          wsRef.current.close(); 
+        }
+      } catch (e) { /* ignore */ }
+      wsRef.current = null;
+    }
   }, []);
 
-  // Get audio levels for visualization
+  // Get audio levels for visualization (synthetic waveform based on partial text activity)
   const getAudioLevels = useCallback((): Uint8Array => {
-    // Avoid grabbing the microphone twice (common iOS issue). We keep the UI responsive
-    // with a synthetic waveform while Scribe owns the actual audio capture.
     if (stateRef.current !== "recording") return new Uint8Array(64).fill(0);
 
     const len = 64;
     const arr = new Uint8Array(len);
     const t = Date.now() / 1000;
-    const activity = Math.min(1, (partialText?.length || 0) / 24);
+    const activity = Math.min(1, (currentPartialRef.current?.length || 0) / 24);
 
     for (let i = 0; i < len; i++) {
       const phase = (i / len) * Math.PI * 2;
@@ -150,7 +140,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       arr[i] = Math.max(0, Math.min(255, Math.floor(v * 255)));
     }
     return arr;
-  }, [partialText]);
+  }, []);
 
   // Parse the final transcript
   const parseTranscript = useCallback(async (text: string) => {
@@ -175,7 +165,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       if (parseData.error) throw new Error(parseData.error);
       
       const transaction = parseData.transaction as VoiceTransactionData;
-      console.log("Parsed transaction:", transaction);
+      console.log("[Voice] Parsed transaction:", transaction);
       
       if (!transaction || !transaction.amount) {
         throw new Error("No se pudo extraer la información de la transacción.");
@@ -184,7 +174,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       setParsedTransaction(transaction);
       setState("ready");
     } catch (err: any) {
-      console.error("Error parsing transcript:", err);
+      console.error("[Voice] Error parsing transcript:", err);
       setError(err.message || "Error al procesar la grabación");
       setState("error");
       toast.error(err.message || "Error al procesar la grabación");
@@ -193,9 +183,11 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     }
   }, [categories, userName]);
 
+  // Stop recording and process the transcript
   const stopRecording = useCallback(async () => {
     if (stopInFlightRef.current) return;
     stopInFlightRef.current = true;
+    stopIntentRef.current = true;
     console.log("[Voice] Stopping recording...");
     
     // Stop timers
@@ -208,17 +200,24 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       autoStopTimeoutRef.current = null;
     }
     
-    // Disconnect from scribe
-    stopIntentRef.current = true;
-    try {
-      if (scribe.isConnected) {
-        scribe.disconnect();
+    // Send final commit message if WebSocket is open
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      try {
+        console.log("[Voice] Sending final commit...");
+        wsRef.current.send(JSON.stringify({
+          type: "flush"
+        }));
+      } catch (e) {
+        console.error("[Voice] Error sending commit:", e);
       }
-
+    }
+    
+    // Wait a bit for the final committed transcript, then cleanup
+    setTimeout(() => {
       cleanup();
-
+      
       // Get the final text (committed + any remaining partial)
-      const finalText = [...committedTextsRef.current, partialText]
+      const finalText = [...committedTextsRef.current, currentPartialRef.current]
         .filter(Boolean)
         .join(" ")
         .trim();
@@ -236,36 +235,33 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
         setError("No se detectó audio suficiente. Intenta hablar más tiempo.");
         setState("error");
       }
-    } finally {
-      // Let onDisconnect fire without turning this into an error.
-      setTimeout(() => {
-        stopIntentRef.current = false;
-        stopInFlightRef.current = false;
-      }, 250);
-    }
-  }, [cleanup, scribe, partialText, parseTranscript]);
+      
+      stopInFlightRef.current = false;
+      stopIntentRef.current = false;
+    }, 500);
+  }, [cleanup, parseTranscript]);
 
+  // Start recording with native WebSocket
   const startRecording = useCallback(async () => {
     if (startInFlightRef.current) return;
     startInFlightRef.current = true;
+    
     try {
-      // Ensure we always start from a clean slate
-      stopIntentRef.current = true;
-      if (scribe.isConnected) scribe.disconnect();
-      scribe.clearTranscripts();
-      stopIntentRef.current = false;
-
+      // Reset state
+      cleanup();
       setError(null);
       setParsedTransaction(null);
       setTranscribedText("");
       setPartialText("");
+      currentPartialRef.current = "";
       setDuration(0);
       committedTextsRef.current = [];
+      stopIntentRef.current = false;
       setState("connecting");
       
       console.log("[Voice] Starting recording flow...");
 
-      // Get ElevenLabs scribe token
+      // 1. Get ElevenLabs scribe token
       console.log("[Voice] Fetching ElevenLabs scribe token...");
       const { data: tokenData, error: tokenError } = await supabase.functions.invoke(
         'elevenlabs-scribe-token'
@@ -281,37 +277,145 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
         throw new Error("No se recibió el token de transcripción");
       }
 
-      console.log("[Voice] Token received, connecting to ElevenLabs Scribe...");
+      console.log("[Voice] Token received, setting up audio capture...");
 
-      // Connect to ElevenLabs Scribe with real-time transcription
-      try {
-        stopIntentRef.current = false;
-        await scribe.connect({
-          token: tokenData.token,
-          microphone: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-        });
-        console.log("[Voice] Connected to ElevenLabs Scribe successfully");
-      } catch (connectError: any) {
-        console.error("[Voice] Scribe connection error:", connectError);
-        throw new Error("Error al conectar con el servicio de transcripción: " + (connectError.message || "conexión fallida"));
-      }
+      // 2. Request microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+      streamRef.current = stream;
+
+      // 3. Set up audio processing
+      const audioContext = new AudioContext({ sampleRate: 16000 });
+      audioContextRef.current = audioContext;
       
-      setState("recording");
+      const source = audioContext.createMediaStreamSource(stream);
+      sourceRef.current = source;
       
-      // Start duration timer
-      durationIntervalRef.current = setInterval(() => {
-        setDuration(prev => prev + 1);
-      }, 1000);
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+      processorRef.current = processor;
+
+      // 4. Create WebSocket connection to ElevenLabs
+      const wsUrl = new URL("wss://api.elevenlabs.io/v1/speech-to-text/realtime");
+      wsUrl.searchParams.set("model_id", "scribe_v2_realtime");
+      wsUrl.searchParams.set("token", tokenData.token);
+      wsUrl.searchParams.set("language_code", "es");
+      wsUrl.searchParams.set("sample_rate", "16000");
+      wsUrl.searchParams.set("encoding", "pcm_s16le");
       
-      // Auto-stop after MAX_DURATION
-      autoStopTimeoutRef.current = setTimeout(() => {
-        console.log("[Voice] Auto-stop triggered");
-        stopRecording();
-      }, MAX_DURATION_MS);
+      console.log("[Voice] Connecting to WebSocket:", wsUrl.toString().replace(tokenData.token, "TOKEN_HIDDEN"));
+      
+      const ws = new WebSocket(wsUrl.toString());
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log("[Voice] WebSocket connected successfully!");
+        
+        if (stopIntentRef.current) {
+          ws.close();
+          return;
+        }
+        
+        setState("recording");
+        
+        // Start sending audio data
+        processor.onaudioprocess = (e) => {
+          if (ws.readyState !== WebSocket.OPEN || stopIntentRef.current) return;
+          
+          const inputData = e.inputBuffer.getChannelData(0);
+          const base64Audio = encodeAudioForAPI(new Float32Array(inputData));
+          
+          try {
+            ws.send(JSON.stringify({
+              type: "audio",
+              audio_base_64: base64Audio
+            }));
+          } catch (err) {
+            console.error("[Voice] Error sending audio chunk:", err);
+          }
+        };
+
+        source.connect(processor);
+        processor.connect(audioContext.destination);
+
+        // Start duration timer
+        durationIntervalRef.current = setInterval(() => {
+          setDuration(prev => prev + 1);
+        }, 1000);
+
+        // Auto-stop after MAX_DURATION
+        autoStopTimeoutRef.current = setTimeout(() => {
+          console.log("[Voice] Auto-stop triggered (30s limit)");
+          stopRecording();
+        }, MAX_DURATION_MS);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log("[Voice] WS message:", data.type, data.text ? `"${data.text}"` : "");
+          
+          switch (data.type) {
+            case "transcript":
+              if (data.is_final) {
+                // This is a committed/final transcript
+                if (data.text && data.text.trim()) {
+                  committedTextsRef.current.push(data.text.trim());
+                  const fullText = committedTextsRef.current.join(" ");
+                  setTranscribedText(fullText);
+                  currentPartialRef.current = "";
+                  setPartialText(fullText);
+                }
+              } else {
+                // This is a partial transcript
+                currentPartialRef.current = data.text || "";
+                const displayText = [...committedTextsRef.current, currentPartialRef.current]
+                  .filter(Boolean)
+                  .join(" ");
+                setPartialText(displayText);
+              }
+              break;
+              
+            case "error":
+              console.error("[Voice] Server error:", data);
+              if (!stopIntentRef.current) {
+                setFatalError(data.message || "Error en la transcripción");
+              }
+              break;
+              
+            case "session_started":
+              console.log("[Voice] Session started:", data.session_id);
+              break;
+              
+            case "session_ended":
+              console.log("[Voice] Session ended");
+              break;
+          }
+        } catch (err) {
+          console.error("[Voice] Error parsing WS message:", err);
+        }
+      };
+
+      ws.onerror = (e) => {
+        console.error("[Voice] WebSocket error:", e);
+        if (!stopIntentRef.current) {
+          setFatalError("Error de conexión con el servicio de transcripción");
+        }
+      };
+
+      ws.onclose = (e) => {
+        console.log("[Voice] WebSocket closed:", e.code, e.reason, "wasClean:", e.wasClean);
+        if (!stopIntentRef.current && stateRef.current === "recording") {
+          // Unexpected close during recording
+          setFatalError("Se perdió la conexión. Intentá de nuevo.");
+        }
+      };
       
     } catch (err: any) {
       console.error("[Voice] Error starting recording:", err);
@@ -328,41 +432,33 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     } finally {
       startInFlightRef.current = false;
     }
-  }, [cleanup, scribe, stopRecording]);
+  }, [cleanup, setFatalError, stopRecording]);
 
   const cancel = useCallback(() => {
     stopIntentRef.current = true;
-    if (scribe.isConnected) scribe.disconnect();
-    scribe.clearTranscripts();
     cleanup();
     setState("idle");
     setDuration(0);
     setError(null);
     setPartialText("");
+    currentPartialRef.current = "";
     setTranscribedText("");
     committedTextsRef.current = [];
-    setTimeout(() => {
-      stopIntentRef.current = false;
-    }, 0);
-  }, [cleanup, scribe]);
+  }, [cleanup]);
 
   const reset = useCallback(() => {
     stopIntentRef.current = true;
-    if (scribe.isConnected) scribe.disconnect();
-    scribe.clearTranscripts();
     cleanup();
     setState("idle");
     setTranscribedText("");
     setPartialText("");
+    currentPartialRef.current = "";
     setParsedTransaction(null);
     setError(null);
     setDuration(0);
     isParsingRef.current = false;
     committedTextsRef.current = [];
-    setTimeout(() => {
-      stopIntentRef.current = false;
-    }, 0);
-  }, [cleanup, scribe]);
+  }, [cleanup]);
 
   const retry = useCallback(() => {
     reset();
@@ -376,18 +472,17 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
   useEffect(() => {
     return () => {
       stopIntentRef.current = true;
-      if (scribe.isConnected) scribe.disconnect();
       cleanup();
     };
-  }, [cleanup, scribe]);
+  }, [cleanup]);
 
   // Combined live text (committed + partial)
-  const liveText = [...committedTextsRef.current, partialText].filter(Boolean).join(" ").trim() || partialText;
+  const liveText = [...committedTextsRef.current, currentPartialRef.current].filter(Boolean).join(" ").trim();
 
   return {
     state,
     transcribedText,
-    partialText: liveText, // Live text for display during recording
+    partialText: liveText || partialText, // Live text for display during recording
     parsedTransaction,
     error,
     duration,
