@@ -89,7 +89,8 @@ export const InvestmentDetailsStep = ({
     };
   }, [numAmount, numRate, startDate, endDate, rateType]);
 
-  const canSubmit = name.trim().length > 0;
+  // Name is optional - will use type label + institution if empty
+  const canSubmit = true;
 
   // Show rate fields for relevant investment types
   const showRateFields = ["plazo_fijo", "fci"].includes(investmentType);
@@ -113,16 +114,6 @@ export const InvestmentDetailsStep = ({
           </p>
         </div>
 
-        {/* Name */}
-        <div className="space-y-2">
-          <Label>Nombre de la inversión *</Label>
-          <Input
-            placeholder={`Ej: ${typeLabels[investmentType]} Banco Nación`}
-            value={name}
-            onChange={(e) => onNameChange(e.target.value)}
-          />
-        </div>
-
         {/* Institution */}
         <div className="space-y-2">
           <Label>Institución (opcional)</Label>
@@ -130,6 +121,16 @@ export const InvestmentDetailsStep = ({
             placeholder="Ej: Banco Galicia, Binance, etc."
             value={institution}
             onChange={(e) => onInstitutionChange(e.target.value)}
+          />
+        </div>
+
+        {/* Custom Name (optional) */}
+        <div className="space-y-2">
+          <Label>Nombre personalizado (opcional)</Label>
+          <Input
+            placeholder={`Por defecto: ${typeLabels[investmentType]}${institution ? ` ${institution}` : ''}`}
+            value={name}
+            onChange={(e) => onNameChange(e.target.value)}
           />
         </div>
 
