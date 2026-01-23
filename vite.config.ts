@@ -3,6 +3,10 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+import { viteStaticCopy } from "vite-plugin-static-copy";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -56,6 +60,19 @@ export default defineConfig(({ mode }) => ({
       devOptions: {
         enabled: false,
       },
+    }),
+    // Copy ElevenLabs audio worklet files for real-time transcription
+    viteStaticCopy({
+      targets: [
+        {
+          src: path.dirname(require.resolve('@elevenlabs/client')) + '/worklets/audioConcatProcessor.js',
+          dest: '.',
+        },
+        {
+          src: path.dirname(require.resolve('@elevenlabs/client')) + '/worklets/rawAudioProcessor.js',
+          dest: '.',
+        },
+      ],
     }),
   ].filter(Boolean),
   resolve: {
