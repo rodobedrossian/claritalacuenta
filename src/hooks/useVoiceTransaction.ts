@@ -47,7 +47,11 @@ const encodeAudioForAPI = (float32Array: Float32Array): string => {
   return btoa(binary);
 };
 
-export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactionProps) => {
+interface UseVoiceTransactionOptions extends UseVoiceTransactionProps {
+  getToken?: () => Promise<string | null>;
+}
+
+export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoiceTransactionOptions) => {
   const [state, setState] = useState<VoiceRecordingState>("idle");
   const [transcribedText, setTranscribedText] = useState<string>("");
   const [partialText, setPartialText] = useState<string>("");
@@ -278,23 +282,35 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       
       console.log("[Voice] Starting recording flow...");
 
-      // 1. Get ElevenLabs scribe token
-      console.log("[Voice] Fetching ElevenLabs scribe token...");
-      const { data: tokenData, error: tokenError } = await supabase.functions.invoke(
-        'elevenlabs-scribe-token'
-      );
+      // 1. Get ElevenLabs scribe token (use prefetched if available)
+      let token: string | null = null;
       
-      if (tokenError) {
-        console.error("[Voice] Token fetch error:", tokenError);
-        throw new Error(tokenError.message || "No se pudo obtener el token de transcripción");
+      if (getToken) {
+        console.log("[Voice] Attempting to use prefetched token...");
+        token = await getToken();
       }
       
-      if (!tokenData?.token) {
-        console.error("[Voice] No token in response:", tokenData);
-        throw new Error("No se recibió el token de transcripción");
+      // Fallback to direct fetch if no prefetched token
+      if (!token) {
+        console.log("[Voice] Fetching ElevenLabs scribe token...");
+        const { data: tokenData, error: tokenError } = await supabase.functions.invoke(
+          'elevenlabs-scribe-token'
+        );
+        
+        if (tokenError) {
+          console.error("[Voice] Token fetch error:", tokenError);
+          throw new Error(tokenError.message || "No se pudo obtener el token de transcripción");
+        }
+        
+        if (!tokenData?.token) {
+          console.error("[Voice] No token in response:", tokenData);
+          throw new Error("No se recibió el token de transcripción");
+        }
+        
+        token = tokenData.token;
       }
 
-      console.log("[Voice] Token received, setting up audio capture...");
+      console.log("[Voice] Token ready, setting up audio capture...");
 
       // 2. Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -321,13 +337,13 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       // 4. Create WebSocket connection to ElevenLabs
       const wsUrl = new URL("wss://api.elevenlabs.io/v1/speech-to-text/realtime");
       wsUrl.searchParams.set("model_id", "scribe_v2_realtime");
-      wsUrl.searchParams.set("token", tokenData.token);
+      wsUrl.searchParams.set("token", token);
       wsUrl.searchParams.set("language_code", "es");
       wsUrl.searchParams.set("sample_rate", "16000");
       wsUrl.searchParams.set("encoding", "pcm_s16le");
       wsUrl.searchParams.set("commit_strategy", "manual");
       
-      console.log("[Voice] Connecting to WebSocket:", wsUrl.toString().replace(tokenData.token, "TOKEN_HIDDEN"));
+      console.log("[Voice] Connecting to WebSocket:", wsUrl.toString().replace(token, "TOKEN_HIDDEN"));
       
       const ws = new WebSocket(wsUrl.toString());
       wsRef.current = ws;
