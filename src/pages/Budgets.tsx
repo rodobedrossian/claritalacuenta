@@ -189,10 +189,7 @@ const Budgets = () => {
                 <h2 className="text-lg font-semibold">Categorías</h2>
                 <AddCategoryDialog onAdd={addCategory} />
               </div>
-              <CategoriesTable
-                categories={categories}
-                onDelete={deleteCategory}
-              />
+              <CategoriesTable categories={categories} />
             </TabsContent>
           </Tabs>
         </main>
