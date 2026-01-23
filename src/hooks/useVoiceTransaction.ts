@@ -205,7 +205,9 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       try {
         console.log("[Voice] Sending final commit...");
         wsRef.current.send(JSON.stringify({
-          type: "flush"
+          message_type: "input_audio_chunk",
+          audio_base_64: "",
+          commit: true
         }));
       } catch (e) {
         console.error("[Voice] Error sending commit:", e);
@@ -308,6 +310,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       wsUrl.searchParams.set("language_code", "es");
       wsUrl.searchParams.set("sample_rate", "16000");
       wsUrl.searchParams.set("encoding", "pcm_s16le");
+      wsUrl.searchParams.set("commit_strategy", "manual");
       
       console.log("[Voice] Connecting to WebSocket:", wsUrl.toString().replace(tokenData.token, "TOKEN_HIDDEN"));
       
@@ -333,7 +336,8 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
           
           try {
             ws.send(JSON.stringify({
-              audio_chunk: base64Audio
+              message_type: "input_audio_chunk",
+              audio_base_64: base64Audio
             }));
           } catch (err) {
             console.error("[Voice] Error sending audio chunk:", err);
