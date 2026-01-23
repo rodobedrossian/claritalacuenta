@@ -49,21 +49,27 @@ export type Database = {
       }
       categories: {
         Row: {
+          color: string | null
           created_at: string
+          icon: string | null
           id: string
           name: string
           type: string
           user_id: string | null
         }
         Insert: {
+          color?: string | null
           created_at?: string
+          icon?: string | null
           id?: string
           name: string
           type: string
           user_id?: string | null
         }
         Update: {
+          color?: string | null
           created_at?: string
+          icon?: string | null
           id?: string
           name?: string
           type?: string

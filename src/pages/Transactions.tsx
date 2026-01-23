@@ -218,10 +218,13 @@ const Transactions = () => {
           ) : (
             <>
               {/* Transactions List */}
-              <TransactionsList 
-                transactions={transactions} 
-                onEdit={handleEditTransaction}
-              />
+              <div className="rounded-lg bg-card border border-border/50 overflow-hidden">
+                <TransactionsList 
+                  transactions={transactions} 
+                  onEdit={handleEditTransaction}
+                  showCard={false}
+                />
+              </div>
 
               {/* Infinite scroll trigger */}
               <div ref={observerTarget} className="py-8 flex justify-center">

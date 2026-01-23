@@ -6,6 +6,8 @@ export interface Category {
   id: string;
   name: string;
   type: "income" | "expense";
+  icon?: string | null;
+  color?: string | null;
   created_at: string;
 }
 
@@ -36,6 +38,8 @@ export const useCategoriesData = (): UseCategoriesDataReturn => {
         (data || []).map((c) => ({
           ...c,
           type: c.type as "income" | "expense",
+          icon: c.icon || null,
+          color: c.color || null,
         }))
       );
     } catch (error) {
