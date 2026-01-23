@@ -65,6 +65,7 @@ interface UseCreditCardStatementsReturn {
   updateTransactionCategory: (transactionId: string, categoryId: string) => Promise<boolean>;
   bulkUpdateCategories: (transactionIds: string[], categoryId: string) => Promise<boolean>;
   deleteStatement: (statementId: string) => Promise<boolean>;
+  getMonthlyTransactions: (month: string) => Promise<CreditCardTransaction[]>;
 }
 
 export function useCreditCardStatements(userId: string | null): UseCreditCardStatementsReturn {
@@ -199,6 +200,32 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
     }
   }, []);
 
+  // Get all transactions for a specific month (from all statements in that period)
+  const getMonthlyTransactions = useCallback(async (month: string): Promise<CreditCardTransaction[]> => {
+    if (!userId) return [];
+
+    // Get all statement IDs for this month
+    const monthPrefix = month.substring(0, 7); // YYYY-MM
+    const statementIds = statements
+      .filter(s => s.statement_month.startsWith(monthPrefix))
+      .map(s => s.id);
+
+    if (statementIds.length === 0) return [];
+
+    const { data, error: fetchError } = await supabase
+      .from("credit_card_transactions")
+      .select("id, description, amount, currency, category_id, date, credit_card_id, statement_import_id, transaction_type, installment_current, installment_total")
+      .in("statement_import_id", statementIds)
+      .order("date", { ascending: false });
+
+    if (fetchError) {
+      console.error("Error fetching monthly transactions:", fetchError);
+      return [];
+    }
+
+    return data || [];
+  }, [userId, statements]);
+
   return {
     statements,
     loading,
@@ -208,5 +235,6 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
     updateTransactionCategory,
     bulkUpdateCategories,
     deleteStatement,
+    getMonthlyTransactions,
   };
 }
