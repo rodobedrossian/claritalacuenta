@@ -124,12 +124,12 @@ export const MonthlyStatementsSummary = ({
               {isExpanded ? (
                 <>
                   <ChevronUp className="h-4 w-4" />
-                  <span className="hidden sm:inline">Ocultar</span>
+                  <span>Ocultar</span>
                 </>
               ) : (
                 <>
                   <ChevronDown className="h-4 w-4" />
-                  <span className="hidden sm:inline">Ver resúmenes</span>
+                  <span>Ver tarjetas</span>
                 </>
               )}
             </Button>
@@ -149,26 +149,26 @@ export const MonthlyStatementsSummary = ({
               return (
                 <div
                   key={statement.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
                   onClick={() => onSelectStatement(statement)}
                 >
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <CreditCard className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="font-medium truncate">
                       {getCardName(statement.credit_card_id || "")}
                     </span>
-                    <span className="text-sm text-muted-foreground">
-                      {txCount} transacciones
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">
+                      {txCount} trans.
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm">
+                  <div className="flex items-center gap-3 text-sm pl-7 sm:pl-0">
                     {totalArs > 0 && (
-                      <span className="text-warning font-medium">
+                      <span className="text-warning font-medium whitespace-nowrap">
                         {formatCurrency(totalArs, "ARS")}
                       </span>
                     )}
                     {totalUsd > 0 && (
-                      <span className="text-warning font-medium">
+                      <span className="text-warning font-medium whitespace-nowrap">
                         {formatCurrency(totalUsd, "USD")}
                       </span>
                     )}
