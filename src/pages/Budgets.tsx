@@ -191,7 +191,6 @@ const Budgets = () => {
               </div>
               <CategoriesTable
                 categories={categories}
-                onUpdate={updateCategory}
                 onDelete={deleteCategory}
               />
             </TabsContent>
