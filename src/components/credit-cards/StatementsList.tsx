@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { StatementImport, MonthlyTotals } from "@/hooks/useCreditCardStatements";
+import { StatementImport, MonthlyTotals, StatementTotals } from "@/hooks/useCreditCardStatements";
 import { MonthlyStatementsSummary } from "./MonthlyStatementsSummary";
 
 interface MonthlyGroup {
@@ -20,6 +20,7 @@ interface StatementsListProps {
   onDeleteStatement: (statementId: string) => Promise<boolean>;
   onViewMonthlyAnalytics: (month: string) => void;
   getMonthlyTotals: () => Promise<MonthlyTotals[]>;
+  getStatementTotals: () => Promise<StatementTotals[]>;
 }
 
 // Helper function to group statements by month (structure only, not totals)
@@ -59,8 +60,10 @@ export const StatementsList = ({
   onDeleteStatement,
   onViewMonthlyAnalytics,
   getMonthlyTotals,
+  getStatementTotals,
 }: StatementsListProps) => {
   const [monthlyTotals, setMonthlyTotals] = useState<MonthlyTotals[]>([]);
+  const [statementTotals, setStatementTotals] = useState<StatementTotals[]>([]);
   const [loadingTotals, setLoadingTotals] = useState(true);
 
   // Fetch real totals from database
@@ -68,10 +71,14 @@ export const StatementsList = ({
     const fetchTotals = async () => {
       setLoadingTotals(true);
       try {
-        const totals = await getMonthlyTotals();
-        setMonthlyTotals(totals);
+        const [monthly, perStatement] = await Promise.all([
+          getMonthlyTotals(),
+          getStatementTotals(),
+        ]);
+        setMonthlyTotals(monthly);
+        setStatementTotals(perStatement);
       } catch (error) {
-        console.error("Error fetching monthly totals:", error);
+        console.error("Error fetching totals:", error);
       } finally {
         setLoadingTotals(false);
       }
@@ -82,7 +89,7 @@ export const StatementsList = ({
     } else {
       setLoadingTotals(false);
     }
-  }, [statements, getMonthlyTotals]);
+  }, [statements, getMonthlyTotals, getStatementTotals]);
 
   // Group statements by month and apply real totals
   const monthlyGroups = useMemo(() => {
@@ -132,6 +139,7 @@ export const StatementsList = ({
           creditCards={creditCards}
           onViewAnalytics={onViewMonthlyAnalytics}
           onSelectStatement={onSelectStatement}
+          statementTotals={statementTotals}
         />
       ))}
     </div>
