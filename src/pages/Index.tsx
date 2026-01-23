@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Wallet, TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,7 @@ import { EditTransactionDialog } from "@/components/EditTransactionDialog";
 import { SpendingChart } from "@/components/SpendingChart";
 import { TimelineChart } from "@/components/TimelineChart";
 import { AppLayout } from "@/components/AppLayout";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { BudgetProgress } from "@/components/budgets/BudgetProgress";
 import { ImportStatementDialog } from "@/components/credit-cards/ImportStatementDialog";
 import { NotificationSetupBanner } from "@/components/notifications/NotificationSetupBanner";
@@ -255,6 +256,13 @@ const Index = () => {
   const goToNextMonth = () => setActiveMonth(prev => addMonths(prev, 1));
   const goToCurrentMonth = () => setActiveMonth(new Date());
 
+  // Pull to refresh handler
+  const handlePullToRefresh = useCallback(async () => {
+    await refetch();
+    await refetchInsights();
+    toast.success("Dashboard actualizado");
+  }, [refetch, refetchInsights]);
+
   if (loading || dataLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -319,9 +327,9 @@ const Index = () => {
           />
         </div>
 
-        {/* Mobile: New streamlined header */}
+        {/* Mobile: New streamlined header with pull-to-refresh */}
         {isMobile ? (
-          <>
+          <PullToRefresh onRefresh={handlePullToRefresh} className="min-h-[calc(100vh-4rem)]" disabled={dataLoading}>
             <DashboardHeader
               userName={user?.user_metadata?.full_name || user?.email}
               exchangeRate={exchangeRate}
@@ -391,7 +399,7 @@ const Index = () => {
                 />
               </div>
             </main>
-          </>
+          </PullToRefresh>
         ) : (
           <>
             {/* Desktop: Original header */}

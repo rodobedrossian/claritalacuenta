@@ -1,16 +1,18 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Filter, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TransactionsList } from "@/components/TransactionsList";
 import { EditTransactionDialog } from "@/components/EditTransactionDialog";
 import { AppLayout } from "@/components/AppLayout";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useTransactionsData, Transaction, TransactionFilters } from "@/hooks/useTransactionsData";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { toast } from "sonner";
 
 const Transactions = () => {
   const navigate = useNavigate();
@@ -40,9 +42,16 @@ const Transactions = () => {
     loading,
     loadingMore,
     loadMore,
+    refetch,
     updateTransaction,
     deleteTransaction
   } = useTransactionsData(filters, user?.id);
+
+  // Pull to refresh handler
+  const handleRefresh = useCallback(async () => {
+    await refetch();
+    toast.success("Transacciones actualizadas");
+  }, [refetch]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -111,7 +120,7 @@ const Transactions = () => {
 
   return (
     <AppLayout>
-      <div className="min-h-screen">
+      <PullToRefresh onRefresh={handleRefresh} className="min-h-screen" disabled={loading}>
         <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
           <div className="container mx-auto px-4 md:px-6 py-4 pl-14 md:pl-6">
             <h1 className="text-xl md:text-2xl font-bold">Transacciones</h1>
@@ -254,7 +263,7 @@ const Transactions = () => {
           onDelete={deleteTransaction}
           categories={categories}
         />
-      </div>
+      </PullToRefresh>
     </AppLayout>
   );
 };
