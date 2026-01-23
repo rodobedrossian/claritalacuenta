@@ -64,6 +64,19 @@ export const VoiceRecordingOverlay = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Get computed primary color from CSS
+    const computedStyle = getComputedStyle(document.documentElement);
+    const primaryHsl = computedStyle.getPropertyValue('--primary').trim();
+    
+    // Parse HSL values and create color function
+    const createColor = (alpha: number) => {
+      if (primaryHsl) {
+        return `hsla(${primaryHsl}, ${alpha})`;
+      }
+      // Fallback color
+      return `rgba(59, 130, 246, ${alpha})`;
+    };
+
     // Set canvas size for high DPI
     const dpr = window.devicePixelRatio || 1;
     const size = 280;
@@ -96,7 +109,7 @@ export const VoiceRecordingOverlay = ({
         
         ctx.beginPath();
         ctx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
-        ctx.strokeStyle = `hsla(var(--primary), ${alpha})`;
+        ctx.strokeStyle = createColor(alpha);
         ctx.lineWidth = 2;
         ctx.stroke();
       }
@@ -123,8 +136,8 @@ export const VoiceRecordingOverlay = ({
 
         // Gradient from primary to primary with lower opacity
         const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-        gradient.addColorStop(0, `hsla(var(--primary), 0.8)`);
-        gradient.addColorStop(1, `hsla(var(--primary), 0.3)`);
+        gradient.addColorStop(0, createColor(0.8));
+        gradient.addColorStop(1, createColor(0.3));
 
         ctx.beginPath();
         ctx.moveTo(x1, y1);
@@ -140,9 +153,9 @@ export const VoiceRecordingOverlay = ({
         centerX, centerY, 0,
         centerX, centerY, baseRadius
       );
-      centerGradient.addColorStop(0, `hsla(var(--primary), 0.2)`);
-      centerGradient.addColorStop(0.7, `hsla(var(--primary), 0.1)`);
-      centerGradient.addColorStop(1, `hsla(var(--primary), 0.05)`);
+      centerGradient.addColorStop(0, createColor(0.2));
+      centerGradient.addColorStop(0.7, createColor(0.1));
+      centerGradient.addColorStop(1, createColor(0.05));
 
       ctx.beginPath();
       ctx.arc(centerX, centerY, baseRadius - 10, 0, Math.PI * 2);
