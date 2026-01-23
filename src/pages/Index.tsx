@@ -596,12 +596,13 @@ const Index = () => {
           onSuccess={refetch}
         />
 
-        {/* Voice Recording Overlay - Immersive experience */}
+        {/* Voice Recording Overlay - Immersive experience with live transcription */}
         <VoiceRecordingOverlay
           isOpen={voiceTransaction.isActive && !voiceTransaction.isReady}
           state={voiceTransaction.state}
           duration={voiceTransaction.duration}
           transcribedText={voiceTransaction.transcribedText}
+          partialText={voiceTransaction.partialText}
           getAudioLevels={voiceTransaction.getAudioLevels}
           onStop={voiceTransaction.stopRecording}
           onCancel={voiceTransaction.cancel}
@@ -617,8 +618,39 @@ const Index = () => {
           }}
           transaction={voiceTransaction.parsedTransaction}
           transcribedText={voiceTransaction.transcribedText}
-          onConfirm={() => {
-            // Transfer data to wizard and open it
+          onConfirmDirect={async () => {
+            // Save transaction directly without opening wizard
+            if (voiceTransaction.parsedTransaction && user) {
+              const tx = voiceTransaction.parsedTransaction;
+              
+              // Find category ID using fuzzy matching
+              const categoryMatch = categories.find(c => 
+                c.name.toLowerCase() === tx.category.toLowerCase() ||
+                c.name.toLowerCase().includes(tx.category.toLowerCase()) ||
+                tx.category.toLowerCase().includes(c.name.toLowerCase())
+              );
+              
+              const newTransaction: Omit<Transaction, "id"> = {
+                user_id: user.id,
+                type: tx.type,
+                amount: tx.amount,
+                currency: tx.currency,
+                category: categoryMatch?.name || tx.category,
+                description: tx.description || "",
+                date: tx.date || new Date().toISOString().split('T')[0],
+                payment_method: "debit",
+                from_savings: false,
+              };
+              
+              setIsVoiceTransaction(true);
+              setVoiceConfirmationOpen(false);
+              await addTransaction(newTransaction);
+              voiceTransaction.reset();
+              setShowVoiceSuccess(true);
+            }
+          }}
+          onEdit={() => {
+            // Transfer data to wizard and open it for editing
             if (voiceTransaction.parsedTransaction) {
               const tx = voiceTransaction.parsedTransaction;
               setVoiceInitialData({
@@ -629,7 +661,7 @@ const Index = () => {
                 description: tx.description,
                 date: new Date(tx.date),
               });
-              setIsVoiceTransaction(true); // Mark as voice transaction for success animation
+              setIsVoiceTransaction(true);
               setVoiceConfirmationOpen(false);
               setAddTransactionDialogOpen(true);
               voiceTransaction.reset();

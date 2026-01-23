@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, RefreshCw, Sparkles, ArrowRight, TrendingUp, TrendingDown } from "lucide-react";
+import { Check, RefreshCw, Sparkles, Pencil, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VoiceTransactionData } from "@/hooks/useVoiceTransaction";
@@ -21,7 +21,8 @@ interface VoiceConfirmationStepProps {
   onOpenChange: (open: boolean) => void;
   transaction: VoiceTransactionData | null;
   transcribedText: string;
-  onConfirm: () => void;
+  onConfirmDirect: () => void; // Confirms and saves directly
+  onEdit: () => void; // Opens wizard for editing
   onRetry: () => void;
   onCancel: () => void;
 }
@@ -34,7 +35,8 @@ export const VoiceConfirmationStep = ({
   onOpenChange,
   transaction,
   transcribedText,
-  onConfirm,
+  onConfirmDirect,
+  onEdit,
   onRetry,
   onCancel,
 }: VoiceConfirmationStepProps) => {
@@ -56,7 +58,7 @@ export const VoiceConfirmationStep = ({
     }
   }, [open, transaction]);
 
-  // Auto-advance for high confidence
+  // Auto-advance for high confidence - now calls onConfirmDirect
   useEffect(() => {
     if (!open || !isHighConfidence || !transaction) {
       setAutoAdvanceActive(false);
@@ -73,12 +75,12 @@ export const VoiceConfirmationStep = ({
 
       if (progress >= 100) {
         clearInterval(interval);
-        onConfirm();
+        onConfirmDirect(); // Direct save, not wizard
       }
     }, 50);
 
     return () => clearInterval(interval);
-  }, [open, isHighConfidence, transaction, onConfirm]);
+  }, [open, isHighConfidence, transaction, onConfirmDirect]);
 
   // Stop auto-advance on any interaction
   const handleInteraction = () => {
@@ -179,7 +181,7 @@ export const VoiceConfirmationStep = ({
       >
         <h2 className="text-xl font-semibold mb-2">¡Transacción detectada!</h2>
         <p className="text-sm text-muted-foreground">
-          Revisa los datos extraídos de tu grabación
+          Revisa los datos y confirma para guardar
         </p>
       </motion.div>
 
@@ -264,7 +266,7 @@ export const VoiceConfirmationStep = ({
           >
             <div className="bg-primary/10 rounded-lg p-3 text-center">
               <p className="text-sm text-primary mb-2">
-                Confirmando automáticamente...
+                Guardando automáticamente...
               </p>
               <div className="h-1 bg-primary/20 rounded-full overflow-hidden">
                 <motion.div
@@ -273,7 +275,7 @@ export const VoiceConfirmationStep = ({
                 />
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Toca para editar manualmente
+                Toca para cancelar y editar
               </p>
             </div>
           </motion.div>
@@ -287,40 +289,55 @@ export const VoiceConfirmationStep = ({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
+        {/* Primary: Confirm and Save Directly */}
         <Button
           onClick={() => {
             handleInteraction();
-            onConfirm();
+            onConfirmDirect();
           }}
           className="w-full h-14 text-lg gap-2 gradient-primary shadow-lg"
           size="lg"
         >
-          Confirmar y Editar
-          <ArrowRight className="h-5 w-5" />
+          <Check className="h-5 w-5" />
+          Confirmar
         </Button>
 
+        {/* Secondary: Edit in Wizard */}
         <Button
           variant="outline"
           onClick={() => {
             handleInteraction();
-            onRetry();
+            onEdit();
           }}
           className="w-full gap-2"
+        >
+          <Pencil className="h-4 w-4" />
+          Editar detalles
+        </Button>
+
+        {/* Retry */}
+        <Button
+          variant="ghost"
+          onClick={() => {
+            handleInteraction();
+            onRetry();
+          }}
+          className="w-full gap-2 text-muted-foreground"
         >
           <RefreshCw className="h-4 w-4" />
           Volver a grabar
         </Button>
 
-        <Button
-          variant="ghost"
+        {/* Cancel - smaller, less prominent */}
+        <button
           onClick={() => {
             handleInteraction();
             onCancel();
           }}
-          className="w-full text-muted-foreground"
+          className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
         >
           Cancelar
-        </Button>
+        </button>
       </motion.div>
     </div>
   );

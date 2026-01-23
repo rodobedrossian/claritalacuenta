@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useScribe, CommitStrategy } from "@elevenlabs/react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -23,6 +24,7 @@ interface UseVoiceTransactionProps {
 // More granular states for better UX feedback
 export type VoiceRecordingState = 
   | "idle" 
+  | "connecting"
   | "recording" 
   | "transcribing" 
   | "parsing" 
@@ -32,17 +34,36 @@ export type VoiceRecordingState =
 export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactionProps) => {
   const [state, setState] = useState<VoiceRecordingState>("idle");
   const [transcribedText, setTranscribedText] = useState<string>("");
+  const [partialText, setPartialText] = useState<string>("");
   const [parsedTransaction, setParsedTransaction] = useState<VoiceTransactionData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(0);
   
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoStopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isParsingRef = useRef<boolean>(false);
+  const committedTextsRef = useRef<string[]>([]);
+
+  // ElevenLabs Scribe hook for real-time transcription
+  const scribe = useScribe({
+    modelId: "scribe_v2_realtime",
+    commitStrategy: CommitStrategy.VAD, // Voice Activity Detection for automatic commits
+    onPartialTranscript: (data) => {
+      console.log("Partial transcript:", data.text);
+      setPartialText(data.text);
+    },
+    onCommittedTranscript: (data) => {
+      console.log("Committed transcript:", data.text);
+      // Accumulate committed transcripts
+      committedTextsRef.current.push(data.text);
+      const fullText = committedTextsRef.current.join(" ");
+      setTranscribedText(fullText);
+      setPartialText("");
+    },
+  });
 
   // Cleanup function
   const cleanup = useCallback(() => {
@@ -67,156 +88,20 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
 
   // Get audio levels for visualization
   const getAudioLevels = useCallback((): Uint8Array => {
-    if (!analyserRef.current) return new Uint8Array(0);
+    if (!analyserRef.current) return new Uint8Array(64).fill(0);
     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
     analyserRef.current.getByteFrequencyData(dataArray);
     return dataArray;
   }, []);
 
-  const startRecording = useCallback(async () => {
-    try {
-      setError(null);
-      setParsedTransaction(null);
-      setTranscribedText("");
-      setDuration(0);
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } 
-      });
-      
-      streamRef.current = stream;
-      chunksRef.current = [];
-
-      // Setup audio context and analyser for visualization
-      const audioContext = new AudioContext();
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 128;
-      const source = audioContext.createMediaStreamSource(stream);
-      source.connect(analyser);
-      audioContextRef.current = audioContext;
-      analyserRef.current = analyser;
-      
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-          ? 'audio/webm;codecs=opus' 
-          : 'audio/webm'
-      });
-      
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-      
-      mediaRecorder.onstop = async () => {
-        cleanup();
-        await processRecording();
-      };
-      
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start(100);
-      setState("recording");
-      
-      // Start duration timer
-      durationIntervalRef.current = setInterval(() => {
-        setDuration(prev => prev + 1);
-      }, 1000);
-      
-      // Auto-stop after 30 seconds
-      autoStopTimeoutRef.current = setTimeout(() => {
-        if (mediaRecorderRef.current?.state === "recording") {
-          stopRecording();
-        }
-      }, 30000);
-      
-    } catch (err: any) {
-      console.error("Error starting recording:", err);
-      cleanup();
-      if (err.name === "NotAllowedError") {
-        setError("Permiso de micrófono denegado. Por favor, habilita el acceso al micrófono.");
-      } else {
-        setError("Error al iniciar la grabación: " + err.message);
-      }
-      setState("error");
-    }
-  }, []);
-
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop();
-      setState("transcribing");
-    }
+  // Parse the final transcript
+  const parseTranscript = useCallback(async (text: string) => {
+    if (isParsingRef.current || !text || text.length < 3) return;
     
-    if (durationIntervalRef.current) {
-      clearInterval(durationIntervalRef.current);
-      durationIntervalRef.current = null;
-    }
-    if (autoStopTimeoutRef.current) {
-      clearTimeout(autoStopTimeoutRef.current);
-      autoStopTimeoutRef.current = null;
-    }
-  }, []);
-
-  const cancel = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop();
-    }
-    cleanup();
-    setState("idle");
-    setDuration(0);
-    setError(null);
-    chunksRef.current = [];
-  }, [cleanup]);
-
-  const processRecording = async () => {
+    isParsingRef.current = true;
+    setState("parsing");
+    
     try {
-      const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-      console.log("Audio blob size:", audioBlob.size);
-      
-      if (audioBlob.size < 1000) {
-        throw new Error("La grabación es muy corta. Intenta hablar más tiempo.");
-      }
-      
-      // Convert to base64
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onloadend = () => {
-          const base64 = (reader.result as string).split(',')[1];
-          resolve(base64);
-        };
-        reader.onerror = reject;
-      });
-      reader.readAsDataURL(audioBlob);
-      const audioBase64 = await base64Promise;
-      
-      // Step 1: Transcribe audio
-      console.log("Transcribing audio...");
-      setState("transcribing");
-      
-      const { data: transcribeData, error: transcribeError } = await supabase.functions.invoke(
-        'transcribe-audio',
-        { body: { audio: audioBase64 } }
-      );
-      
-      if (transcribeError) throw transcribeError;
-      if (transcribeData.error) throw new Error(transcribeData.error);
-      
-      const text = transcribeData.text;
-      console.log("Transcribed text:", text);
-      setTranscribedText(text);
-      
-      if (!text || text.length < 3) {
-        throw new Error("No se pudo entender el audio. Intenta hablar más claro.");
-      }
-      
-      // Step 2: Parse transaction from text
-      console.log("Parsing transaction...");
-      setState("parsing");
-      
       const { data: parseData, error: parseError } = await supabase.functions.invoke(
         'parse-voice-transaction',
         { 
@@ -240,24 +125,152 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       
       setParsedTransaction(transaction);
       setState("ready");
-      
     } catch (err: any) {
-      console.error("Error processing recording:", err);
+      console.error("Error parsing transcript:", err);
       setError(err.message || "Error al procesar la grabación");
       setState("error");
       toast.error(err.message || "Error al procesar la grabación");
+    } finally {
+      isParsingRef.current = false;
     }
-  };
+  }, [categories, userName]);
+
+  const startRecording = useCallback(async () => {
+    try {
+      setError(null);
+      setParsedTransaction(null);
+      setTranscribedText("");
+      setPartialText("");
+      setDuration(0);
+      committedTextsRef.current = [];
+      setState("connecting");
+      
+      // Request microphone permission first
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
+      });
+      
+      streamRef.current = stream;
+
+      // Setup audio context and analyser for visualization
+      const audioContext = new AudioContext();
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 128;
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+
+      // Get ElevenLabs scribe token
+      const { data: tokenData, error: tokenError } = await supabase.functions.invoke(
+        'elevenlabs-scribe-token'
+      );
+      
+      if (tokenError || !tokenData?.token) {
+        throw new Error(tokenError?.message || "No se pudo obtener el token de transcripción");
+      }
+
+      // Connect to ElevenLabs Scribe with real-time transcription
+      await scribe.connect({
+        token: tokenData.token,
+        microphone: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+      });
+      
+      setState("recording");
+      
+      // Start duration timer
+      durationIntervalRef.current = setInterval(() => {
+        setDuration(prev => prev + 1);
+      }, 1000);
+      
+      // Auto-stop after 30 seconds
+      autoStopTimeoutRef.current = setTimeout(() => {
+        if (state === "recording") {
+          stopRecording();
+        }
+      }, 30000);
+      
+    } catch (err: any) {
+      console.error("Error starting recording:", err);
+      cleanup();
+      if (err.name === "NotAllowedError") {
+        setError("Permiso de micrófono denegado. Por favor, habilita el acceso al micrófono.");
+      } else {
+        setError("Error al iniciar la grabación: " + err.message);
+      }
+      setState("error");
+    }
+  }, [cleanup, scribe]);
+
+  const stopRecording = useCallback(async () => {
+    // Stop timers
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+    }
+    if (autoStopTimeoutRef.current) {
+      clearTimeout(autoStopTimeoutRef.current);
+      autoStopTimeoutRef.current = null;
+    }
+    
+    // Disconnect from scribe
+    if (scribe.isConnected) {
+      scribe.disconnect();
+    }
+    
+    cleanup();
+    
+    // Get the final text (committed + any remaining partial)
+    const finalText = [...committedTextsRef.current, partialText].filter(Boolean).join(" ").trim();
+    
+    if (finalText && finalText.length >= 3) {
+      setTranscribedText(finalText);
+      setState("transcribing");
+      
+      // Small delay to show the transcribed text before parsing
+      setTimeout(() => {
+        parseTranscript(finalText);
+      }, 500);
+    } else {
+      setError("No se detectó audio suficiente. Intenta hablar más tiempo.");
+      setState("error");
+    }
+  }, [cleanup, scribe, partialText, parseTranscript]);
+
+  const cancel = useCallback(() => {
+    if (scribe.isConnected) {
+      scribe.disconnect();
+    }
+    cleanup();
+    setState("idle");
+    setDuration(0);
+    setError(null);
+    setPartialText("");
+    setTranscribedText("");
+    committedTextsRef.current = [];
+  }, [cleanup, scribe]);
 
   const reset = useCallback(() => {
+    if (scribe.isConnected) {
+      scribe.disconnect();
+    }
     cleanup();
     setState("idle");
     setTranscribedText("");
+    setPartialText("");
     setParsedTransaction(null);
     setError(null);
     setDuration(0);
-    chunksRef.current = [];
-  }, [cleanup]);
+    isParsingRef.current = false;
+    committedTextsRef.current = [];
+  }, [cleanup, scribe]);
 
   const retry = useCallback(() => {
     reset();
@@ -270,13 +283,20 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      if (scribe.isConnected) {
+        scribe.disconnect();
+      }
       cleanup();
     };
-  }, [cleanup]);
+  }, [cleanup, scribe]);
+
+  // Combined live text (committed + partial)
+  const liveText = [...committedTextsRef.current, partialText].filter(Boolean).join(" ").trim() || partialText;
 
   return {
     state,
     transcribedText,
+    partialText: liveText, // Live text for display during recording
     parsedTransaction,
     error,
     duration,
@@ -288,10 +308,11 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     getAudioLevels,
     // Convenience booleans
     isIdle: state === "idle",
+    isConnecting: state === "connecting",
     isRecording: state === "recording",
     isTranscribing: state === "transcribing",
     isParsing: state === "parsing",
-    isProcessing: state === "transcribing" || state === "parsing",
+    isProcessing: state === "transcribing" || state === "parsing" || state === "connecting",
     isReady: state === "ready",
     isError: state === "error",
     isActive: state !== "idle",
