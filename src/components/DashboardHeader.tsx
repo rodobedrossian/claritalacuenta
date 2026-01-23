@@ -47,16 +47,11 @@ export const DashboardHeader = ({
   const breakdownText = getBreakdownText();
 
   return (
-    <header className="bg-gradient-to-b from-card to-background border-b border-border/50">
+    <header className="bg-gradient-to-b from-card to-background">
       <div className="container mx-auto px-4 pt-4 pb-6">
-        {/* Top row - Welcome & Exchange Rate */}
-        <div className="flex items-center justify-between mb-4 pl-10 md:pl-0">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              Hola, <span className="font-medium text-foreground">{userName?.split(' ')[0] || 'Usuario'}</span>
-            </p>
-          </div>
-          {lastUpdated && (
+        {/* Exchange Rate row */}
+        {lastUpdated && (
+          <div className="flex items-center justify-end mb-4">
             <button
               onClick={onRefreshRate}
               disabled={isRefreshingRate}
@@ -65,8 +60,8 @@ export const DashboardHeader = ({
               <span className="font-medium">USD {exchangeRate.toFixed(0)}</span>
               <RefreshCw className={`h-3 w-3 ${isRefreshingRate ? 'animate-spin' : ''}`} />
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Main Balance */}
         <div className="text-center mb-4">
