@@ -7,7 +7,7 @@ import { InvestmentsList } from "@/components/savings/InvestmentsList";
 import { GoalsList } from "@/components/savings/GoalsList";
 import { AddSavingsWizard } from "@/components/savings-wizard/AddSavingsWizard";
 import { AddInvestmentWizard } from "@/components/investment-wizard/AddInvestmentWizard";
-import { AddGoalDialog } from "@/components/savings/AddGoalDialog";
+import { AddGoalWizard } from "@/components/goal-wizard/AddGoalWizard";
 import { EditSavingsEntryDialog } from "@/components/savings/EditSavingsEntryDialog";
 import { SavingsQuickStats } from "@/components/savings/SavingsQuickStats";
 import { SavingsQuickActions } from "@/components/savings/SavingsQuickActions";
@@ -248,8 +248,8 @@ const Savings = () => {
           onAdd={addInvestment} 
         />
 
-        {/* Add Goal Dialog */}
-        <AddGoalDialog 
+        {/* Add Goal Wizard */}
+        <AddGoalWizard 
           open={goalDialogOpen}
           onOpenChange={setGoalDialogOpen}
           onAdd={addGoal} 
