@@ -195,7 +195,7 @@ export const SuccessConfetti = ({
 
             {/* Message */}
             <motion.div
-              className="absolute left-1/2 -translate-x-1/2 top-full mt-6 text-center whitespace-nowrap"
+              className="fixed left-0 right-0 top-[calc(50%+60px)] flex flex-col items-center justify-center text-center px-4"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.3 }}
