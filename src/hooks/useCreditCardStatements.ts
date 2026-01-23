@@ -56,6 +56,14 @@ export interface CreditCardTransaction {
   installment_total: number | null;
 }
 
+export interface MonthlyTotals {
+  month: string;
+  totalArs: number;
+  totalUsd: number;
+  transactionCount: number;
+  cardIds: string[];
+}
+
 interface UseCreditCardStatementsReturn {
   statements: StatementImport[];
   loading: boolean;
@@ -66,6 +74,7 @@ interface UseCreditCardStatementsReturn {
   bulkUpdateCategories: (transactionIds: string[], categoryId: string) => Promise<boolean>;
   deleteStatement: (statementId: string) => Promise<boolean>;
   getMonthlyTransactions: (month: string) => Promise<CreditCardTransaction[]>;
+  getMonthlyTotals: () => Promise<MonthlyTotals[]>;
 }
 
 export function useCreditCardStatements(userId: string | null): UseCreditCardStatementsReturn {
@@ -226,6 +235,58 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
     return data || [];
   }, [userId, statements]);
 
+  // Get real totals for each month from actual transactions in the database
+  const getMonthlyTotals = useCallback(async (): Promise<MonthlyTotals[]> => {
+    if (!userId || statements.length === 0) return [];
+
+    // Get all statement IDs
+    const statementIds = statements.map(s => s.id);
+
+    const { data, error: fetchError } = await supabase
+      .from("credit_card_transactions")
+      .select("statement_import_id, amount, currency, credit_card_id")
+      .in("statement_import_id", statementIds);
+
+    if (fetchError) {
+      console.error("Error fetching monthly totals:", fetchError);
+      return [];
+    }
+
+    // Group transactions by statement month
+    const monthlyData = new Map<string, { ars: number; usd: number; count: number; cardIds: Set<string> }>();
+
+    (data || []).forEach(tx => {
+      // Find the statement for this transaction
+      const statement = statements.find(s => s.id === tx.statement_import_id);
+      if (!statement) return;
+
+      const monthKey = statement.statement_month.substring(0, 7) + "-01";
+
+      if (!monthlyData.has(monthKey)) {
+        monthlyData.set(monthKey, { ars: 0, usd: 0, count: 0, cardIds: new Set() });
+      }
+
+      const data = monthlyData.get(monthKey)!;
+      data.count += 1;
+      if (tx.currency === "ARS") {
+        data.ars += tx.amount;
+      } else if (tx.currency === "USD") {
+        data.usd += tx.amount;
+      }
+      if (tx.credit_card_id) {
+        data.cardIds.add(tx.credit_card_id);
+      }
+    });
+
+    return Array.from(monthlyData.entries()).map(([month, totals]) => ({
+      month,
+      totalArs: totals.ars,
+      totalUsd: totals.usd,
+      transactionCount: totals.count,
+      cardIds: Array.from(totals.cardIds),
+    }));
+  }, [userId, statements]);
+
   return {
     statements,
     loading,
@@ -236,5 +297,6 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
     bulkUpdateCategories,
     deleteStatement,
     getMonthlyTransactions,
+    getMonthlyTotals,
   };
 }

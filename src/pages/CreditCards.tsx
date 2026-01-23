@@ -32,7 +32,7 @@ const CreditCards = () => {
   const [loadingMonthly, setLoadingMonthly] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
-  const { statements, loading, refetch, deleteStatement, getMonthlyTransactions } = useCreditCardStatements(userId);
+  const { statements, loading, refetch, deleteStatement, getMonthlyTransactions, getMonthlyTotals } = useCreditCardStatements(userId);
   const { creditCards, addCreditCard, deleteCreditCard } = useCreditCardsData(userId);
 
   useEffect(() => {
@@ -161,6 +161,7 @@ const CreditCards = () => {
                 onSelectStatement={setSelectedStatement}
                 onDeleteStatement={deleteStatement}
                 onViewMonthlyAnalytics={handleViewMonthlyAnalytics}
+                getMonthlyTotals={getMonthlyTotals}
               />
             )}
           </div>

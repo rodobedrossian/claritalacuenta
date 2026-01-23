@@ -176,39 +176,3 @@ export const MonthlyStatementsSummary = ({
   );
 };
 
-// Helper function to group statements by month
-export function groupStatementsByMonth(
-  statements: StatementImport[]
-): MonthlyGroup[] {
-  const groups = new Map<string, MonthlyGroup>();
-
-  statements.forEach((statement) => {
-    // Get the month key (YYYY-MM-01 format)
-    const monthKey = statement.statement_month.substring(0, 7) + "-01";
-
-    if (!groups.has(monthKey)) {
-      groups.set(monthKey, {
-        month: monthKey,
-        statements: [],
-        totalArs: 0,
-        totalUsd: 0,
-        totalTransactions: 0,
-        cardIds: new Set(),
-      });
-    }
-
-    const group = groups.get(monthKey)!;
-    group.statements.push(statement);
-    group.totalArs += statement.extracted_data?.resumen?.total_ars || 0;
-    group.totalUsd += statement.extracted_data?.resumen?.total_usd || 0;
-    group.totalTransactions += statement.transactions_created || 0;
-    if (statement.credit_card_id) {
-      group.cardIds.add(statement.credit_card_id);
-    }
-  });
-
-  // Sort groups by month descending
-  return Array.from(groups.values()).sort(
-    (a, b) => new Date(b.month).getTime() - new Date(a.month).getTime()
-  );
-}
