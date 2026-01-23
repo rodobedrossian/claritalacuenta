@@ -45,6 +45,8 @@ interface SavingsActionDropdownProps {
   // Controlled mode props
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  // Hide the dropdown trigger (for controlled mode)
+  hideDropdownTrigger?: boolean;
 }
 
 type ActionMode = "transfer" | "manual" | null;
@@ -56,6 +58,7 @@ export const SavingsActionDropdown = ({
   onAddSavings,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
+  hideDropdownTrigger = false,
 }: SavingsActionDropdownProps) => {
   const [internalDialogOpen, setInternalDialogOpen] = useState(false);
   const [actionMode, setActionMode] = useState<ActionMode>(null);
@@ -137,48 +140,61 @@ export const SavingsActionDropdown = ({
     }
   };
 
+  // When in controlled mode and dialog opens, set action to transfer by default
+  const handleControlledOpen = (open: boolean) => {
+    if (open && isControlled && !actionMode) {
+      setActionMode("transfer");
+    }
+    setDialogOpen(open);
+    if (!open) {
+      resetForm();
+    }
+  };
+
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="border-primary/50 hover:bg-primary/10">
-            <PiggyBank className="mr-2 h-4 w-4" />
-            Ahorrar
-            <ChevronDown className="ml-2 h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64">
-          <DropdownMenuItem 
-            onClick={() => handleOpenAction("transfer")}
-            disabled={!hasPositiveBalance}
-            className="flex flex-col items-start py-3 cursor-pointer"
-          >
-            <div className="flex items-center gap-2 font-medium">
-              <Wallet className="h-4 w-4 text-primary" />
-              Desde el balance del mes
-            </div>
-            <span className="text-xs text-muted-foreground mt-1 ml-6">
-              {hasPositiveBalance 
-                ? "Transferir dinero no gastado a ahorros" 
-                : "Sin balance disponible este mes"}
-            </span>
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => handleOpenAction("manual")}
-            className="flex flex-col items-start py-3 cursor-pointer"
-          >
-            <div className="flex items-center gap-2 font-medium">
-              <Plus className="h-4 w-4 text-primary" />
-              Registrar ahorro externo
-            </div>
-            <span className="text-xs text-muted-foreground mt-1 ml-6">
-              Agregar un ahorro que ya tenías guardado
-            </span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {!hideDropdownTrigger && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="border-primary/50 hover:bg-primary/10">
+              <PiggyBank className="mr-2 h-4 w-4" />
+              Ahorrar
+              <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuItem 
+              onClick={() => handleOpenAction("transfer")}
+              disabled={!hasPositiveBalance}
+              className="flex flex-col items-start py-3 cursor-pointer"
+            >
+              <div className="flex items-center gap-2 font-medium">
+                <Wallet className="h-4 w-4 text-primary" />
+                Desde el balance del mes
+              </div>
+              <span className="text-xs text-muted-foreground mt-1 ml-6">
+                {hasPositiveBalance 
+                  ? "Transferir dinero no gastado a ahorros" 
+                  : "Sin balance disponible este mes"}
+              </span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => handleOpenAction("manual")}
+              className="flex flex-col items-start py-3 cursor-pointer"
+            >
+              <div className="flex items-center gap-2 font-medium">
+                <Plus className="h-4 w-4 text-primary" />
+                Registrar ahorro externo
+              </div>
+              <span className="text-xs text-muted-foreground mt-1 ml-6">
+                Agregar un ahorro que ya tenías guardado
+              </span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={handleControlledOpen}>
         <DialogContent className="sm:max-w-[425px] bg-card border-border">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
