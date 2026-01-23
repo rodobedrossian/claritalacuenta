@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InsightItem } from "./InsightItem";
 import type { Insight } from "@/hooks/useInsightsData";
+import { motion } from "framer-motion";
 
 interface InsightsCardProps {
   insights: Insight[];
@@ -35,7 +36,12 @@ export function InsightsCard({ insights, loading }: InsightsCardProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <motion.div 
+      className="space-y-2"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.3 }}
+    >
       {/* Single insight - compact */}
       <InsightItem insight={topInsight} compact />
       
@@ -51,6 +57,6 @@ export function InsightsCard({ insights, loading }: InsightsCardProps) {
           <ArrowRight className="h-3 w-3 ml-1" />
         </Button>
       )}
-    </div>
+    </motion.div>
   );
 }

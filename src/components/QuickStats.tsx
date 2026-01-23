@@ -1,5 +1,6 @@
 import { TrendingUp, TrendingDown, PiggyBank, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 
 interface QuickStatsProps {
   income: { usd: number; ars: number; total: number };
@@ -7,6 +8,20 @@ interface QuickStatsProps {
   savings: { usd: number; ars: number };
   formatCurrency: (amount: number, currency: "USD" | "ARS") => string;
 }
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.4,
+      delay: i * 0.1,
+      ease: "easeOut" as const
+    }
+  })
+};
 
 export const QuickStats = ({
   income,
@@ -19,7 +34,13 @@ export const QuickStats = ({
   return (
     <div className="space-y-3">
       {/* Income Card */}
-      <div className="bg-card rounded-xl p-4 border border-border/50">
+      <motion.div 
+        className="bg-card rounded-xl p-4 border border-border/50"
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        custom={0}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-success/10">
@@ -45,10 +66,16 @@ export const QuickStats = ({
             )}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Expenses Card */}
-      <div className="bg-card rounded-xl p-4 border border-border/50">
+      <motion.div 
+        className="bg-card rounded-xl p-4 border border-border/50"
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        custom={1}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-destructive/10">
@@ -74,12 +101,18 @@ export const QuickStats = ({
             )}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Savings Card */}
-      <button 
+      <motion.button 
         onClick={() => navigate("/savings")}
         className="w-full bg-card rounded-xl p-4 border border-border/50 hover:border-primary/50 transition-colors text-left group"
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        custom={2}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -104,7 +137,7 @@ export const QuickStats = ({
             <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
         </div>
-      </button>
+      </motion.button>
     </div>
   );
 };

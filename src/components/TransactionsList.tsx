@@ -2,6 +2,7 @@ import { Pencil, PiggyBank } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCategoryIcon, getCategoryColor, DEFAULT_CATEGORY_COLORS, DEFAULT_CATEGORY_ICONS } from "@/lib/categoryIcons";
+import { motion } from "framer-motion";
 
 interface Transaction {
   id: string;
@@ -277,9 +278,15 @@ export const TransactionsList = ({
 
   if (showCard) {
     return (
-      <Card className="p-4 md:p-6 gradient-card border-border/50">
-        {content}
-      </Card>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+      >
+        <Card className="p-4 md:p-6 gradient-card border-border/50">
+          {content}
+        </Card>
+      </motion.div>
     );
   }
 
