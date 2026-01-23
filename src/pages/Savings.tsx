@@ -12,6 +12,7 @@ import { AddGoalDialog } from "@/components/savings/AddGoalDialog";
 import { EditSavingsEntryDialog } from "@/components/savings/EditSavingsEntryDialog";
 import { StatCard } from "@/components/StatCard";
 import { AppLayout } from "@/components/AppLayout";
+import { SavingsSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useSavingsData, SavingsEntry } from "@/hooks/useSavingsData";
 
 const Savings = () => {
@@ -60,12 +61,9 @@ const Savings = () => {
 
   if (loading || dataLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" />
-          <p className="mt-4 text-muted-foreground">Cargando...</p>
-        </div>
-      </div>
+      <AppLayout>
+        <SavingsSkeleton />
+      </AppLayout>
     );
   }
 

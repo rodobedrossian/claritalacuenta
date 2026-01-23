@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { InsightsPanel } from "@/components/insights/InsightsPanel";
+import { InsightsSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useInsightsData } from "@/hooks/useInsightsData";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -41,12 +42,7 @@ const Insights = () => {
   if (loading) {
     return (
       <AppLayout>
-        <div className="p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-muted rounded w-48" />
-            <div className="h-32 bg-muted rounded" />
-          </div>
-        </div>
+        <InsightsSkeleton />
       </AppLayout>
     );
   }

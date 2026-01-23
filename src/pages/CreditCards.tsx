@@ -10,6 +10,7 @@ import { InstallmentProjectionPanel } from "@/components/credit-cards/Installmen
 import { ImportStatementDialog } from "@/components/credit-cards/ImportStatementDialog";
 import { AddCreditCardDialog } from "@/components/credit-cards/AddCreditCardDialog";
 import { CreditCardsList } from "@/components/credit-cards/CreditCardsList";
+import { CreditCardsSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useCreditCardStatements, StatementImport, CreditCardTransaction } from "@/hooks/useCreditCardStatements";
 import { useCreditCardsData } from "@/hooks/useCreditCardsData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -85,9 +86,7 @@ const CreditCards = () => {
   if (!userId) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-screen">
-          <div className="animate-pulse text-muted-foreground">Cargando...</div>
-        </div>
+        <CreditCardsSkeleton />
       </AppLayout>
     );
   }
