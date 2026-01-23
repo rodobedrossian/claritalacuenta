@@ -135,81 +135,9 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     }
   }, [categories, userName]);
 
-  const startRecording = useCallback(async () => {
-    try {
-      setError(null);
-      setParsedTransaction(null);
-      setTranscribedText("");
-      setPartialText("");
-      setDuration(0);
-      committedTextsRef.current = [];
-      setState("connecting");
-      
-      // Request microphone permission first
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } 
-      });
-      
-      streamRef.current = stream;
-
-      // Setup audio context and analyser for visualization
-      const audioContext = new AudioContext();
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 128;
-      const source = audioContext.createMediaStreamSource(stream);
-      source.connect(analyser);
-      audioContextRef.current = audioContext;
-      analyserRef.current = analyser;
-
-      // Get ElevenLabs scribe token
-      const { data: tokenData, error: tokenError } = await supabase.functions.invoke(
-        'elevenlabs-scribe-token'
-      );
-      
-      if (tokenError || !tokenData?.token) {
-        throw new Error(tokenError?.message || "No se pudo obtener el token de transcripción");
-      }
-
-      // Connect to ElevenLabs Scribe with real-time transcription
-      await scribe.connect({
-        token: tokenData.token,
-        microphone: {
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
-      });
-      
-      setState("recording");
-      
-      // Start duration timer
-      durationIntervalRef.current = setInterval(() => {
-        setDuration(prev => prev + 1);
-      }, 1000);
-      
-      // Auto-stop after 30 seconds
-      autoStopTimeoutRef.current = setTimeout(() => {
-        if (state === "recording") {
-          stopRecording();
-        }
-      }, 30000);
-      
-    } catch (err: any) {
-      console.error("Error starting recording:", err);
-      cleanup();
-      if (err.name === "NotAllowedError") {
-        setError("Permiso de micrófono denegado. Por favor, habilita el acceso al micrófono.");
-      } else {
-        setError("Error al iniciar la grabación: " + err.message);
-      }
-      setState("error");
-    }
-  }, [cleanup, scribe]);
-
   const stopRecording = useCallback(async () => {
+    console.log("[Voice] Stopping recording...");
+    
     // Stop timers
     if (durationIntervalRef.current) {
       clearInterval(durationIntervalRef.current);
@@ -229,6 +157,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     
     // Get the final text (committed + any remaining partial)
     const finalText = [...committedTextsRef.current, partialText].filter(Boolean).join(" ").trim();
+    console.log("[Voice] Final transcribed text:", finalText);
     
     if (finalText && finalText.length >= 3) {
       setTranscribedText(finalText);
@@ -243,6 +172,99 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       setState("error");
     }
   }, [cleanup, scribe, partialText, parseTranscript]);
+
+  const startRecording = useCallback(async () => {
+    try {
+      setError(null);
+      setParsedTransaction(null);
+      setTranscribedText("");
+      setPartialText("");
+      setDuration(0);
+      committedTextsRef.current = [];
+      setState("connecting");
+      
+      console.log("[Voice] Starting recording flow...");
+      
+      // Request microphone permission first
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
+      });
+      
+      console.log("[Voice] Microphone access granted");
+      streamRef.current = stream;
+
+      // Setup audio context and analyser for visualization
+      const audioContext = new AudioContext();
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 128;
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+
+      // Get ElevenLabs scribe token
+      console.log("[Voice] Fetching ElevenLabs scribe token...");
+      const { data: tokenData, error: tokenError } = await supabase.functions.invoke(
+        'elevenlabs-scribe-token'
+      );
+      
+      if (tokenError) {
+        console.error("[Voice] Token fetch error:", tokenError);
+        throw new Error(tokenError.message || "No se pudo obtener el token de transcripción");
+      }
+      
+      if (!tokenData?.token) {
+        console.error("[Voice] No token in response:", tokenData);
+        throw new Error("No se recibió el token de transcripción");
+      }
+
+      console.log("[Voice] Token received, connecting to ElevenLabs Scribe...");
+
+      // Connect to ElevenLabs Scribe with real-time transcription
+      try {
+        await scribe.connect({
+          token: tokenData.token,
+          microphone: {
+            echoCancellation: true,
+            noiseSuppression: true,
+          },
+        });
+        console.log("[Voice] Connected to ElevenLabs Scribe successfully");
+      } catch (connectError: any) {
+        console.error("[Voice] Scribe connection error:", connectError);
+        throw new Error("Error al conectar con el servicio de transcripción: " + (connectError.message || "conexión fallida"));
+      }
+      
+      setState("recording");
+      
+      // Start duration timer
+      durationIntervalRef.current = setInterval(() => {
+        setDuration(prev => prev + 1);
+      }, 1000);
+      
+      // Auto-stop after 30 seconds
+      autoStopTimeoutRef.current = setTimeout(() => {
+        console.log("[Voice] Auto-stop triggered after 30s");
+        stopRecording();
+      }, 30000);
+      
+    } catch (err: any) {
+      console.error("[Voice] Error starting recording:", err);
+      cleanup();
+      if (err.name === "NotAllowedError") {
+        setError("Permiso de micrófono denegado. Por favor, habilita el acceso al micrófono.");
+      } else if (err.name === "NotFoundError") {
+        setError("No se encontró un micrófono. Conecta un micrófono e intenta de nuevo.");
+      } else {
+        setError(err.message || "Error al iniciar la grabación");
+      }
+      setState("error");
+    }
+  }, [cleanup, scribe, stopRecording]);
 
   const cancel = useCallback(() => {
     if (scribe.isConnected) {
