@@ -62,13 +62,10 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
   }, []);
 
   // ElevenLabs Scribe hook for real-time transcription
+  // Using MANUAL commit strategy - recording continues until user presses Send or 30s limit
   const scribe = useScribe({
     modelId: "scribe_v2_realtime",
-    commitStrategy: CommitStrategy.VAD, // Voice Activity Detection for automatic commits
-    // Make VAD a bit more tolerant so normal pauses don't cause weird behavior.
-    minSilenceDurationMs: 900,
-    minSpeechDurationMs: 200,
-    vadThreshold: 0.55,
+    commitStrategy: CommitStrategy.MANUAL, // Manual: user controls when to stop, not silence detection
     onPartialTranscript: (data) => {
       if (stateRef.current !== "recording") return;
       console.log("[Voice] Partial transcript:", data.text);
@@ -114,9 +111,10 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       if (stopIntentRef.current) return;
       setFatalError(error || "Se alcanzó el límite de tiempo de la sesión.");
     },
-    onInsufficientAudioActivityError: ({ error }) => {
-      if (stopIntentRef.current) return;
-      setFatalError(error || "No se detectó suficiente audio. Hablá más cerca del micrófono.");
+    // Don't treat silence as an error in manual mode - we want recording to continue
+    onInsufficientAudioActivityError: () => {
+      // Ignore this in manual mode - user controls when to stop
+      console.log("[Voice] Insufficient audio activity (ignored in manual mode)");
     },
   });
 
