@@ -64,14 +64,17 @@ export const VoiceRecordingOverlay = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Get computed primary color from CSS
+    // Get computed primary color from CSS and convert to proper HSLA format
     const computedStyle = getComputedStyle(document.documentElement);
     const primaryHsl = computedStyle.getPropertyValue('--primary').trim();
     
     // Parse HSL values and create color function
+    // CSS uses space-separated values (217 91% 60%), Canvas needs comma-separated (217, 91%, 60%)
     const createColor = (alpha: number) => {
       if (primaryHsl) {
-        return `hsla(${primaryHsl}, ${alpha})`;
+        // Replace spaces with commas for proper HSLA format
+        const hslWithCommas = primaryHsl.replace(/\s+/g, ', ');
+        return `hsla(${hslWithCommas}, ${alpha})`;
       }
       // Fallback color
       return `rgba(59, 130, 246, ${alpha})`;
