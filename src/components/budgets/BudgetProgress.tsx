@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { BudgetWithSpending } from "@/hooks/useBudgetsData";
+import { motion } from "framer-motion";
 
 interface BudgetProgressProps {
   budgets: BudgetWithSpending[];
@@ -73,66 +74,78 @@ export const BudgetProgress = ({ budgets, projectedExpensesUSD = 0, projectedExp
   const hasProjectedExpenses = projectedExpensesUSD > 0 || projectedExpensesARS > 0;
 
   return (
-    <Card className="p-6 gradient-card border-border/50">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold">Presupuestos del Mes</h3>
-          {hasProjectedExpenses && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Incluye gastos proyectados de TC
-            </p>
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.25 }}
+    >
+      <Card className="p-6 gradient-card border-border/50">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold">Presupuestos del Mes</h3>
+            {hasProjectedExpenses && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Incluye gastos proyectados de TC
+              </p>
+            )}
+          </div>
+          {onManageBudgets && (
+            <button
+              onClick={onManageBudgets}
+              className="text-sm text-primary hover:underline"
+            >
+              Gestionar
+            </button>
           )}
         </div>
-        {onManageBudgets && (
-          <button
-            onClick={onManageBudgets}
-            className="text-sm text-primary hover:underline"
-          >
-            Gestionar
-          </button>
-        )}
-      </div>
-      <div className="space-y-4">
-        {budgets.map((budget) => (
-          <div key={budget.id} className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                {getStatusIcon(budget.percentage)}
-                <span className="font-medium">{budget.category}</span>
-                <span className="text-muted-foreground text-xs">
-                  ({budget.currency})
+        <div className="space-y-4">
+          {budgets.map((budget, index) => (
+            <motion.div 
+              key={budget.id} 
+              className="space-y-2"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 + index * 0.08 }}
+            >
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  {getStatusIcon(budget.percentage)}
+                  <span className="font-medium">{budget.category}</span>
+                  <span className="text-muted-foreground text-xs">
+                    ({budget.currency})
+                  </span>
+                </div>
+                <span className="text-muted-foreground">
+                  {formatCurrency(budget.spent, budget.currency)} /{" "}
+                  {formatCurrency(budget.monthly_limit, budget.currency)}
                 </span>
               </div>
-              <span className="text-muted-foreground">
-                {formatCurrency(budget.spent, budget.currency)} /{" "}
-                {formatCurrency(budget.monthly_limit, budget.currency)}
-              </span>
-            </div>
-            <div className="relative">
-              <Progress
-                value={Math.min(budget.percentage, 100)}
-                className="h-2"
-              />
-              <div
-                className={`absolute inset-0 h-2 rounded-full ${getProgressColor(
-                  budget.percentage
-                )} transition-all`}
-                style={{ width: `${Math.min(budget.percentage, 100)}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{budget.percentage.toFixed(0)}% usado</span>
-              <span>
-                Disponible:{" "}
-                {formatCurrency(
-                  Math.max(0, budget.monthly_limit - budget.spent),
-                  budget.currency
-                )}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Card>
+              <div className="relative">
+                <Progress
+                  value={Math.min(budget.percentage, 100)}
+                  className="h-2"
+                />
+                <div
+                  className={`absolute inset-0 h-2 rounded-full ${getProgressColor(
+                    budget.percentage
+                  )} transition-all`}
+                  style={{ width: `${Math.min(budget.percentage, 100)}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{budget.percentage.toFixed(0)}% usado</span>
+                <span>
+                  Disponible:{" "}
+                  {formatCurrency(
+                    Math.max(0, budget.monthly_limit - budget.spent),
+                    budget.currency
+                  )}
+                </span>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </Card>
+    </motion.div>
   );
 };

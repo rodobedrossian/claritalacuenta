@@ -2,6 +2,7 @@ import { RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { motion } from "framer-motion";
 
 interface DashboardHeaderProps {
   userName: string;
@@ -51,7 +52,12 @@ export const DashboardHeader = ({
       <div className="container mx-auto px-4 pt-4 pb-6">
         {/* Exchange Rate row */}
         {lastUpdated && (
-          <div className="flex items-center justify-end mb-4">
+          <motion.div 
+            className="flex items-center justify-end mb-4"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
             <button
               onClick={onRefreshRate}
               disabled={isRefreshingRate}
@@ -60,22 +66,44 @@ export const DashboardHeader = ({
               <span className="font-medium">USD {exchangeRate.toFixed(0)}</span>
               <RefreshCw className={`h-3 w-3 ${isRefreshingRate ? 'animate-spin' : ''}`} />
             </button>
-          </div>
+          </motion.div>
         )}
 
         {/* Main Balance */}
-        <div className="text-center mb-4">
+        <motion.div 
+          className="text-center mb-4"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
           <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Balance Neto</p>
-          <p className={`text-4xl font-bold tracking-tight ${isPositive ? 'text-success' : 'text-destructive'}`}>
+          <motion.p 
+            className={`text-4xl font-bold tracking-tight ${isPositive ? 'text-success' : 'text-destructive'}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+          >
             {formatCurrency(netBalance, "ARS")}
-          </p>
+          </motion.p>
           {breakdownText && (
-            <p className="text-xs text-muted-foreground mt-1">{breakdownText}</p>
+            <motion.p 
+              className="text-xs text-muted-foreground mt-1"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+            >
+              {breakdownText}
+            </motion.p>
           )}
-        </div>
+        </motion.div>
 
         {/* Month Selector */}
-        <div className="flex items-center justify-center gap-2">
+        <motion.div 
+          className="flex items-center justify-center gap-2"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.25 }}
+        >
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onPreviousMonth}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -88,7 +116,7 @@ export const DashboardHeader = ({
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onNextMonth}>
             <ChevronRight className="h-4 w-4" />
           </Button>
-        </div>
+        </motion.div>
       </div>
     </header>
   );
