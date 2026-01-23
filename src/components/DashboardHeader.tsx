@@ -1,4 +1,4 @@
-import { RefreshCw, ChevronLeft, ChevronRight, Plus, Mic, PiggyBank } from "lucide-react";
+import { RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -14,6 +14,7 @@ interface DashboardHeaderProps {
   onNextMonth: () => void;
   onCurrentMonth: () => void;
   netBalance: number;
+  netBalanceBreakdown?: { usd: number; ars: number };
   formatCurrency: (amount: number, currency: "USD" | "ARS") => string;
 }
 
@@ -28,9 +29,22 @@ export const DashboardHeader = ({
   onNextMonth,
   onCurrentMonth,
   netBalance,
+  netBalanceBreakdown,
   formatCurrency,
 }: DashboardHeaderProps) => {
   const isPositive = netBalance >= 0;
+
+  // Format breakdown subtitle
+  const getBreakdownText = () => {
+    if (!netBalanceBreakdown) return null;
+    const { usd, ars } = netBalanceBreakdown;
+    const parts: string[] = [];
+    if (usd !== 0) parts.push(`USD ${usd >= 0 ? '' : '-'}${Math.abs(usd).toLocaleString('en-US')}`);
+    if (ars !== 0) parts.push(`ARS ${ars >= 0 ? '' : '-'}${Math.abs(ars).toLocaleString('en-US')}`);
+    return parts.length > 0 ? `(${parts.join(' + ')})` : null;
+  };
+
+  const breakdownText = getBreakdownText();
 
   return (
     <header className="bg-gradient-to-b from-card to-background border-b border-border/50">
@@ -60,6 +74,9 @@ export const DashboardHeader = ({
           <p className={`text-4xl font-bold tracking-tight ${isPositive ? 'text-success' : 'text-destructive'}`}>
             {formatCurrency(netBalance, "ARS")}
           </p>
+          {breakdownText && (
+            <p className="text-xs text-muted-foreground mt-1">{breakdownText}</p>
+          )}
         </div>
 
         {/* Month Selector */}

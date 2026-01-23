@@ -2,8 +2,8 @@ import { TrendingUp, TrendingDown, PiggyBank, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface QuickStatsProps {
-  income: number;
-  expenses: number;
+  income: { usd: number; ars: number; total: number };
+  expenses: { usd: number; ars: number; total: number };
   savings: { usd: number; ars: number };
   formatCurrency: (amount: number, currency: "USD" | "ARS") => string;
 }
@@ -16,6 +16,14 @@ export const QuickStats = ({
 }: QuickStatsProps) => {
   const navigate = useNavigate();
 
+  // Helper to format breakdown line
+  const formatBreakdown = (usd: number, ars: number) => {
+    const parts: string[] = [];
+    if (usd > 0) parts.push(`USD ${usd.toLocaleString('en-US', { maximumFractionDigits: 0 })}`);
+    if (ars > 0) parts.push(`ARS ${ars.toLocaleString('en-US', { maximumFractionDigits: 0 })}`);
+    return parts.join(' · ');
+  };
+
   return (
     <div className="grid grid-cols-3 gap-3">
       {/* Income */}
@@ -27,8 +35,13 @@ export const QuickStats = ({
           <span className="text-xs text-muted-foreground">Ingresos</span>
         </div>
         <p className="text-sm font-semibold text-success">
-          {formatCurrency(income, "ARS")}
+          {formatCurrency(income.total, "ARS")}
         </p>
+        {(income.usd > 0 || income.ars > 0) && (
+          <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+            {formatBreakdown(income.usd, income.ars)}
+          </p>
+        )}
       </div>
 
       {/* Expenses */}
@@ -40,8 +53,13 @@ export const QuickStats = ({
           <span className="text-xs text-muted-foreground">Gastos</span>
         </div>
         <p className="text-sm font-semibold text-destructive">
-          {formatCurrency(expenses, "ARS")}
+          {formatCurrency(expenses.total, "ARS")}
         </p>
+        {(expenses.usd > 0 || expenses.ars > 0) && (
+          <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+            {formatBreakdown(expenses.usd, expenses.ars)}
+          </p>
+        )}
       </div>
 
       {/* Savings */}
@@ -56,9 +74,16 @@ export const QuickStats = ({
           <span className="text-xs text-muted-foreground">Ahorros</span>
         </div>
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-primary">
-            {formatCurrency(savings.usd, "USD")}
-          </p>
+          <div>
+            <p className="text-sm font-semibold text-primary">
+              {formatCurrency(savings.usd, "USD")}
+            </p>
+            {savings.ars > 0 && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {formatCurrency(savings.ars, "ARS")}
+              </p>
+            )}
+          </div>
           <ArrowRight className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
         </div>
       </button>
