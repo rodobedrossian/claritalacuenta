@@ -27,6 +27,7 @@ import { MobileHeader } from "@/components/MobileHeader";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useVoiceTransaction } from "@/hooks/useVoiceTransaction";
+import { useVoiceTokenPrefetch } from "@/hooks/useVoiceTokenPrefetch";
 import { useInsightsData } from "@/hooks/useInsightsData";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -89,19 +90,25 @@ const Index = () => {
   // Insights data
   const { data: insightsData, loading: insightsLoading, refetch: refetchInsights } = useInsightsData(user?.id);
 
-  // Voice transaction hook
+  // Voice token prefetch - fetches token when dashboard loads
+  const { getToken, prefetch: prefetchToken } = useVoiceTokenPrefetch();
+
+  // Voice transaction hook - uses prefetched token for faster startup
   const voiceTransaction = useVoiceTransaction({
     categories: dashboardData?.categories || [],
     userName: user?.user_metadata?.full_name || user?.email || "Usuario",
-    userId: user?.id
+    userId: user?.id,
+    getToken
   });
 
   // Open confirmation step when voice transaction is parsed
   useEffect(() => {
     if (voiceTransaction.isReady && voiceTransaction.parsedTransaction) {
       setVoiceConfirmationOpen(true);
+      // Prefetch a new token for the next recording
+      prefetchToken();
     }
-  }, [voiceTransaction.isReady, voiceTransaction.parsedTransaction]);
+  }, [voiceTransaction.isReady, voiceTransaction.parsedTransaction, prefetchToken]);
 
   // Handle URL action params from FAB navigation
   useEffect(() => {
