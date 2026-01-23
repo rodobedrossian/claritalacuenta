@@ -362,7 +362,7 @@ const Index = () => {
                 isProcessing={voiceTransaction.isProcessing}
               />
 
-              {/* Savings Dropdown (controlled, hidden trigger - dialog only) */}
+              {/* Savings Dialog (controlled, no visible trigger) */}
               <SavingsActionDropdown
                 availableBalanceUSD={availableBalanceUSD}
                 availableBalanceARS={availableBalanceARS}
@@ -370,6 +370,7 @@ const Index = () => {
                 onAddSavings={handleAddSavings}
                 open={savingsDropdownOpen}
                 onOpenChange={setSavingsDropdownOpen}
+                hideDropdownTrigger
               />
 
               {/* Budget Progress */}
