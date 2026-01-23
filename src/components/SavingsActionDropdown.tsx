@@ -42,6 +42,9 @@ interface SavingsActionDropdownProps {
     savingsType: "cash" | "bank" | "other",
     notes?: string
   ) => void;
+  // Controlled mode props
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 type ActionMode = "transfer" | "manual" | null;
@@ -51,9 +54,18 @@ export const SavingsActionDropdown = ({
   availableBalanceARS,
   onTransferFromBalance,
   onAddSavings,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: SavingsActionDropdownProps) => {
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [internalDialogOpen, setInternalDialogOpen] = useState(false);
   const [actionMode, setActionMode] = useState<ActionMode>(null);
+  
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledOpen !== undefined;
+  const dialogOpen = isControlled ? controlledOpen : internalDialogOpen;
+  const setDialogOpen = isControlled 
+    ? (open: boolean) => controlledOnOpenChange?.(open)
+    : setInternalDialogOpen;
   
   // Form state
   const [currency, setCurrency] = useState<"USD" | "ARS" | "">("");
