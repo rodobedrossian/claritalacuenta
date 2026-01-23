@@ -22,10 +22,19 @@ import { toast } from "sonner";
 
 interface AddGoalDialogProps {
   onAdd: (goal: Omit<SavingsGoal, "id" | "user_id" | "created_at" | "updated_at" | "is_completed">) => void;
+  // Controlled mode props
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export const AddGoalDialog = ({ onAdd }: AddGoalDialogProps) => {
-  const [open, setOpen] = useState(false);
+export const AddGoalDialog = ({ onAdd, open: controlledOpen, onOpenChange }: AddGoalDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? (v: boolean) => onOpenChange?.(v) : setInternalOpen;
+
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState<"USD" | "ARS">("ARS");
   const [targetAmount, setTargetAmount] = useState("");
@@ -62,12 +71,14 @@ export const AddGoalDialog = ({ onAdd }: AddGoalDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Objetivo
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Objetivo
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nuevo Objetivo de Ahorro</DialogTitle>

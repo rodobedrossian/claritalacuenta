@@ -24,10 +24,19 @@ import { toast } from "sonner";
 
 interface AddSavingsEntryDialogProps {
   onAdd: (entry: Omit<SavingsEntry, "id" | "user_id" | "created_at">) => void;
+  // Controlled mode props
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export const AddSavingsEntryDialog = ({ onAdd }: AddSavingsEntryDialogProps) => {
-  const [open, setOpen] = useState(false);
+export const AddSavingsEntryDialog = ({ onAdd, open: controlledOpen, onOpenChange }: AddSavingsEntryDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? (v: boolean) => onOpenChange?.(v) : setInternalOpen;
+
   const [entryType, setEntryType] = useState<SavingsEntry["entry_type"]>("deposit");
   const [currency, setCurrency] = useState<"USD" | "ARS">("ARS");
   const [savingsType, setSavingsType] = useState<"cash" | "bank" | "other">("cash");
@@ -62,12 +71,14 @@ export const AddSavingsEntryDialog = ({ onAdd }: AddSavingsEntryDialogProps) => 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Movimiento
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Movimiento
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Registrar Movimiento</DialogTitle>
