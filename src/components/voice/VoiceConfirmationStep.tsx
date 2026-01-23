@@ -115,82 +115,12 @@ export const VoiceConfirmationStep = ({
 
   const content = (
     <div className="flex flex-col h-full px-6 py-8" onClick={handleInteraction}>
-      {/* Success Animation */}
-      <div className="flex justify-center mb-8">
-        <motion.div
-          className="relative"
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        >
-          {/* Outer ring with sparkles */}
-          <motion.div
-            className="absolute inset-0 rounded-full"
-            initial={{ scale: 1 }}
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            <div className="w-24 h-24 rounded-full bg-primary/10" />
-          </motion.div>
-
-          {/* Main circle */}
-          <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
-            <AnimatePresence>
-              {showCheck && (
-                <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 15 }}
-                >
-                  <Check className="h-12 w-12 text-primary-foreground" strokeWidth={3} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Sparkle particles */}
-          {[0, 60, 120, 180, 240, 300].map((angle, i) => (
-            <motion.div
-              key={angle}
-              className="absolute"
-              style={{
-                top: `${50 + 60 * Math.sin((angle * Math.PI) / 180)}%`,
-                left: `${50 + 60 * Math.cos((angle * Math.PI) / 180)}%`,
-              }}
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: [0, 1, 0], opacity: [0, 1, 0] }}
-              transition={{
-                duration: 1.5,
-                delay: 0.3 + i * 0.1,
-                repeat: Infinity,
-                repeatDelay: 2,
-              }}
-            >
-              <Sparkles className="h-4 w-4 text-primary" />
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
-
-      {/* Title */}
-      <motion.div
-        className="text-center mb-6"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <h2 className="text-xl font-semibold mb-2">¡Transacción detectada!</h2>
-        <p className="text-sm text-muted-foreground">
-          Revisa los datos y confirma para guardar
-        </p>
-      </motion.div>
-
       {/* Transaction Card */}
       <motion.div
         className="bg-muted/30 rounded-2xl p-5 mb-6 border border-border/50"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.1 }}
       >
         {/* Amount & Type */}
         <div className="flex items-center justify-between mb-4">
@@ -223,7 +153,7 @@ export const VoiceConfirmationStep = ({
         </div>
 
         {/* Category & Description */}
-        <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border/50">
+        <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
             <CategoryIcon className="h-5 w-5 text-primary" />
           </div>
@@ -235,23 +165,6 @@ export const VoiceConfirmationStep = ({
               </p>
             )}
           </div>
-        </div>
-
-        {/* Transcribed text */}
-        <div className="bg-background/50 rounded-lg p-3">
-          <p className="text-xs text-muted-foreground mb-1">Texto reconocido:</p>
-          <p className="text-sm italic">"{transcribedText}"</p>
-        </div>
-
-        {/* Confidence Badge */}
-        <div className="flex items-center justify-between mt-4">
-          <Badge variant="outline" className={cn("gap-1.5", getConfidenceColor())}>
-            <span className="h-1.5 w-1.5 rounded-full bg-current" />
-            {getConfidenceLabel()} ({Math.round(confidence * 100)}%)
-          </Badge>
-          {transaction.notes && (
-            <p className="text-xs text-muted-foreground">💡 {transaction.notes}</p>
-          )}
         </div>
       </motion.div>
 
