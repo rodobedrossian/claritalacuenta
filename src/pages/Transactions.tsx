@@ -9,6 +9,8 @@ import { PullToRefresh } from "@/components/PullToRefresh";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TransactionsListSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useTransactionsData, Transaction, TransactionFilters } from "@/hooks/useTransactionsData";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -106,12 +108,20 @@ const Transactions = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" />
-          <p className="mt-4 text-muted-foreground">Cargando...</p>
+      <AppLayout>
+        <div className="min-h-screen">
+          <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+            <div className="container mx-auto px-4 md:px-6 py-4 pl-14 md:pl-6">
+              <Skeleton className="h-7 w-40" />
+            </div>
+          </header>
+          <main className="container mx-auto px-4 md:px-6 py-6">
+            <div className="rounded-lg bg-card border border-border/50 p-4">
+              <TransactionsListSkeleton count={8} />
+            </div>
+          </main>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
@@ -219,8 +229,8 @@ const Transactions = () => {
 
           {/* Loading state for initial load */}
           {loading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="rounded-lg bg-card border border-border/50 p-4">
+              <TransactionsListSkeleton count={10} />
             </div>
           ) : (
             <>
