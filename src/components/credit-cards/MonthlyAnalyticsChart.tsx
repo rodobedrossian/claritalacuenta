@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreditCardTransaction } from "@/hooks/useCreditCardStatements";
@@ -22,17 +22,18 @@ interface MonthlyAnalyticsChartProps {
   creditCards: CreditCardType[];
 }
 
+// Same colors as StatementSpendingChart for consistency
 const COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "hsl(var(--chart-6))",
-  "hsl(var(--chart-7))",
-  "hsl(var(--chart-8))",
-  "hsl(var(--chart-9))",
-  "hsl(var(--chart-10))",
+  "hsl(262, 83%, 58%)",
+  "hsl(217, 91%, 60%)",
+  "hsl(142, 71%, 45%)",
+  "hsl(38, 92%, 50%)",
+  "hsl(0, 84%, 60%)",
+  "hsl(280, 87%, 65%)",
+  "hsl(172, 66%, 50%)",
+  "hsl(47, 100%, 50%)",
+  "hsl(330, 81%, 60%)",
+  "hsl(200, 98%, 39%)",
 ];
 
 export const MonthlyAnalyticsChart = ({
@@ -102,6 +103,15 @@ export const MonthlyAnalyticsChart = ({
 
   const formatAmount = (value: number) => {
     return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const formatAmountShort = (value: number) => {
+    return new Intl.NumberFormat("es-AR", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
@@ -119,101 +129,114 @@ export const MonthlyAnalyticsChart = ({
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      {/* Pie Chart by Category */}
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Gasto por Categoría</CardTitle>
-            {hasBothCurrencies && (
-              <div className="flex gap-1">
-                <Button
-                  variant={currency === "ARS" ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setCurrency("ARS")}
-                >
-                  ARS
-                </Button>
-                <Button
-                  variant={currency === "USD" ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setCurrency("USD")}
-                >
-                  USD
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {categoryData.length > 0 ? (
-            <>
-              <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={categoryData}
-                      dataKey="amount"
-                      nameKey="category"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      label={false}
-                    >
-                      {categoryData.map((_, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      content={({ payload }) => {
-                        if (!payload || !payload[0]) return null;
-                        const data = payload[0].payload;
-                        return (
-                          <div className="bg-popover border rounded-lg p-2 text-sm shadow-md">
-                            <p className="font-medium">{data.category}</p>
-                            <p className="text-muted-foreground">{currency} {formatAmount(data.amount)}</p>
-                          </div>
-                        );
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-4 space-y-2 max-h-[150px] overflow-y-auto">
-                {categoryData.slice(0, 6).map((item, index) => (
-                  <div key={item.category} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                      />
-                      <span className="truncate max-w-[120px]">{item.category}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">
-                        {currency} {formatAmount(item.amount)}
-                      </span>
-                      <span className="text-muted-foreground text-xs">
-                        {((item.amount / total) * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {categoryData.length > 6 && (
-                  <div className="text-xs text-muted-foreground text-center">
-                    +{categoryData.length - 6} categorías más
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-              No hay datos en {currency}
+      {/* Pie Chart by Category - Matching StatementSpendingChart style */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold">Gastos por Categoría</h3>
+          {hasBothCurrencies && (
+            <div className="flex gap-1">
+              <Button
+                variant={currency === "ARS" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrency("ARS")}
+              >
+                ARS
+              </Button>
+              <Button
+                variant={currency === "USD" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrency("USD")}
+              >
+                USD
+              </Button>
             </div>
           )}
-        </CardContent>
+        </div>
+
+        {categoryData.length > 0 ? (
+          <div className="flex flex-col lg:flex-row gap-6 items-center">
+            {/* Donut Chart */}
+            <div className="flex-shrink-0">
+              <ResponsiveContainer width={240} height={240}>
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    dataKey="amount"
+                    nameKey="category"
+                  >
+                    {categoryData.map((_, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                        stroke="hsl(var(--background))"
+                        strokeWidth={2}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number) => formatAmount(value)}
+                    labelStyle={{ color: "hsl(var(--foreground))" }}
+                    itemStyle={{ color: "hsl(var(--foreground))" }}
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--popover))",
+                      borderColor: "hsl(var(--border))",
+                      borderRadius: "var(--radius)",
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Legend */}
+            <div className="flex-1 w-full lg:w-auto">
+              {/* Total */}
+              <div className="mb-4 p-3 rounded-lg bg-muted/30 border border-border/50">
+                <p className="text-sm text-muted-foreground">Total consolidado</p>
+                <p className="text-2xl font-bold">{formatAmount(total)}</p>
+              </div>
+
+              {/* Categories */}
+              <div className="space-y-2 overflow-y-auto max-h-[180px]">
+                {categoryData.map((item, index) => {
+                  const percentage = ((item.amount / total) * 100).toFixed(1);
+                  return (
+                    <div
+                      key={item.category}
+                      className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        />
+                        <span className="text-sm truncate" title={item.category}>
+                          {item.category}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className="text-sm font-medium">
+                          {formatAmount(item.amount)}
+                        </span>
+                        <span className="text-xs text-muted-foreground w-12 text-right">
+                          {percentage}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+            No hay datos en {currency}
+          </div>
+        )}
       </Card>
 
       {/* Bar Chart by Card */}
@@ -228,7 +251,7 @@ export const MonthlyAnalyticsChart = ({
                 <BarChart data={cardData} layout="vertical">
                   <XAxis
                     type="number"
-                    tickFormatter={(v) => formatAmount(v)}
+                    tickFormatter={(v) => formatAmountShort(v)}
                     tick={{ fontSize: 12 }}
                   />
                   <YAxis
@@ -244,7 +267,7 @@ export const MonthlyAnalyticsChart = ({
                       return (
                         <div className="bg-popover border rounded-lg p-2 text-sm shadow-md">
                           <p className="font-medium">{data.card}</p>
-                          <p className="text-muted-foreground">{currency} {formatAmount(data.amount)}</p>
+                          <p className="text-muted-foreground">{formatAmount(data.amount)}</p>
                         </div>
                       );
                     }}
