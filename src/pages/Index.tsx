@@ -22,6 +22,7 @@ import { VoiceTransactionDialog } from "@/components/voice/VoiceTransactionDialo
 import { VoiceRecordingOverlay } from "@/components/voice/VoiceRecordingOverlay";
 import { InsightsCard } from "@/components/insights/InsightsCard";
 import { MobileHeader } from "@/components/MobileHeader";
+import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useVoiceTransaction } from "@/hooks/useVoiceTransaction";
 import { useInsightsData } from "@/hooks/useInsightsData";
@@ -266,12 +267,9 @@ const Index = () => {
 
   if (loading || dataLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-          <p className="mt-4 text-muted-foreground">Cargando...</p>
-        </div>
-      </div>
+      <AppLayout>
+        <DashboardSkeleton />
+      </AppLayout>
     );
   }
 
