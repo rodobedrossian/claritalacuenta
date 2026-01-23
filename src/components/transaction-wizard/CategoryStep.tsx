@@ -2,7 +2,7 @@ import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { getCategoryIcon, getCategoryColor, DEFAULT_CATEGORY_ICONS, DEFAULT_CATEGORY_COLORS } from "@/lib/categoryIcons";
+import { getIconForCategory, getCategoryColor, DEFAULT_CATEGORY_COLORS } from "@/lib/categoryIcons";
 
 interface Category {
   id: string;
@@ -56,9 +56,8 @@ export const CategoryStep = ({
       <ScrollArea className="flex-1 -mx-2 px-2">
         <div className="grid grid-cols-3 gap-2 pb-4">
           {categories.map((cat) => {
-            const iconName = cat.icon || DEFAULT_CATEGORY_ICONS[cat.name] || "circle";
             const color = cat.color || DEFAULT_CATEGORY_COLORS[cat.name] || getCategoryColor(cat.name);
-            const IconComponent = getCategoryIcon(iconName);
+            const IconComponent = getIconForCategory(cat.name, cat.icon);
             const isSelected = selectedCategory === cat.name;
 
             return (

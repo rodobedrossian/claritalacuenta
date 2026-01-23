@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { getCategoryIcon, getCategoryColor, DEFAULT_CATEGORY_ICONS, DEFAULT_CATEGORY_COLORS } from "@/lib/categoryIcons";
+import { getIconForCategory, getCategoryColor, DEFAULT_CATEGORY_COLORS } from "@/lib/categoryIcons";
 
 interface Category {
   id: string;
@@ -74,9 +74,8 @@ export const DetailsStep = ({
 }: DetailsStepProps) => {
   // Get category info for display
   const categoryData = categories.find(c => c.name === category);
-  const iconName = categoryData?.icon || DEFAULT_CATEGORY_ICONS[category] || "circle";
   const color = categoryData?.color || DEFAULT_CATEGORY_COLORS[category] || getCategoryColor(category);
-  const IconComponent = getCategoryIcon(iconName);
+  const IconComponent = getIconForCategory(category, categoryData?.icon);
 
   const formattedAmount = new Intl.NumberFormat("es-AR", {
     minimumFractionDigits: 0,
