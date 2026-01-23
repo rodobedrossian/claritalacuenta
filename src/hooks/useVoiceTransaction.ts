@@ -63,6 +63,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoStopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isParsingRef = useRef<boolean>(false);
   const committedTextsRef = useRef<Set<string>>(new Set());
   const startInFlightRef = useRef(false);
@@ -70,8 +71,10 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
   const stopIntentRef = useRef(false);
   const stateRef = useRef<VoiceRecordingState>(state);
   const currentPartialRef = useRef<string>("");
+  const hasReceivedSpeechRef = useRef<boolean>(false);
 
   const MAX_DURATION_MS = 30_000;
+  const SILENCE_TIMEOUT_MS = 3_000; // Stop after 3 seconds of silence
 
   useEffect(() => {
     stateRef.current = state;
@@ -95,6 +98,10 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     if (autoStopTimeoutRef.current) {
       clearTimeout(autoStopTimeoutRef.current);
       autoStopTimeoutRef.current = null;
+    }
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
     }
     if (sourceRef.current) {
       try { sourceRef.current.disconnect(); } catch (e) { /* ignore */ }
@@ -199,6 +206,10 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       clearTimeout(autoStopTimeoutRef.current);
       autoStopTimeoutRef.current = null;
     }
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
     
     // Send final commit message if WebSocket is open
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -262,6 +273,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       setDuration(0);
       committedTextsRef.current = new Set();
       stopIntentRef.current = false;
+      hasReceivedSpeechRef.current = false;
       setState("connecting");
       
       console.log("[Voice] Starting recording flow...");
@@ -360,6 +372,23 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
           console.log("[Voice] Auto-stop triggered (30s limit)");
           stopRecording();
         }, MAX_DURATION_MS);
+
+        // Reset speech detection flag
+        hasReceivedSpeechRef.current = false;
+      };
+
+      // Helper to reset silence timeout
+      const resetSilenceTimer = () => {
+        if (silenceTimeoutRef.current) {
+          clearTimeout(silenceTimeoutRef.current);
+        }
+        // Only start silence timer after we've received some speech
+        if (hasReceivedSpeechRef.current) {
+          silenceTimeoutRef.current = setTimeout(() => {
+            console.log("[Voice] Auto-stop triggered (3s silence)");
+            stopRecording();
+          }, SILENCE_TIMEOUT_MS);
+        }
       };
 
       ws.onmessage = (event) => {
@@ -378,6 +407,12 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
                 .filter(Boolean)
                 .join(" ");
               setPartialText(displayText);
+              
+              // Mark that we've received speech and reset silence timer
+              if (currentPartialRef.current) {
+                hasReceivedSpeechRef.current = true;
+                resetSilenceTimer();
+              }
               break;
               
             case "committed_transcript":
@@ -393,6 +428,10 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
                   setTranscribedText(fullText);
                   currentPartialRef.current = "";
                   setPartialText(fullText);
+                  
+                  // Reset silence timer after committed speech
+                  hasReceivedSpeechRef.current = true;
+                  resetSilenceTimer();
                 }
               }
               break;
@@ -463,6 +502,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     currentPartialRef.current = "";
     setTranscribedText("");
     committedTextsRef.current = new Set();
+    hasReceivedSpeechRef.current = false;
   }, [cleanup]);
 
   const reset = useCallback(() => {
@@ -477,6 +517,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     setDuration(0);
     isParsingRef.current = false;
     committedTextsRef.current = new Set();
+    hasReceivedSpeechRef.current = false;
   }, [cleanup]);
 
   const retry = useCallback(() => {
