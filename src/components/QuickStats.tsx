@@ -16,75 +16,93 @@ export const QuickStats = ({
 }: QuickStatsProps) => {
   const navigate = useNavigate();
 
-  // Helper to format breakdown line
-  const formatBreakdown = (usd: number, ars: number) => {
-    const parts: string[] = [];
-    if (usd > 0) parts.push(`USD ${usd.toLocaleString('en-US', { maximumFractionDigits: 0 })}`);
-    if (ars > 0) parts.push(`ARS ${ars.toLocaleString('en-US', { maximumFractionDigits: 0 })}`);
-    return parts.join(' · ');
-  };
-
   return (
-    <div className="grid grid-cols-3 gap-3">
-      {/* Income */}
-      <div className="bg-card rounded-xl p-3 border border-border/50">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="p-1.5 rounded-lg bg-success/10">
-            <TrendingUp className="h-3.5 w-3.5 text-success" />
-          </div>
-          <span className="text-xs text-muted-foreground">Ingresos</span>
-        </div>
-        <p className="text-sm font-semibold text-success">
-          {formatCurrency(income.total, "ARS")}
-        </p>
-        {(income.usd > 0 || income.ars > 0) && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
-            {formatBreakdown(income.usd, income.ars)}
-          </p>
-        )}
-      </div>
-
-      {/* Expenses */}
-      <div className="bg-card rounded-xl p-3 border border-border/50">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="p-1.5 rounded-lg bg-destructive/10">
-            <TrendingDown className="h-3.5 w-3.5 text-destructive" />
-          </div>
-          <span className="text-xs text-muted-foreground">Gastos</span>
-        </div>
-        <p className="text-sm font-semibold text-destructive">
-          {formatCurrency(expenses.total, "ARS")}
-        </p>
-        {(expenses.usd > 0 || expenses.ars > 0) && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
-            {formatBreakdown(expenses.usd, expenses.ars)}
-          </p>
-        )}
-      </div>
-
-      {/* Savings */}
-      <button 
-        onClick={() => navigate("/savings")}
-        className="bg-card rounded-xl p-3 border border-border/50 hover:border-primary/50 transition-colors text-left group"
-      >
-        <div className="flex items-center gap-2 mb-1">
-          <div className="p-1.5 rounded-lg bg-primary/10">
-            <PiggyBank className="h-3.5 w-3.5 text-primary" />
-          </div>
-          <span className="text-xs text-muted-foreground">Ahorros</span>
-        </div>
+    <div className="space-y-3">
+      {/* Income Card */}
+      <div className="bg-card rounded-xl p-4 border border-border/50">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold text-primary">
-              {formatCurrency(savings.usd, "USD")}
-            </p>
-            {savings.ars > 0 && (
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                {formatCurrency(savings.ars, "ARS")}
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-success/10">
+              <TrendingUp className="h-4 w-4 text-success" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Ingresos del mes</p>
+              <p className="text-lg font-bold text-success">
+                {formatCurrency(income.total, "ARS")}
+              </p>
+            </div>
+          </div>
+          <div className="text-right space-y-0.5">
+            {income.usd > 0 && (
+              <p className="text-xs text-muted-foreground">
+                USD {income.usd.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              </p>
+            )}
+            {income.ars > 0 && (
+              <p className="text-xs text-muted-foreground">
+                ARS {income.ars.toLocaleString('en-US', { maximumFractionDigits: 0 })}
               </p>
             )}
           </div>
-          <ArrowRight className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
+        </div>
+      </div>
+
+      {/* Expenses Card */}
+      <div className="bg-card rounded-xl p-4 border border-border/50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-destructive/10">
+              <TrendingDown className="h-4 w-4 text-destructive" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Gastos del mes</p>
+              <p className="text-lg font-bold text-destructive">
+                {formatCurrency(expenses.total, "ARS")}
+              </p>
+            </div>
+          </div>
+          <div className="text-right space-y-0.5">
+            {expenses.usd > 0 && (
+              <p className="text-xs text-muted-foreground">
+                USD {expenses.usd.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              </p>
+            )}
+            {expenses.ars > 0 && (
+              <p className="text-xs text-muted-foreground">
+                ARS {expenses.ars.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Savings Card */}
+      <button 
+        onClick={() => navigate("/savings")}
+        className="w-full bg-card rounded-xl p-4 border border-border/50 hover:border-primary/50 transition-colors text-left group"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <PiggyBank className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Ahorros actuales</p>
+              <p className="text-lg font-bold text-primary">
+                {formatCurrency(savings.usd, "USD")}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              {savings.ars > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  + {formatCurrency(savings.ars, "ARS")}
+                </p>
+              )}
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
         </div>
       </button>
     </div>
