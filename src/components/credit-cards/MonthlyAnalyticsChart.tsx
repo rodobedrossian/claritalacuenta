@@ -167,10 +167,16 @@ export const MonthlyAnalyticsChart = ({
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number) => [
-                        `${currency} ${formatAmount(value)}`,
-                        "Monto",
-                      ]}
+                      content={({ payload }) => {
+                        if (!payload || !payload[0]) return null;
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-popover border rounded-lg p-2 text-sm shadow-md">
+                            <p className="font-medium">{data.category}</p>
+                            <p className="text-muted-foreground">{currency} {formatAmount(data.amount)}</p>
+                          </div>
+                        );
+                      }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -232,10 +238,16 @@ export const MonthlyAnalyticsChart = ({
                     tick={{ fontSize: 12 }}
                   />
                   <Tooltip
-                    formatter={(value: number) => [
-                      `${currency} ${formatAmount(value)}`,
-                      "Monto",
-                    ]}
+                    content={({ payload }) => {
+                      if (!payload || !payload[0]) return null;
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-popover border rounded-lg p-2 text-sm shadow-md">
+                          <p className="font-medium">{data.card}</p>
+                          <p className="text-muted-foreground">{currency} {formatAmount(data.amount)}</p>
+                        </div>
+                      );
+                    }}
                   />
                   <Bar
                     dataKey="amount"
