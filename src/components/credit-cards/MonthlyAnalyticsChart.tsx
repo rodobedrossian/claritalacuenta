@@ -28,11 +28,11 @@ const COLORS = [
   "hsl(var(--chart-3))",
   "hsl(var(--chart-4))",
   "hsl(var(--chart-5))",
-  "hsl(210, 70%, 50%)",
-  "hsl(280, 60%, 50%)",
-  "hsl(30, 80%, 55%)",
-  "hsl(160, 60%, 45%)",
-  "hsl(340, 70%, 50%)",
+  "hsl(var(--chart-6))",
+  "hsl(var(--chart-7))",
+  "hsl(var(--chart-8))",
+  "hsl(var(--chart-9))",
+  "hsl(var(--chart-10))",
 ];
 
 export const MonthlyAnalyticsChart = ({
