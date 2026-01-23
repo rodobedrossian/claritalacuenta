@@ -6,7 +6,7 @@ import { SavingsEntriesList } from "@/components/savings/SavingsEntriesList";
 import { InvestmentsList } from "@/components/savings/InvestmentsList";
 import { GoalsList } from "@/components/savings/GoalsList";
 import { AddSavingsWizard } from "@/components/savings-wizard/AddSavingsWizard";
-import { AddInvestmentDialog } from "@/components/savings/AddInvestmentDialog";
+import { AddInvestmentWizard } from "@/components/investment-wizard/AddInvestmentWizard";
 import { AddGoalDialog } from "@/components/savings/AddGoalDialog";
 import { EditSavingsEntryDialog } from "@/components/savings/EditSavingsEntryDialog";
 import { SavingsQuickStats } from "@/components/savings/SavingsQuickStats";
@@ -16,6 +16,7 @@ import { SavingsSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { MobileHeader } from "@/components/MobileHeader";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { useSavingsData, SavingsEntry } from "@/hooks/useSavingsData";
+import { useMonthlyBalance } from "@/hooks/useMonthlyBalance";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
@@ -31,7 +32,7 @@ const Savings = () => {
   
   // Dialog states for quick actions
   const [savingsWizardOpen, setSavingsWizardOpen] = useState(false);
-  const [investmentDialogOpen, setInvestmentDialogOpen] = useState(false);
+  const [investmentWizardOpen, setInvestmentWizardOpen] = useState(false);
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
 
   // Use the consolidated data hook
@@ -48,6 +49,9 @@ const Savings = () => {
     toggleGoalComplete,
     deleteGoal
   } = useSavingsData(user?.id);
+
+  // Get monthly balance for savings wizard
+  const { balance: monthlyBalance, refetch: refetchBalance } = useMonthlyBalance(user?.id);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -70,8 +74,8 @@ const Savings = () => {
   };
 
   const handlePullToRefresh = useCallback(async () => {
-    await refetch();
-  }, [refetch]);
+    await Promise.all([refetch(), refetchBalance()]);
+  }, [refetch, refetchBalance]);
 
   const formatCurrency = (amount: number, currency: "USD" | "ARS") => {
     return `${currency} ${new Intl.NumberFormat("en-US", {
@@ -153,10 +157,9 @@ const Savings = () => {
 
             {/* Quick Actions */}
             <SavingsQuickActions
-              onAddDeposit={() => setSavingsWizardOpen(true)}
-              onAddInvestment={() => setInvestmentDialogOpen(true)}
+              onAddSavings={() => setSavingsWizardOpen(true)}
+              onAddInvestment={() => setInvestmentWizardOpen(true)}
               onAddGoal={() => setGoalDialogOpen(true)}
-              onRegisterPrevious={() => setSavingsWizardOpen(true)}
             />
 
             {/* Tabs */}
@@ -234,12 +237,14 @@ const Savings = () => {
           open={savingsWizardOpen}
           onOpenChange={setSavingsWizardOpen}
           onAdd={addEntry}
+          availableBalanceUSD={monthlyBalance.availableUSD}
+          availableBalanceARS={monthlyBalance.availableARS}
         />
 
-        {/* Add Investment Dialog */}
-        <AddInvestmentDialog 
-          open={investmentDialogOpen}
-          onOpenChange={setInvestmentDialogOpen}
+        {/* Add Investment Wizard */}
+        <AddInvestmentWizard 
+          open={investmentWizardOpen}
+          onOpenChange={setInvestmentWizardOpen}
           onAdd={addInvestment} 
         />
 

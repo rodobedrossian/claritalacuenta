@@ -1,32 +1,41 @@
-import { ArrowDownCircle, ArrowUpCircle, Delete, Sparkles } from "lucide-react";
+import { Banknote, PiggyBank, Delete } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+
+export type SavingsSource = "balance" | "previous";
 
 interface SavingsAmountStepProps {
-  entryType: "deposit" | "withdrawal" | "interest";
+  source: SavingsSource;
   currency: "USD" | "ARS" | "";
   amount: string;
-  onEntryTypeChange: (type: "deposit" | "withdrawal" | "interest") => void;
+  availableBalanceUSD: number;
+  availableBalanceARS: number;
+  onSourceChange: (source: SavingsSource) => void;
   onCurrencyChange: (currency: "USD" | "ARS") => void;
   onAmountChange: (amount: string) => void;
   onNext: () => void;
 }
 
 export const SavingsAmountStep = ({
-  entryType,
+  source,
   currency,
   amount,
-  onEntryTypeChange,
+  availableBalanceUSD,
+  availableBalanceARS,
+  onSourceChange,
   onCurrencyChange,
   onAmountChange,
   onNext,
 }: SavingsAmountStepProps) => {
+  const hasBalance = availableBalanceUSD > 0 || availableBalanceARS > 0;
+  
   const handleKeyPress = (key: string) => {
     if (key === "backspace") {
       onAmountChange(amount.slice(0, -1));
-    } else if (key === "." && !amount.includes(".")) {
-      onAmountChange(amount + ".");
-    } else if (key !== ".") {
+    } else if (key === ".") {
+      if (!amount.includes(".")) {
+        onAmountChange(amount + ".");
+      }
+    } else {
       // Limit to 2 decimal places
       const parts = amount.split(".");
       if (parts[1] && parts[1].length >= 2) return;
@@ -36,152 +45,177 @@ export const SavingsAmountStep = ({
     }
   };
 
-  const displayAmount = amount || "0";
-  const canProceed = !!currency && parseFloat(amount) > 0;
-
-  const getTypeColor = () => {
-    switch (entryType) {
-      case "deposit":
-        return "text-success";
-      case "withdrawal":
-        return "text-destructive";
-      case "interest":
-        return "text-primary";
-    }
+  const handleUseMax = () => {
+    if (!currency) return;
+    const maxAmount = currency === "USD" ? availableBalanceUSD : availableBalanceARS;
+    onAmountChange(maxAmount.toString());
   };
+
+  const getAvailableForCurrency = (curr: "USD" | "ARS") => {
+    return curr === "USD" ? availableBalanceUSD : availableBalanceARS;
+  };
+
+  const formatDisplayAmount = () => {
+    if (!amount) return "0";
+    const num = parseFloat(amount);
+    if (isNaN(num)) return "0";
+    return new Intl.NumberFormat("es-AR", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(num);
+  };
+
+  const formatCurrency = (value: number, curr: "USD" | "ARS") => {
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: curr,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const canProceed = currency && parseFloat(amount) > 0;
+
+  // Check if amount exceeds available balance when source is "balance"
+  const exceedsBalance = source === "balance" && currency && parseFloat(amount) > getAvailableForCurrency(currency as "USD" | "ARS");
 
   return (
     <div className="flex flex-col h-full">
-      {/* Entry Type Toggle */}
-      <div className="flex gap-2 p-1 bg-muted rounded-lg mb-4">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => onEntryTypeChange("deposit")}
-          className={cn(
-            "flex-1 gap-1.5 transition-all text-sm px-2",
-            entryType === "deposit" 
-              ? "bg-success/20 text-success hover:bg-success/30" 
-              : "hover:bg-muted-foreground/10"
+      {/* Source selection */}
+      <div className="px-4 py-3 space-y-3">
+        <p className="text-sm text-muted-foreground text-center">¿De dónde viene este ahorro?</p>
+        <div className="space-y-2">
+          {hasBalance && (
+            <button
+              onClick={() => onSourceChange("balance")}
+              className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                source === "balance"
+                  ? "border-primary bg-primary/5"
+                  : "border-border/50 hover:border-primary/30"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-full ${source === "balance" ? "bg-primary/20" : "bg-muted"}`}>
+                  <Banknote className={`h-5 w-5 ${source === "balance" ? "text-primary" : "text-muted-foreground"}`} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-sm">Del balance del mes</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(availableBalanceARS, "ARS")} / {formatCurrency(availableBalanceUSD, "USD")}
+                  </p>
+                </div>
+              </div>
+            </button>
           )}
-        >
-          <ArrowDownCircle className="h-4 w-4" />
-          Depósito
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => onEntryTypeChange("withdrawal")}
-          className={cn(
-            "flex-1 gap-1.5 transition-all text-sm px-2",
-            entryType === "withdrawal" 
-              ? "bg-destructive/20 text-destructive hover:bg-destructive/30" 
-              : "hover:bg-muted-foreground/10"
-          )}
-        >
-          <ArrowUpCircle className="h-4 w-4" />
-          Retiro
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => onEntryTypeChange("interest")}
-          className={cn(
-            "flex-1 gap-1.5 transition-all text-sm px-2",
-            entryType === "interest" 
-              ? "bg-primary/20 text-primary hover:bg-primary/30" 
-              : "hover:bg-muted-foreground/10"
-          )}
-        >
-          <Sparkles className="h-4 w-4" />
-          Interés
-        </Button>
-      </div>
-
-      {/* Currency Toggle */}
-      <div className="flex gap-2 mb-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => onCurrencyChange("ARS")}
-          className={cn(
-            "flex-1 h-12 text-lg font-semibold transition-all",
-            currency === "ARS" 
-              ? "border-primary bg-primary/10 text-primary" 
-              : "border-border/50"
-          )}
-        >
-          ARS $
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => onCurrencyChange("USD")}
-          className={cn(
-            "flex-1 h-12 text-lg font-semibold transition-all",
-            currency === "USD" 
-              ? "border-primary bg-primary/10 text-primary" 
-              : "border-border/50"
-          )}
-        >
-          USD $
-        </Button>
-      </div>
-
-      {/* Amount Display */}
-      <div className="flex-1 flex flex-col items-center justify-center py-4">
-        <div className="flex items-baseline gap-2">
-          {currency && (
-            <span className="text-2xl text-muted-foreground">{currency}</span>
-          )}
-          <span className={cn(
-            "font-bold transition-all",
-            displayAmount.length > 8 ? "text-4xl" : "text-5xl",
-            !currency ? "text-muted-foreground" : getTypeColor()
-          )}>
-            {!currency ? "Elegí moneda" : new Intl.NumberFormat("es-AR", {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 2,
-            }).format(parseFloat(displayAmount) || 0)}
-          </span>
+          
+          <button
+            onClick={() => onSourceChange("previous")}
+            className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+              source === "previous"
+                ? "border-primary bg-primary/5"
+                : "border-border/50 hover:border-primary/30"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-full ${source === "previous" ? "bg-primary/20" : "bg-muted"}`}>
+                <PiggyBank className={`h-5 w-5 ${source === "previous" ? "text-primary" : "text-muted-foreground"}`} />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Ya lo tenía guardado</p>
+                <p className="text-xs text-muted-foreground">Registrar ahorro existente</p>
+              </div>
+            </div>
+          </button>
         </div>
-        {currency && (
+      </div>
+
+      {/* Currency selector */}
+      <div className="flex justify-center gap-4 py-3">
+        {(["ARS", "USD"] as const).map((curr) => {
+          const available = getAvailableForCurrency(curr);
+          const isDisabled = source === "balance" && available <= 0;
+          
+          return (
+            <button
+              key={curr}
+              onClick={() => !isDisabled && onCurrencyChange(curr)}
+              disabled={isDisabled}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                currency === curr
+                  ? "bg-primary text-primary-foreground"
+                  : isDisabled
+                    ? "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              {curr === "ARS" ? "ARS $" : "USD $"}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Amount display */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-2">
+        <div className="text-center">
+          <span className={`text-5xl md:text-6xl font-bold tracking-tight text-primary`}>
+            {currency || "ARS"} {formatDisplayAmount()}
+          </span>
           <p className="text-sm text-muted-foreground mt-2">
-            {entryType === "deposit" && "Ingreso a ahorros"}
-            {entryType === "withdrawal" && "Retiro de ahorros"}
-            {entryType === "interest" && "Interés ganado"}
+            {source === "balance" ? "Monto a transferir a ahorros" : "Monto a registrar"}
           </p>
+          {source === "balance" && currency && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Disponible: {formatCurrency(getAvailableForCurrency(currency as "USD" | "ARS"), currency as "USD" | "ARS")}
+            </p>
+          )}
+          {exceedsBalance && (
+            <p className="text-xs text-destructive mt-1">
+              Excede el balance disponible
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Keypad */}
+      <div className="px-6 pb-4">
+        <div className="grid grid-cols-3 gap-3 max-w-xs mx-auto">
+          {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "backspace"].map((key) => (
+            <Button
+              key={key}
+              variant="ghost"
+              className={`h-14 text-xl font-medium rounded-xl ${
+                key === "backspace" ? "text-muted-foreground" : ""
+              }`}
+              onClick={() => handleKeyPress(key)}
+              disabled={!currency}
+            >
+              {key === "backspace" ? <Delete className="h-6 w-6" /> : key}
+            </Button>
+          ))}
+        </div>
+
+        {/* Use max button for balance source */}
+        {source === "balance" && currency && (
+          <Button
+            variant="outline"
+            className="w-full mt-3 max-w-xs mx-auto block"
+            onClick={handleUseMax}
+          >
+            Usar máximo ({formatCurrency(getAvailableForCurrency(currency as "USD" | "ARS"), currency as "USD" | "ARS")})
+          </Button>
         )}
       </div>
 
-      {/* Numeric Keypad */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "backspace"].map((key) => (
-          <Button
-            key={key}
-            type="button"
-            variant="outline"
-            onClick={() => handleKeyPress(key)}
-            disabled={!currency}
-            className={cn(
-              "h-14 text-xl font-semibold border-border/50 hover:bg-muted",
-              key === "backspace" && "text-destructive"
-            )}
-          >
-            {key === "backspace" ? <Delete className="h-6 w-6" /> : key}
-          </Button>
-        ))}
+      {/* Continue button */}
+      <div className="p-4 border-t border-border/50">
+        <Button
+          className="w-full h-12 text-base font-medium"
+          onClick={onNext}
+          disabled={!canProceed || !!exceedsBalance}
+        >
+          Continuar
+        </Button>
       </div>
-
-      {/* Next Button */}
-      <Button 
-        type="button"
-        onClick={onNext}
-        disabled={!canProceed}
-        className="w-full h-12 text-lg gradient-primary"
-      >
-        Continuar
-      </Button>
     </div>
   );
 };

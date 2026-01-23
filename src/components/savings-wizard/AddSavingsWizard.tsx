@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { SavingsAmountStep } from "./SavingsAmountStep";
+import { SavingsAmountStep, SavingsSource } from "./SavingsAmountStep";
 import { SavingsDetailsStep } from "./SavingsDetailsStep";
 import { SavingsEntry } from "@/hooks/useSavingsData";
 import { toast } from "sonner";
@@ -13,19 +13,25 @@ interface AddSavingsWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAdd: (entry: Omit<SavingsEntry, "id" | "user_id" | "created_at">) => Promise<void>;
+  availableBalanceUSD?: number;
+  availableBalanceARS?: number;
 }
 
-export const AddSavingsWizard = ({
-  open,
-  onOpenChange,
+export const AddSavingsWizard = ({ 
+  open, 
+  onOpenChange, 
   onAdd,
+  availableBalanceUSD = 0,
+  availableBalanceARS = 0
 }: AddSavingsWizardProps) => {
   const isMobile = useIsMobile();
   const [step, setStep] = useState<WizardStep>("amount");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
-  const [entryType, setEntryType] = useState<"deposit" | "withdrawal" | "interest">("deposit");
+  const [source, setSource] = useState<SavingsSource>(
+    availableBalanceUSD > 0 || availableBalanceARS > 0 ? "balance" : "previous"
+  );
   const [currency, setCurrency] = useState<"USD" | "ARS" | "">("");
   const [amount, setAmount] = useState("");
   const [savingsType, setSavingsType] = useState<"cash" | "bank" | "other" | "">("");
@@ -33,7 +39,7 @@ export const AddSavingsWizard = ({
 
   const resetForm = () => {
     setStep("amount");
-    setEntryType("deposit");
+    setSource(availableBalanceUSD > 0 || availableBalanceARS > 0 ? "balance" : "previous");
     setCurrency("");
     setAmount("");
     setSavingsType("");
@@ -48,15 +54,15 @@ export const AddSavingsWizard = ({
   };
 
   const handleNextStep = () => {
-    if (step === "amount") {
-      setStep("details");
+    if (!currency || parseFloat(amount) <= 0) {
+      toast.error("Ingresa un monto válido");
+      return;
     }
+    setStep("details");
   };
 
   const handleBackStep = () => {
-    if (step === "details") {
-      setStep("amount");
-    }
+    setStep("amount");
   };
 
   const handleSubmit = async () => {
@@ -73,30 +79,39 @@ export const AddSavingsWizard = ({
 
     setIsSubmitting(true);
     try {
+      // Build notes with source info
+      let finalNotes = notes.trim();
+      if (source === "balance") {
+        const autoNote = "Transferencia desde balance del mes";
+        finalNotes = finalNotes ? `${autoNote} - ${finalNotes}` : autoNote;
+      }
+
       await onAdd({
-        entry_type: entryType,
+        entry_type: "deposit", // Always deposit for savings registration
         currency: currency as "USD" | "ARS",
         amount: numAmount,
+        notes: finalNotes || null,
         savings_type: savingsType as "cash" | "bank" | "other",
-        notes: notes.trim() || null,
       });
+
       handleOpenChange(false);
     } catch (error) {
-      console.error("Error saving entry:", error);
-      toast.error("Error al guardar el movimiento");
+      console.error("Error adding savings:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const content = (
-    <>
+    <div className="h-full flex flex-col">
       {step === "amount" && (
         <SavingsAmountStep
-          entryType={entryType}
+          source={source}
           currency={currency}
           amount={amount}
-          onEntryTypeChange={setEntryType}
+          availableBalanceUSD={availableBalanceUSD}
+          availableBalanceARS={availableBalanceARS}
+          onSourceChange={setSource}
           onCurrencyChange={setCurrency}
           onAmountChange={setAmount}
           onNext={handleNextStep}
@@ -104,7 +119,7 @@ export const AddSavingsWizard = ({
       )}
       {step === "details" && currency && (
         <SavingsDetailsStep
-          entryType={entryType}
+          source={source}
           currency={currency as "USD" | "ARS"}
           amount={amount}
           savingsType={savingsType}
@@ -116,16 +131,14 @@ export const AddSavingsWizard = ({
           isSubmitting={isSubmitting}
         />
       )}
-    </>
+    </div>
   );
 
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={handleOpenChange}>
-        <DrawerContent className="h-[85vh] px-4 pb-safe">
-          <div className="pt-4 h-full">
-            {content}
-          </div>
+        <DrawerContent className="h-[85vh] max-h-[85vh]">
+          {content}
         </DrawerContent>
       </Drawer>
     );
@@ -133,7 +146,7 @@ export const AddSavingsWizard = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[425px] p-6 h-[600px] flex flex-col">
+      <DialogContent className="max-w-md h-[600px] p-0 overflow-hidden">
         {content}
       </DialogContent>
     </Dialog>
