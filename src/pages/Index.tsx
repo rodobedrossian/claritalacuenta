@@ -43,7 +43,6 @@ const Index = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [isRefreshingRate, setIsRefreshingRate] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -120,33 +119,20 @@ const Index = () => {
   }, [location.search, navigate, voiceTransaction]);
 
   useEffect(() => {
-    // Check authentication
-    const {
-      data: {
-        subscription
-      }
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    // Solo obtener sesión inicial - ProtectedRoute ya validó que existe
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (!session) {
-        navigate("/auth");
-      }
     });
 
-    supabase.auth.getSession().then(({
-      data: {
-        session
+    // Escuchar cambios para logout
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
       }
-    }) => {
-      setUser(session?.user ?? null);
-      if (!session) {
-        navigate("/auth");
-      } else {
-        setLoading(false);
-      }
-    });
+    );
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
 
   const fetchExchangeRate = async () => {
     try {
@@ -276,7 +262,7 @@ const Index = () => {
     toast.success("Dashboard actualizado");
   }, [refetch, refetchInsights]);
 
-  if (loading || dataLoading) {
+  if (dataLoading) {
     return (
       <AppLayout>
         <DashboardSkeleton />
