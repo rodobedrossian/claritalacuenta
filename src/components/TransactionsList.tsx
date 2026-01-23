@@ -229,10 +229,10 @@ export const TransactionsList = ({
     <>
       {showCard && (
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Actividad reciente</h3>
+          <h3 className="text-lg font-semibold">Transacciones Recientes</h3>
           {showViewAll && onViewAll && (
             <Button variant="ghost" onClick={onViewAll} className="text-sm">
-              Ver Todas →
+              Ver más →
             </Button>
           )}
         </div>
