@@ -1,32 +1,25 @@
-import { useState } from "react";
-import { CalendarIcon, Wallet, Banknote } from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
+  Drawer,
+  DrawerContent,
+} from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
+import { AmountStep } from "./transaction-wizard/AmountStep";
+import { CategoryStep } from "./transaction-wizard/CategoryStep";
+import { DetailsStep } from "./transaction-wizard/DetailsStep";
+
+interface Category {
+  id: string;
+  name: string;
+  type: string;
+  icon?: string | null;
+  color?: string | null;
+}
 
 interface AddTransactionDialogProps {
   onAdd: (transaction: {
@@ -41,12 +34,14 @@ interface AddTransactionDialogProps {
     savings_source?: string;
     payment_method?: string;
   }) => void;
-  categories: Array<{ id: string; name: string; type: string }>;
+  categories: Category[];
   currentUserId: string;
   currentSavings?: { usd: number; ars: number };
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
+
+type WizardStep = "amount" | "category" | "details";
 
 export const AddTransactionDialog = ({ 
   onAdd, 
@@ -56,12 +51,16 @@ export const AddTransactionDialog = ({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange
 }: AddTransactionDialogProps) => {
+  const isMobile = useIsMobile();
   const [internalOpen, setInternalOpen] = useState(false);
   
   // Support both controlled and uncontrolled modes
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? (controlledOnOpenChange || (() => {})) : setInternalOpen;
+
+  // Wizard state
+  const [step, setStep] = useState<WizardStep>("amount");
   const [type, setType] = useState<"income" | "expense">("expense");
   const [currency, setCurrency] = useState<"USD" | "ARS" | "">("");
   const [amount, setAmount] = useState("");
@@ -71,18 +70,45 @@ export const AddTransactionDialog = ({
   const [fromSavings, setFromSavings] = useState(false);
   const [savingsSource, setSavingsSource] = useState<"cash" | "bank" | "other" | "">("");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "debit">("cash");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setStep("amount");
+      setType("expense");
+      setCurrency("");
+      setAmount("");
+      setCategory("");
+      setDescription("");
+      setDate(new Date());
+      setFromSavings(false);
+      setSavingsSource("");
+      setPaymentMethod("cash");
+    }
+  }, [open]);
 
   const availableSavings = currency && currentSavings 
     ? (currency === "USD" ? currentSavings.usd : currentSavings.ars) 
     : 0;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!amount || !currency || !category || !description) {
-      toast.error("Completa todos los campos");
+  const handleTypeChange = (newType: "income" | "expense") => {
+    setType(newType);
+    if (newType === "income") {
+      setPaymentMethod("cash");
+      setFromSavings(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    // Validate required fields
+    if (!amount || !currency || !category) {
+      toast.error("Completa todos los campos requeridos");
       return;
     }
+
+    // Use category name as description if empty
+    const finalDescription = description.trim() || category;
 
     if (fromSavings && !savingsSource) {
       toast.error("Selecciona el tipo de ahorro");
@@ -95,215 +121,116 @@ export const AddTransactionDialog = ({
       return;
     }
 
-    onAdd({
-      type,
-      amount: amountNum,
-      currency: currency as "USD" | "ARS",
-      category,
-      description,
-      date: date.toISOString(),
-      user_id: currentUserId,
-      from_savings: fromSavings,
-      savings_source: fromSavings ? savingsSource : undefined,
-      payment_method: paymentMethod,
-    });
+    setIsSubmitting(true);
+    
+    try {
+      await onAdd({
+        type,
+        amount: amountNum,
+        currency: currency as "USD" | "ARS",
+        category,
+        description: finalDescription,
+        date: date.toISOString(),
+        user_id: currentUserId,
+        from_savings: fromSavings,
+        savings_source: fromSavings ? savingsSource : undefined,
+        payment_method: paymentMethod,
+      });
 
-    setOpen(false);
-    setCurrency("");
-    setAmount("");
-    setCategory("");
-    setDescription("");
-    setDate(new Date());
-    setFromSavings(false);
-    setSavingsSource("");
-    setPaymentMethod("cash");
+      setOpen(false);
+      toast.success("Transacción agregada");
+    } catch (error) {
+      toast.error("Error al agregar transacción");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  // Progress indicator
+  const stepIndex = step === "amount" ? 0 : step === "category" ? 1 : 2;
+  
+  const content = (
+    <div className="flex flex-col h-full">
+      {/* Progress Bar */}
+      <div className="flex gap-1 mb-4">
+        {[0, 1, 2].map((i) => (
+          <div 
+            key={i}
+            className={`h-1 flex-1 rounded-full transition-colors ${
+              i <= stepIndex ? "bg-primary" : "bg-muted"
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* Steps */}
+      <div className="flex-1 min-h-0">
+        {step === "amount" && (
+          <AmountStep
+            type={type}
+            currency={currency}
+            amount={amount}
+            onTypeChange={handleTypeChange}
+            onCurrencyChange={setCurrency}
+            onAmountChange={setAmount}
+            onNext={() => setStep("category")}
+          />
+        )}
+
+        {step === "category" && (
+          <CategoryStep
+            categories={categories}
+            selectedCategory={category}
+            onCategoryChange={setCategory}
+            onNext={() => setStep("details")}
+            onBack={() => setStep("amount")}
+          />
+        )}
+
+        {step === "details" && currency && (
+          <DetailsStep
+            type={type}
+            currency={currency}
+            amount={amount}
+            category={category}
+            categories={categories}
+            description={description}
+            date={date}
+            paymentMethod={paymentMethod}
+            fromSavings={fromSavings}
+            savingsSource={savingsSource}
+            availableSavings={availableSavings}
+            onDescriptionChange={setDescription}
+            onDateChange={setDate}
+            onPaymentMethodChange={setPaymentMethod}
+            onFromSavingsChange={setFromSavings}
+            onSavingsSourceChange={setSavingsSource}
+            onBack={() => setStep("category")}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+          />
+        )}
+      </div>
+    </div>
+  );
+
+  // Use Drawer on mobile for better UX
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={setOpen}>
+        <DrawerContent className="h-[85vh] px-4 pb-safe">
+          <div className="pt-4 h-full">
+            {content}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[425px] bg-card border-border max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Agregar Transacción</DialogTitle>
-          <DialogDescription>
-            Agregá un nuevo ingreso o gasto para llevar el control de tus finanzas.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label htmlFor="type">Tipo</Label>
-            <Select value={type} onValueChange={(value: "income" | "expense") => {
-              setType(value);
-              // Reset payment method for income
-              if (value === "income") {
-                setPaymentMethod("cash");
-                setFromSavings(false);
-              }
-            }}>
-              <SelectTrigger id="type" className="bg-muted border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                <SelectItem value="income">Ingreso</SelectItem>
-                <SelectItem value="expense">Gasto</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="currency">Moneda</Label>
-            <Select value={currency} onValueChange={(value: "USD" | "ARS") => setCurrency(value)}>
-              <SelectTrigger id="currency" className="bg-muted border-border">
-                <SelectValue placeholder="Seleccionar moneda" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                <SelectItem value="USD">USD ($)</SelectItem>
-                <SelectItem value="ARS">ARS ($)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="amount">Monto</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="bg-muted border-border"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="category">Categoría</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger id="category" className="bg-muted border-border">
-                <SelectValue placeholder="Seleccionar categoría" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.name}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="date">Fecha</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="date"
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal bg-muted border-border",
-                    !date && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP", { locale: es }) : <span>Elegir fecha</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-card border-border" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(newDate) => newDate && setDate(newDate)}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Descripción</Label>
-            <Input
-              id="description"
-              placeholder="¿Para qué fue?"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="bg-muted border-border"
-            />
-          </div>
-
-          {/* Payment Method - only for expenses */}
-          {type === "expense" && (
-            <div className="space-y-3 p-3 rounded-lg bg-muted/50 border border-border/50">
-              <div className="space-y-2">
-                <Label htmlFor="paymentMethod" className="flex items-center gap-2">
-                  <Banknote className="h-4 w-4" />
-                  Método de pago
-                </Label>
-                <Select 
-                  value={paymentMethod} 
-                  onValueChange={(value: "cash" | "debit") => setPaymentMethod(value)}
-                >
-                  <SelectTrigger id="paymentMethod" className="bg-muted border-border">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    <SelectItem value="cash">Efectivo</SelectItem>
-                    <SelectItem value="debit">Débito</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Para gastos de tarjeta de crédito, importá el resumen desde la sección Tarjetas
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* From Savings Option - only for expenses */}
-          {type === "expense" && currency && (
-            <div className="space-y-3 p-3 rounded-lg bg-muted/50 border border-border/50">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="fromSavings"
-                  checked={fromSavings}
-                  onChange={(e) => {
-                    setFromSavings(e.target.checked);
-                    if (!e.target.checked) setSavingsSource("");
-                  }}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <Label htmlFor="fromSavings" className="flex items-center gap-2 cursor-pointer">
-                  <Wallet className="h-4 w-4" />
-                  Sale de mis ahorros
-                </Label>
-              </div>
-              
-              {fromSavings && (
-                <>
-                  <div className="text-xs text-muted-foreground">
-                    Disponible: {currency} {availableSavings.toLocaleString()}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="savingsSource">Tipo de ahorro</Label>
-                    <Select value={savingsSource} onValueChange={(value: "cash" | "bank" | "other") => setSavingsSource(value)}>
-                      <SelectTrigger id="savingsSource" className="bg-muted border-border">
-                        <SelectValue placeholder="Seleccionar tipo" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border">
-                        <SelectItem value="cash">Efectivo</SelectItem>
-                        <SelectItem value="bank">Banco</SelectItem>
-                        <SelectItem value="other">Otro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          <Button type="submit" className="w-full gradient-primary hover:opacity-90">
-            Agregar Transacción
-          </Button>
-        </form>
+      <DialogContent className="sm:max-w-[425px] bg-card border-border h-[600px] flex flex-col p-4">
+        {content}
       </DialogContent>
     </Dialog>
   );
