@@ -21,6 +21,16 @@ interface Category {
   color?: string | null;
 }
 
+// Initial data that can be pre-filled from voice or other sources
+export interface TransactionInitialData {
+  type?: "income" | "expense";
+  amount?: number;
+  currency?: "USD" | "ARS";
+  category?: string;
+  description?: string;
+  date?: Date;
+}
+
 interface AddTransactionDialogProps {
   onAdd: (transaction: {
     type: "income" | "expense";
@@ -39,6 +49,7 @@ interface AddTransactionDialogProps {
   currentSavings?: { usd: number; ars: number };
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  initialData?: TransactionInitialData | null;
 }
 
 type WizardStep = "amount" | "category" | "details";
@@ -49,7 +60,8 @@ export const AddTransactionDialog = ({
   currentUserId,
   currentSavings, 
   open: controlledOpen,
-  onOpenChange: controlledOnOpenChange
+  onOpenChange: controlledOnOpenChange,
+  initialData,
 }: AddTransactionDialogProps) => {
   const isMobile = useIsMobile();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -72,21 +84,64 @@ export const AddTransactionDialog = ({
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "debit">("cash");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset form when dialog opens
+  // Helper to match category with fuzzy matching
+  const matchCategory = (aiCategory: string, availableCategories: Category[]): string => {
+    const normalizedAi = aiCategory.toLowerCase().trim();
+    
+    // Exact match
+    const exact = availableCategories.find(c => c.name.toLowerCase() === normalizedAi);
+    if (exact) return exact.name;
+    
+    // Partial match
+    const partial = availableCategories.find(c => 
+      c.name.toLowerCase().includes(normalizedAi) ||
+      normalizedAi.includes(c.name.toLowerCase())
+    );
+    if (partial) return partial.name;
+    
+    return aiCategory;
+  };
+
+  // Reset form or pre-fill from initialData when dialog opens
   useEffect(() => {
     if (open) {
-      setStep("amount");
-      setType("expense");
-      setCurrency("");
-      setAmount("");
-      setCategory("");
-      setDescription("");
-      setDate(new Date());
-      setFromSavings(false);
-      setSavingsSource("");
-      setPaymentMethod("cash");
+      if (initialData) {
+        // Pre-fill from voice or other source
+        setType(initialData.type || "expense");
+        setCurrency(initialData.currency || "");
+        setAmount(initialData.amount ? initialData.amount.toString() : "");
+        setDescription(initialData.description || "");
+        setDate(initialData.date || new Date());
+        
+        // Match category
+        if (initialData.category) {
+          const filteredCats = categories.filter(c => c.type === (initialData.type || "expense"));
+          const matched = matchCategory(initialData.category, filteredCats);
+          setCategory(matched);
+        } else {
+          setCategory("");
+        }
+        
+        // Start at amount step so user can review/edit
+        setStep("amount");
+        setFromSavings(false);
+        setSavingsSource("");
+        setPaymentMethod("cash");
+      } else {
+        // Fresh form
+        setStep("amount");
+        setType("expense");
+        setCurrency("");
+        setAmount("");
+        setCategory("");
+        setDescription("");
+        setDate(new Date());
+        setFromSavings(false);
+        setSavingsSource("");
+        setPaymentMethod("cash");
+      }
     }
-  }, [open]);
+  }, [open, initialData, categories]);
 
   const availableSavings = currency && currentSavings 
     ? (currency === "USD" ? currentSavings.usd : currentSavings.ars) 
@@ -98,6 +153,8 @@ export const AddTransactionDialog = ({
       setPaymentMethod("cash");
       setFromSavings(false);
     }
+    // Clear category when type changes since categories are type-specific
+    setCategory("");
   };
 
   const handleSubmit = async () => {

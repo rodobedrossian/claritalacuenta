@@ -18,8 +18,9 @@ import { PullToRefresh } from "@/components/PullToRefresh";
 import { BudgetProgress } from "@/components/budgets/BudgetProgress";
 import { ImportStatementDialog } from "@/components/credit-cards/ImportStatementDialog";
 import { NotificationSetupBanner } from "@/components/notifications/NotificationSetupBanner";
-import { VoiceTransactionDialog } from "@/components/voice/VoiceTransactionDialog";
 import { VoiceRecordingOverlay } from "@/components/voice/VoiceRecordingOverlay";
+import { VoiceConfirmationStep } from "@/components/voice/VoiceConfirmationStep";
+import { TransactionInitialData } from "@/components/AddTransactionDialog";
 import { InsightsCard } from "@/components/insights/InsightsCard";
 import { MobileHeader } from "@/components/MobileHeader";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
@@ -47,8 +48,9 @@ const Index = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeMonth, setActiveMonth] = useState<Date>(new Date());
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
+  const [voiceConfirmationOpen, setVoiceConfirmationOpen] = useState(false);
   const [addTransactionDialogOpen, setAddTransactionDialogOpen] = useState(false);
+  const [voiceInitialData, setVoiceInitialData] = useState<TransactionInitialData | null>(null);
   const [savingsDropdownOpen, setSavingsDropdownOpen] = useState(false);
 
   // Use the new consolidated data hook
@@ -92,12 +94,12 @@ const Index = () => {
     userId: user?.id
   });
 
-  // Open dialog when voice transaction is parsed
+  // Open confirmation step when voice transaction is parsed
   useEffect(() => {
-    if (voiceTransaction.parsedTransaction) {
-      setVoiceDialogOpen(true);
+    if (voiceTransaction.isReady && voiceTransaction.parsedTransaction) {
+      setVoiceConfirmationOpen(true);
     }
-  }, [voiceTransaction.parsedTransaction]);
+  }, [voiceTransaction.isReady, voiceTransaction.parsedTransaction]);
 
   // Handle URL action params from FAB navigation
   useEffect(() => {
@@ -570,7 +572,11 @@ const Index = () => {
           currentUserId={user?.id || ""}
           currentSavings={currentSavings} 
           open={addTransactionDialogOpen}
-          onOpenChange={setAddTransactionDialogOpen}
+          onOpenChange={(open) => {
+            setAddTransactionDialogOpen(open);
+            if (!open) setVoiceInitialData(null);
+          }}
+          initialData={voiceInitialData}
         />
 
         <ImportStatementDialog
@@ -581,47 +587,52 @@ const Index = () => {
           onSuccess={refetch}
         />
 
-        <VoiceTransactionDialog
-          open={voiceDialogOpen}
-          onOpenChange={(open) => {
-            setVoiceDialogOpen(open);
-            if (!open) voiceTransaction.reset();
-          }}
-          transaction={voiceTransaction.parsedTransaction}
-          transcribedText={voiceTransaction.transcribedText}
-          categories={categories}
-          currentUserId={user?.id}
-          onConfirm={async (transaction) => {
-            await handleAddTransaction({
-              type: transaction.type,
-              amount: transaction.amount,
-              currency: transaction.currency,
-              category: transaction.category,
-              description: transaction.description,
-              date: transaction.date,
-              user_id: user?.id || "",
-              payment_method: "cash",
-              from_savings: false
-            });
-            setVoiceDialogOpen(false);
-            voiceTransaction.reset();
-            toast.success("Transacción creada por voz");
-          }}
-          onCancel={() => {
-            setVoiceDialogOpen(false);
-            voiceTransaction.reset();
-          }}
-        />
-
-        {/* Voice Recording Overlay */}
+        {/* Voice Recording Overlay - Immersive experience */}
         <VoiceRecordingOverlay
-          isRecording={voiceTransaction.isRecording}
-          isProcessing={voiceTransaction.isProcessing}
+          isOpen={voiceTransaction.isActive && !voiceTransaction.isReady}
+          state={voiceTransaction.state}
           duration={voiceTransaction.duration}
+          transcribedText={voiceTransaction.transcribedText}
           getAudioLevels={voiceTransaction.getAudioLevels}
           onStop={voiceTransaction.stopRecording}
           onCancel={voiceTransaction.cancel}
           error={voiceTransaction.error}
+        />
+
+        {/* Voice Confirmation Step - Shows parsed transaction */}
+        <VoiceConfirmationStep
+          open={voiceConfirmationOpen}
+          onOpenChange={(open) => {
+            setVoiceConfirmationOpen(open);
+            if (!open) voiceTransaction.reset();
+          }}
+          transaction={voiceTransaction.parsedTransaction}
+          transcribedText={voiceTransaction.transcribedText}
+          onConfirm={() => {
+            // Transfer data to wizard and open it
+            if (voiceTransaction.parsedTransaction) {
+              const tx = voiceTransaction.parsedTransaction;
+              setVoiceInitialData({
+                type: tx.type,
+                amount: tx.amount,
+                currency: tx.currency,
+                category: tx.category,
+                description: tx.description,
+                date: new Date(tx.date),
+              });
+              setVoiceConfirmationOpen(false);
+              setAddTransactionDialogOpen(true);
+              voiceTransaction.reset();
+            }
+          }}
+          onRetry={() => {
+            setVoiceConfirmationOpen(false);
+            voiceTransaction.retry();
+          }}
+          onCancel={() => {
+            setVoiceConfirmationOpen(false);
+            voiceTransaction.reset();
+          }}
         />
       </div>
     </AppLayout>

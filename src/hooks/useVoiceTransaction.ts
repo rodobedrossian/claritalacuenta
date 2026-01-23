@@ -20,10 +20,17 @@ interface UseVoiceTransactionProps {
   userId?: string;
 }
 
-type RecordingState = "idle" | "recording" | "processing";
+// More granular states for better UX feedback
+export type VoiceRecordingState = 
+  | "idle" 
+  | "recording" 
+  | "transcribing" 
+  | "parsing" 
+  | "ready" 
+  | "error";
 
 export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactionProps) => {
-  const [state, setState] = useState<RecordingState>("idle");
+  const [state, setState] = useState<VoiceRecordingState>("idle");
   const [transcribedText, setTranscribedText] = useState<string>("");
   const [parsedTransaction, setParsedTransaction] = useState<VoiceTransactionData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -134,14 +141,14 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       } else {
         setError("Error al iniciar la grabación: " + err.message);
       }
-      setState("idle");
+      setState("error");
     }
   }, []);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
-      setState("processing");
+      setState("transcribing");
     }
     
     if (durationIntervalRef.current) {
@@ -161,6 +168,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     cleanup();
     setState("idle");
     setDuration(0);
+    setError(null);
     chunksRef.current = [];
   }, [cleanup]);
 
@@ -187,6 +195,8 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       
       // Step 1: Transcribe audio
       console.log("Transcribing audio...");
+      setState("transcribing");
+      
       const { data: transcribeData, error: transcribeError } = await supabase.functions.invoke(
         'transcribe-audio',
         { body: { audio: audioBase64 } }
@@ -205,6 +215,8 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       
       // Step 2: Parse transaction from text
       console.log("Parsing transaction...");
+      setState("parsing");
+      
       const { data: parseData, error: parseError } = await supabase.functions.invoke(
         'parse-voice-transaction',
         { 
@@ -227,14 +239,12 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       }
       
       setParsedTransaction(transaction);
-      setState("idle");
-      setDuration(0);
+      setState("ready");
       
     } catch (err: any) {
       console.error("Error processing recording:", err);
       setError(err.message || "Error al procesar la grabación");
-      setState("idle");
-      setDuration(0);
+      setState("error");
       toast.error(err.message || "Error al procesar la grabación");
     }
   };
@@ -248,6 +258,14 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     setDuration(0);
     chunksRef.current = [];
   }, [cleanup]);
+
+  const retry = useCallback(() => {
+    reset();
+    // Small delay before starting new recording
+    setTimeout(() => {
+      startRecording();
+    }, 100);
+  }, [reset, startRecording]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -266,8 +284,16 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     stopRecording,
     cancel,
     reset,
+    retry,
     getAudioLevels,
+    // Convenience booleans
+    isIdle: state === "idle",
     isRecording: state === "recording",
-    isProcessing: state === "processing",
+    isTranscribing: state === "transcribing",
+    isParsing: state === "parsing",
+    isProcessing: state === "transcribing" || state === "parsing",
+    isReady: state === "ready",
+    isError: state === "error",
+    isActive: state !== "idle",
   };
 };
