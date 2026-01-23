@@ -99,13 +99,6 @@ export const BottomNavigation = ({ onAddClick }: BottomNavigationProps) => {
         })}
       </div>
 
-      {/* More menu drawer for secondary items */}
-      <MoreDrawer 
-        items={secondaryNavItems}
-        currentPath={location.pathname}
-        onNavigate={navigate}
-        onSignOut={handleSignOut}
-      />
     </nav>
   );
 };

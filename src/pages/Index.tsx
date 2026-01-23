@@ -21,6 +21,7 @@ import { NotificationSetupBanner } from "@/components/notifications/Notification
 import { VoiceTransactionDialog } from "@/components/voice/VoiceTransactionDialog";
 import { VoiceRecordingOverlay } from "@/components/voice/VoiceRecordingOverlay";
 import { InsightsCard } from "@/components/insights/InsightsCard";
+import { MobileHeader } from "@/components/MobileHeader";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useVoiceTransaction } from "@/hooks/useVoiceTransaction";
 import { useInsightsData } from "@/hooks/useInsightsData";
@@ -329,8 +330,10 @@ const Index = () => {
 
         {/* Mobile: New streamlined header with pull-to-refresh */}
         {isMobile ? (
-          <PullToRefresh onRefresh={handlePullToRefresh} className="min-h-[calc(100vh-4rem)]" disabled={dataLoading}>
-            <DashboardHeader
+          <>
+            <MobileHeader userName={user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuario'} />
+            <PullToRefresh onRefresh={handlePullToRefresh} className="min-h-[calc(100vh-4rem)]" disabled={dataLoading}>
+              <DashboardHeader
               userName={user?.user_metadata?.full_name || user?.email}
               exchangeRate={exchangeRate}
               lastUpdated={lastUpdated}
@@ -404,7 +407,8 @@ const Index = () => {
                 />
               </div>
             </main>
-          </PullToRefresh>
+            </PullToRefresh>
+          </>
         ) : (
           <>
             {/* Desktop: Original header */}
