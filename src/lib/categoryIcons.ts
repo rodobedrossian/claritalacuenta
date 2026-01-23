@@ -29,11 +29,55 @@ import {
   CircleEllipsis,
   Shirt,
   Palmtree,
+  Building,
+  FileText,
+  ShoppingBag,
+  Coins,
+  Trophy,
+  Film,
+  Music,
+  Scissors,
+  Stethoscope,
+  Bus,
+  Train,
+  Fuel,
+  Lightbulb,
+  Droplets,
+  Wifi,
+  Phone,
+  Tv,
+  BookOpen,
+  Users,
+  UtensilsCrossed,
+  Wine,
+  Beer,
+  Pizza,
+  Cake,
+  IceCream,
+  Popcorn,
+  Ticket,
+  Camera,
+  Headphones,
+  Watch,
+  Glasses,
+  Footprints,
+  Umbrella,
+  Key,
+  Lock,
+  Shield,
+  Star,
+  Zap,
+  Flame,
+  Snowflake,
+  Sun,
+  Moon,
+  Cloud,
   type LucideIcon,
 } from "lucide-react";
 
 // Map icon string names to Lucide components
 export const ICON_MAP: Record<string, LucideIcon> = {
+  // Basic
   "shopping-cart": ShoppingCart,
   "utensils": Utensils,
   "car": Car,
@@ -64,10 +108,56 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   "circle-ellipsis": CircleEllipsis,
   "shirt": Shirt,
   "palm-tree": Palmtree,
+  
+  // Extended icons
+  "building": Building,
+  "file-text": FileText,
+  "shopping-bag": ShoppingBag,
+  "coins": Coins,
+  "trophy": Trophy,
+  "film": Film,
+  "music": Music,
+  "scissors": Scissors,
+  "stethoscope": Stethoscope,
+  "bus": Bus,
+  "train": Train,
+  "fuel": Fuel,
+  "lightbulb": Lightbulb,
+  "droplets": Droplets,
+  "wifi": Wifi,
+  "phone": Phone,
+  "tv": Tv,
+  "book-open": BookOpen,
+  "users": Users,
+  "utensils-crossed": UtensilsCrossed,
+  "wine": Wine,
+  "beer": Beer,
+  "pizza": Pizza,
+  "cake": Cake,
+  "ice-cream": IceCream,
+  "popcorn": Popcorn,
+  "ticket": Ticket,
+  "camera": Camera,
+  "headphones": Headphones,
+  "watch": Watch,
+  "glasses": Glasses,
+  "footprints": Footprints,
+  "umbrella": Umbrella,
+  "key": Key,
+  "lock": Lock,
+  "shield": Shield,
+  "star": Star,
+  "zap": Zap,
+  "flame": Flame,
+  "snowflake": Snowflake,
+  "sun": Sun,
+  "moon": Moon,
+  "cloud": Cloud,
 };
 
 // Default fallback colors for categories without a custom color
 export const DEFAULT_CATEGORY_COLORS: Record<string, string> = {
+  // Expenses
   "Supermercado": "#22c55e",
   "Delivery": "#f97316",
   "Ropa": "#8b5cf6",
@@ -82,22 +172,54 @@ export const DEFAULT_CATEGORY_COLORS: Record<string, string> = {
   "Educación": "#0d9488",
   "Trabajo": "#64748b",
   "Inversión": "#10b981",
+  "Inversiones": "#10b981",
   "Freelance": "#22c55e",
   "Otros": "#eab308",
+  "Otro": "#eab308",
   "Mascotas": "#f97316",
   "Hijos": "#ec4899",
   "Belleza": "#a855f7",
+  // New categories
+  "Alquiler": "#6366f1",
+  "Auto": "#3b82f6",
+  "Comisiones": "#64748b",
+  "Compras": "#8b5cf6",
+  "Crédito": "#f43f5e",
+  "Deporte": "#22c55e",
+  "Entrenamiento": "#14b8a6",
+  "Hogar": "#0ea5e9",
+  "Impuestos": "#64748b",
+  "Salario": "#22c55e",
+  "Salidas": "#a855f7",
+  "Suscripciones": "#6366f1",
+  "Tarjeta": "#f97316",
+  "Gastos Fijos": "#3b82f6",
+  "Comida": "#f97316",
+  "Restaurantes": "#ef4444",
+  "Bar": "#a855f7",
+  "Cine": "#8b5cf6",
+  "Gimnasio": "#22c55e",
+  "Farmacia": "#ec4899",
+  "Médico": "#f43f5e",
+  "Seguro": "#3b82f6",
+  "Luz": "#eab308",
+  "Gas": "#f97316",
+  "Agua": "#0ea5e9",
+  "Internet": "#6366f1",
+  "Teléfono": "#14b8a6",
+  "Streaming": "#a855f7",
 };
 
 // Default fallback icons for categories without a custom icon
 export const DEFAULT_CATEGORY_ICONS: Record<string, string> = {
+  // Common expense categories
   "Supermercado": "shopping-cart",
-  "Delivery": "utensils",
+  "Delivery": "bike",
   "Ropa": "shirt",
   "Servicios": "home",
   "Transporte": "car",
   "Salud": "heart",
-  "Vacaciones": "plane",
+  "Vacaciones": "palm-tree",
   "Regalos": "gift",
   "Cafetería": "coffee",
   "Tecnología": "smartphone",
@@ -105,11 +227,79 @@ export const DEFAULT_CATEGORY_ICONS: Record<string, string> = {
   "Educación": "graduation-cap",
   "Trabajo": "briefcase",
   "Inversión": "trending-up",
+  "Inversiones": "trending-up",
   "Freelance": "banknote",
-  "Otros": "wallet",
+  "Otros": "circle-ellipsis",
+  "Otro": "circle-ellipsis",
   "Mascotas": "dog",
   "Hijos": "baby",
   "Belleza": "sparkles",
+  
+  // New category mappings
+  "Alquiler": "building",
+  "Auto": "car",
+  "Comisiones": "percent",
+  "Compras": "shopping-bag",
+  "Crédito": "credit-card",
+  "Deporte": "trophy",
+  "Entrenamiento": "dumbbell",
+  "Hogar": "home",
+  "Impuestos": "landmark",
+  "Salario": "banknote",
+  "Salidas": "wine",
+  "Suscripciones": "repeat",
+  "Tarjeta": "credit-card",
+  "Gastos Fijos": "receipt",
+  
+  // Food & Drinks
+  "Comida": "utensils",
+  "Restaurantes": "utensils-crossed",
+  "Bar": "beer",
+  "Cine": "popcorn",
+  
+  // Health & Fitness
+  "Gimnasio": "dumbbell",
+  "Farmacia": "stethoscope",
+  "Médico": "stethoscope",
+  
+  // Insurance & Bills
+  "Seguro": "shield",
+  "Luz": "lightbulb",
+  "Gas": "flame",
+  "Agua": "droplets",
+  "Internet": "wifi",
+  "Teléfono": "phone",
+  "Streaming": "tv",
+  
+  // Transport variations
+  "Combustible": "fuel",
+  "Nafta": "fuel",
+  "Colectivo": "bus",
+  "Subte": "train",
+  "Tren": "train",
+  "Uber": "car",
+  "Taxi": "car",
+  "Remis": "car",
+  
+  // Entertainment
+  "Música": "music",
+  "Conciertos": "ticket",
+  "Teatro": "ticket",
+  "Eventos": "ticket",
+  
+  // Personal care
+  "Peluquería": "scissors",
+  "Barbería": "scissors",
+  
+  // Education
+  "Cursos": "book-open",
+  "Libros": "book-open",
+  
+  // Social
+  "Amigos": "users",
+  "Familia": "users",
+  "Cumpleaños": "cake",
+  "Fiestas": "party-popper",
 };
 
 export function getCategoryIcon(iconName: string | undefined | null): LucideIcon {
@@ -123,4 +313,10 @@ export function getCategoryColor(
 ): string {
   if (customColor) return customColor;
   return DEFAULT_CATEGORY_COLORS[categoryName] || "#6366f1";
+}
+
+// Helper to get icon for a category by name (uses default mappings)
+export function getIconForCategory(categoryName: string, customIcon?: string | null): LucideIcon {
+  const iconName = customIcon || DEFAULT_CATEGORY_ICONS[categoryName];
+  return getCategoryIcon(iconName);
 }
