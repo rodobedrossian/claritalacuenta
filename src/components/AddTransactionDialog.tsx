@@ -236,7 +236,7 @@ export const AddTransactionDialog = ({
 
         {step === "category" && (
           <CategoryStep
-            categories={categories}
+            categories={categories.filter(cat => cat.type === type)}
             selectedCategory={category}
             onCategoryChange={setCategory}
             onNext={() => setStep("details")}
