@@ -34,9 +34,9 @@ export const MobileHeader = ({ userName }: MobileHeaderProps) => {
     <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 px-4 py-3">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-foreground">
-          Hola, <span className="text-primary">@{userName}</span>
+          Hola, <span className="text-primary">{userName}</span>
         </h1>
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-9 w-9">
@@ -47,11 +47,7 @@ export const MobileHeader = ({ userName }: MobileHeaderProps) => {
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (
-                <DropdownMenuItem
-                  key={item.path}
-                  onClick={() => navigate(item.path)}
-                  className="cursor-pointer"
-                >
+                <DropdownMenuItem key={item.path} onClick={() => navigate(item.path)} className="cursor-pointer">
                   <Icon className="h-4 w-4 mr-2" />
                   {item.title}
                 </DropdownMenuItem>
