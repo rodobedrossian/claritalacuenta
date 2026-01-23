@@ -19,10 +19,11 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MobileTransactionFAB } from "@/components/MobileTransactionFAB";
+import { BottomNavigation } from "@/components/BottomNavigation";
 
 interface AppLayoutProps {
   children: ReactNode;
+  onMobileAddClick?: () => void;
 }
 
 const navItems = [
@@ -36,7 +37,7 @@ const navItems = [
   { title: "Configuración", path: "/settings", icon: Settings },
 ];
 
-export const AppLayout = ({ children }: AppLayoutProps) => {
+export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
@@ -61,48 +62,45 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
   const showExpanded = isMobile || !isCollapsed;
   const sidebarWidth = showExpanded ? "w-64" : "w-16";
 
-  return (
-    <div className="min-h-screen bg-background flex">
-      {/* Mobile menu button - only show when sidebar is closed */}
-      {!isOpen && (
+  // For mobile, we use bottom navigation instead of sidebar
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        {/* Mobile menu button for accessing secondary menu */}
         <Button
           variant="ghost"
           size="icon"
-          className="fixed top-4 left-4 z-50 md:hidden"
-          onClick={() => setIsOpen(true)}
+          className="fixed top-4 left-4 z-50"
+          onClick={() => setIsOpen(!isOpen)}
         >
-          <Menu className="h-5 w-5" />
+          {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
-      )}
 
-      {/* Overlay for mobile */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 md:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "fixed md:sticky top-0 left-0 z-40 h-screen border-r border-border/50 bg-card backdrop-blur-sm transition-all duration-300",
-          sidebarWidth,
-          isMobile ? (isOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0",
+        {/* Overlay for mobile sidebar */}
+        {isOpen && (
+          <div
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30"
+            onClick={() => setIsOpen(false)}
+          />
         )}
-      >
-        <div className="flex flex-col h-full">
-          {/* Logo and mobile close button */}
-          <div className={cn("p-4 border-b border-border/50", !showExpanded ? "px-2" : "p-6")}>
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg gradient-primary shrink-0">
-                  <PiggyBank className="h-6 w-6 text-primary-foreground" />
+
+        {/* Mobile Sidebar - for secondary navigation */}
+        <aside
+          className={cn(
+            "fixed top-0 left-0 z-40 h-screen w-64 border-r border-border/50 bg-card backdrop-blur-sm transition-transform duration-300",
+            isOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <div className="flex flex-col h-full">
+            {/* Logo */}
+            <div className="p-6 border-b border-border/50">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg gradient-primary shrink-0">
+                    <PiggyBank className="h-6 w-6 text-primary-foreground" />
+                  </div>
+                  <h1 className="text-lg font-bold text-foreground truncate">Clarita la cuenta</h1>
                 </div>
-                {showExpanded && <h1 className="text-lg font-bold text-foreground truncate">Clarita la cuenta</h1>}
-              </div>
-              {/* Mobile close button - inside sidebar header */}
-              {isMobile && isOpen && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -111,7 +109,74 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
                 >
                   <X className="h-5 w-5" />
                 </Button>
-              )}
+              </div>
+            </div>
+
+            {/* Navigation */}
+            <nav className="flex-1 p-4 space-y-2">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => {
+                      navigate(item.path);
+                      setIsOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all",
+                      isActive(item.path)
+                        ? "bg-primary/10 text-primary border border-primary/20"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" />
+                    <span className="font-medium">{item.title}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Footer */}
+            <div className="border-t border-border/50 p-4">
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+              >
+                <LogOut className="h-5 w-5 shrink-0" />
+                <span className="font-medium">Cerrar Sesión</span>
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main content */}
+        <main className="flex-1 min-w-0 pb-20">{children}</main>
+
+        {/* Bottom Navigation */}
+        <BottomNavigation onAddClick={onMobileAddClick || (() => navigate("/?action=add-transaction"))} />
+      </div>
+    );
+  }
+
+  // Desktop/Tablet layout with sidebar
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "sticky top-0 left-0 z-40 h-screen border-r border-border/50 bg-card backdrop-blur-sm transition-all duration-300",
+          sidebarWidth
+        )}
+      >
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className={cn("border-b border-border/50", !showExpanded ? "px-2 py-4" : "p-6")}>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg gradient-primary shrink-0">
+                <PiggyBank className="h-6 w-6 text-primary-foreground" />
+              </div>
+              {showExpanded && <h1 className="text-lg font-bold text-foreground truncate">Clarita la cuenta</h1>}
             </div>
           </div>
 
@@ -122,10 +187,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
               return (
                 <button
                   key={item.path}
-                  onClick={() => {
-                    navigate(item.path);
-                    if (isMobile) setIsOpen(false);
-                  }}
+                  onClick={() => navigate(item.path)}
                   title={!showExpanded ? item.title : undefined}
                   className={cn(
                     "w-full flex items-center gap-3 rounded-lg text-left transition-all",
@@ -144,26 +206,24 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
 
           {/* Footer */}
           <div className={cn("border-t border-border/50", !showExpanded ? "p-2" : "p-4")}>
-            {/* Desktop collapse toggle */}
-            {!isMobile && (
-              <button
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className={cn(
-                  "w-full flex items-center gap-3 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all mb-2",
-                  !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
-                )}
-                title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
-              >
-                {isCollapsed ? (
-                  <PanelLeft className="h-5 w-5 shrink-0" />
-                ) : (
-                  <>
-                    <PanelLeftClose className="h-5 w-5 shrink-0" />
-                    <span className="font-medium">Colapsar</span>
-                  </>
-                )}
-              </button>
-            )}
+            {/* Collapse toggle */}
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className={cn(
+                "w-full flex items-center gap-3 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all mb-2",
+                !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
+              )}
+              title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+            >
+              {isCollapsed ? (
+                <PanelLeft className="h-5 w-5 shrink-0" />
+              ) : (
+                <>
+                  <PanelLeftClose className="h-5 w-5 shrink-0" />
+                  <span className="font-medium">Colapsar</span>
+                </>
+              )}
+            </button>
             <button
               onClick={handleSignOut}
               title={!showExpanded ? "Cerrar Sesión" : undefined}
@@ -181,9 +241,6 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
 
       {/* Main content */}
       <main className="flex-1 min-w-0">{children}</main>
-
-      {/* Mobile FAB for transactions */}
-      <MobileTransactionFAB />
     </div>
   );
 };

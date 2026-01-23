@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Wallet, TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { QuickStats } from "@/components/QuickStats";
+import { QuickActions } from "@/components/QuickActions";
 import { StatCard } from "@/components/StatCard";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
 import { SavingsActionDropdown } from "@/components/SavingsActionDropdown";
@@ -20,6 +23,7 @@ import { InsightsCard } from "@/components/insights/InsightsCard";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useVoiceTransaction } from "@/hooks/useVoiceTransaction";
 import { useInsightsData } from "@/hooks/useInsightsData";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,6 +36,7 @@ import { useBudgetsData } from "@/hooks/useBudgetsData";
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isRefreshingRate, setIsRefreshingRate] = useState(false);
@@ -41,6 +46,7 @@ const Index = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
   const [addTransactionDialogOpen, setAddTransactionDialogOpen] = useState(false);
+  const [savingsDropdownOpen, setSavingsDropdownOpen] = useState(false);
 
   // Use the new consolidated data hook
   const { 
@@ -298,10 +304,10 @@ const Index = () => {
   };
 
   return (
-    <AppLayout>
+    <AppLayout onMobileAddClick={() => setAddTransactionDialogOpen(true)}>
       <div className="min-h-screen">
         {/* Notification Banner */}
-        <div className="container mx-auto px-6 pt-4">
+        <div className="container mx-auto px-4 pt-4">
           <NotificationSetupBanner
             isSupported={pushNotifications.isSupported}
             isPWA={pushNotifications.isPWA}
@@ -313,155 +319,226 @@ const Index = () => {
           />
         </div>
 
-        {/* Header */}
-        <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-          <div className="container mx-auto px-4 md:px-6 py-4 pl-14 md:pl-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg gradient-primary md:hidden hidden">
-                  <Wallet className="h-6 w-6 text-primary-foreground" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Bienvenido, {user?.user_metadata?.full_name || user?.email}
-                  </p>
-                  {lastUpdated && (
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-muted-foreground">
-                        USD/ARS: {exchangeRate.toFixed(2)}
-                      </span>
-                      <button
-                        onClick={fetchExchangeRate}
-                        disabled={isRefreshingRate}
-                        className="text-xs text-primary hover:underline disabled:opacity-50 flex items-center gap-1"
-                        title="Actualizar tipo de cambio"
-                      >
-                        <RefreshCw className={`h-3 w-3 ${isRefreshingRate ? 'animate-spin' : ''}`} />
-                        {isRefreshingRate ? 'Actualizando...' : 'Actualizar'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3">
-                <SavingsActionDropdown
-                  availableBalanceUSD={availableBalanceUSD}
-                  availableBalanceARS={availableBalanceARS}
-                  onTransferFromBalance={(currency, amount, savingsType, notes) => handleAddSavings(currency, amount, "deposit", savingsType, notes)}
-                  onAddSavings={handleAddSavings}
-                />
-                <div className="hidden md:block">
-                  <TransactionActionsDropdown
-                    onAddManual={() => setAddTransactionDialogOpen(true)}
-                    onVoiceRecord={voiceTransaction.isRecording ? voiceTransaction.stopRecording : voiceTransaction.startRecording}
-                    onImportStatement={() => setImportDialogOpen(true)}
-                    isRecording={voiceTransaction.isRecording}
-                    isProcessing={voiceTransaction.isProcessing}
-                    showImport={creditCards.length > 0}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
-          {/* Month Selector */}
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <button
-              onClick={goToCurrentMonth}
-              className="text-xl font-semibold capitalize min-w-[200px] text-center hover:text-primary transition-colors"
-            >
-              {format(activeMonth, "MMMM yyyy", { locale: es })}
-            </button>
-            <Button variant="ghost" size="icon" onClick={goToNextMonth}>
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in">
-            <StatCard 
-              title="Ahorros Actuales" 
-              value={`${formatCurrency(currentSavings.usd, "USD")} / ${formatCurrency(currentSavings.ars, "ARS")}`} 
-              icon={PiggyBank}
-              onClick={() => navigate("/savings")}
+        {/* Mobile: New streamlined header */}
+        {isMobile ? (
+          <>
+            <DashboardHeader
+              userName={user?.user_metadata?.full_name || user?.email}
+              exchangeRate={exchangeRate}
+              lastUpdated={lastUpdated}
+              isRefreshingRate={isRefreshingRate}
+              onRefreshRate={fetchExchangeRate}
+              activeMonth={activeMonth}
+              onPreviousMonth={goToPreviousMonth}
+              onNextMonth={goToNextMonth}
+              onCurrentMonth={goToCurrentMonth}
+              netBalance={globalNetBalanceARS}
+              formatCurrency={formatCurrency}
             />
-            <StatCard 
-              title="Ingresos Totales" 
-              value={formatCurrency(globalIncomeARS, "ARS")}
-              subtitle={`${formatCurrency(totals.incomeUSD, "USD")} / ${formatCurrency(totals.incomeARS, "ARS")}`}
-              icon={TrendingUp}
-              trend="up"
-            />
-            <StatCard 
-              title="Gastos Totales" 
-              value={formatCurrency(globalExpensesARS, "ARS")}
-              subtitle={`${formatCurrency(totals.expensesUSD, "USD")} / ${formatCurrency(totals.expensesARS, "ARS")}`}
-              icon={TrendingDown}
-            />
-            <StatCard 
-              title="Balance Neto" 
-              value={formatCurrency(globalNetBalanceARS, "ARS")}
-              subtitle={`Gastos: ${formatCurrency(globalExpensesARS, "ARS")} | Ahorros: ${formatCurrency(globalSavingsTransfersARS, "ARS")}`}
-              icon={Wallet}
-              trend={globalNetBalanceARS >= 0 ? "up" : "down"}
-            />
-          </div>
 
-
-          {/* Budget Progress */}
-          <div className="animate-fade-in mb-6">
-            {budgetsWithSpending.length > 0 ? (
-              <BudgetProgress
-                budgets={budgetsWithSpending}
-                onManageBudgets={() => navigate("/budgets")}
+            <main className="container mx-auto px-4 py-4 space-y-4">
+              {/* Quick Stats */}
+              <QuickStats
+                income={globalIncomeARS}
+                expenses={globalExpensesARS}
+                savings={currentSavings}
+                formatCurrency={formatCurrency}
               />
-            ) : (
-              <Card className="p-6 gradient-card border-border/50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold">Presupuestos del Mes</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Configura límites de gasto por categoría para controlar tus finanzas
-                    </p>
+
+              {/* Quick Actions */}
+              <QuickActions
+                onAddExpense={() => setAddTransactionDialogOpen(true)}
+                onVoiceRecord={voiceTransaction.isRecording ? voiceTransaction.stopRecording : voiceTransaction.startRecording}
+                onTransferToSavings={() => setSavingsDropdownOpen(true)}
+                isRecording={voiceTransaction.isRecording}
+                isProcessing={voiceTransaction.isProcessing}
+              />
+
+              {/* Savings Dropdown (controlled, hidden trigger - dialog only) */}
+              <SavingsActionDropdown
+                availableBalanceUSD={availableBalanceUSD}
+                availableBalanceARS={availableBalanceARS}
+                onTransferFromBalance={(currency, amount, savingsType, notes) => handleAddSavings(currency, amount, "deposit", savingsType, notes)}
+                onAddSavings={handleAddSavings}
+                open={savingsDropdownOpen}
+                onOpenChange={setSavingsDropdownOpen}
+              />
+
+              {/* Budget Progress */}
+              {budgetsWithSpending.length > 0 && (
+                <BudgetProgress
+                  budgets={budgetsWithSpending}
+                  onManageBudgets={() => navigate("/budgets")}
+                />
+              )}
+
+              {/* Insights */}
+              <InsightsCard
+                insights={insightsData?.insights || []}
+                loading={insightsLoading}
+                onRefresh={refetchInsights}
+              />
+
+              {/* Charts and Transactions */}
+              <div className="space-y-4">
+                <SpendingChart data={spendingByCategory} />
+                <TimelineChart transactions={transactions} />
+                <TransactionsList 
+                  transactions={transactions.slice(0, 5)} 
+                  onEdit={handleEditTransaction}
+                  showViewAll={transactions.length > 5}
+                  onViewAll={() => navigate("/transactions")}
+                />
+              </div>
+            </main>
+          </>
+        ) : (
+          <>
+            {/* Desktop: Original header */}
+            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+              <div className="container mx-auto px-6 py-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Bienvenido, {user?.user_metadata?.full_name || user?.email}
+                      </p>
+                      {lastUpdated && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-muted-foreground">
+                            USD/ARS: {exchangeRate.toFixed(2)}
+                          </span>
+                          <button
+                            onClick={fetchExchangeRate}
+                            disabled={isRefreshingRate}
+                            className="text-xs text-primary hover:underline disabled:opacity-50 flex items-center gap-1"
+                            title="Actualizar tipo de cambio"
+                          >
+                            <RefreshCw className={`h-3 w-3 ${isRefreshingRate ? 'animate-spin' : ''}`} />
+                            {isRefreshingRate ? 'Actualizando...' : 'Actualizar'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <Button 
-                    onClick={() => navigate("/budgets")}
-                    className="gradient-primary"
-                  >
-                    Crear Presupuesto
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <SavingsActionDropdown
+                      availableBalanceUSD={availableBalanceUSD}
+                      availableBalanceARS={availableBalanceARS}
+                      onTransferFromBalance={(currency, amount, savingsType, notes) => handleAddSavings(currency, amount, "deposit", savingsType, notes)}
+                      onAddSavings={handleAddSavings}
+                    />
+                    <TransactionActionsDropdown
+                      onAddManual={() => setAddTransactionDialogOpen(true)}
+                      onVoiceRecord={voiceTransaction.isRecording ? voiceTransaction.stopRecording : voiceTransaction.startRecording}
+                      onImportStatement={() => setImportDialogOpen(true)}
+                      isRecording={voiceTransaction.isRecording}
+                      isProcessing={voiceTransaction.isProcessing}
+                      showImport={creditCards.length > 0}
+                    />
+                  </div>
                 </div>
-              </Card>
-            )}
-          </div>
+              </div>
+            </header>
 
-          {/* Insights */}
-          <div className="animate-fade-in mb-6">
-            <InsightsCard
-              insights={insightsData?.insights || []}
-              loading={insightsLoading}
-              onRefresh={refetchInsights}
-            />
-          </div>
+            {/* Desktop: Main Content */}
+            <main className="container mx-auto px-6 py-8">
+              {/* Month Selector */}
+              <div className="flex items-center justify-center gap-4 mb-6">
+                <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <button
+                  onClick={goToCurrentMonth}
+                  className="text-xl font-semibold capitalize min-w-[200px] text-center hover:text-primary transition-colors"
+                >
+                  {format(activeMonth, "MMMM yyyy", { locale: es })}
+                </button>
+                <Button variant="ghost" size="icon" onClick={goToNextMonth}>
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+              </div>
 
-          {/* Charts and Transactions */}
-          <div className="space-y-6 animate-slide-up">
-            <TimelineChart transactions={transactions} />
-            <SpendingChart data={spendingByCategory} />
-            <TransactionsList 
-              transactions={transactions.slice(0, 5)} 
-              onEdit={handleEditTransaction}
-              showViewAll={transactions.length > 5}
-              onViewAll={() => navigate("/transactions")}
-            />
-          </div>
-        </main>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in">
+                <StatCard 
+                  title="Ahorros Actuales" 
+                  value={`${formatCurrency(currentSavings.usd, "USD")} / ${formatCurrency(currentSavings.ars, "ARS")}`} 
+                  icon={PiggyBank}
+                  onClick={() => navigate("/savings")}
+                />
+                <StatCard 
+                  title="Ingresos Totales" 
+                  value={formatCurrency(globalIncomeARS, "ARS")}
+                  subtitle={`${formatCurrency(totals.incomeUSD, "USD")} / ${formatCurrency(totals.incomeARS, "ARS")}`}
+                  icon={TrendingUp}
+                  trend="up"
+                />
+                <StatCard 
+                  title="Gastos Totales" 
+                  value={formatCurrency(globalExpensesARS, "ARS")}
+                  subtitle={`${formatCurrency(totals.expensesUSD, "USD")} / ${formatCurrency(totals.expensesARS, "ARS")}`}
+                  icon={TrendingDown}
+                />
+                <StatCard 
+                  title="Balance Neto" 
+                  value={formatCurrency(globalNetBalanceARS, "ARS")}
+                  subtitle={`Gastos: ${formatCurrency(globalExpensesARS, "ARS")} | Ahorros: ${formatCurrency(globalSavingsTransfersARS, "ARS")}`}
+                  icon={Wallet}
+                  trend={globalNetBalanceARS >= 0 ? "up" : "down"}
+                />
+              </div>
+
+              {/* Budget Progress */}
+              <div className="animate-fade-in mb-6">
+                {budgetsWithSpending.length > 0 ? (
+                  <BudgetProgress
+                    budgets={budgetsWithSpending}
+                    onManageBudgets={() => navigate("/budgets")}
+                  />
+                ) : (
+                  <Card className="p-6 gradient-card border-border/50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold">Presupuestos del Mes</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Configura límites de gasto por categoría para controlar tus finanzas
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={() => navigate("/budgets")}
+                        className="gradient-primary"
+                      >
+                        Crear Presupuesto
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+              </div>
+
+              {/* Insights */}
+              <div className="animate-fade-in mb-6">
+                <InsightsCard
+                  insights={insightsData?.insights || []}
+                  loading={insightsLoading}
+                  onRefresh={refetchInsights}
+                />
+              </div>
+
+              {/* Charts and Transactions */}
+              <div className="space-y-6 animate-slide-up">
+                <TimelineChart transactions={transactions} />
+                <SpendingChart data={spendingByCategory} />
+                <TransactionsList 
+                  transactions={transactions.slice(0, 5)} 
+                  onEdit={handleEditTransaction}
+                  showViewAll={transactions.length > 5}
+                  onViewAll={() => navigate("/transactions")}
+                />
+              </div>
+            </main>
+          </>
+        )}
 
         <EditTransactionDialog
           transaction={editingTransaction}
@@ -471,7 +548,6 @@ const Index = () => {
           onDelete={handleDeleteTransaction}
           categories={categories}
         />
-
 
         <AddTransactionDialog 
           onAdd={handleAddTransaction} 
