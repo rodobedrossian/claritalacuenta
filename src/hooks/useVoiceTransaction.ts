@@ -64,7 +64,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoStopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isParsingRef = useRef<boolean>(false);
-  const committedTextsRef = useRef<string[]>([]);
+  const committedTextsRef = useRef<Set<string>>(new Set());
   const startInFlightRef = useRef(false);
   const stopInFlightRef = useRef(false);
   const stopIntentRef = useRef(false);
@@ -219,10 +219,13 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       cleanup();
       
       // Get the final text (committed + any remaining partial)
-      const finalText = [...committedTextsRef.current, currentPartialRef.current]
+      const committedArray = Array.from(committedTextsRef.current);
+      const finalText = [...committedArray, currentPartialRef.current]
         .filter(Boolean)
         .join(" ")
-        .trim();
+        .trim()
+        // Filter out invalid characters (non-printable, weird unicode)
+        .replace(/[^\p{L}\p{N}\p{P}\p{Z}]/gu, '');
       console.log("[Voice] Final transcribed text:", finalText);
 
       if (finalText && finalText.length >= 3) {
@@ -257,7 +260,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
       setPartialText("");
       currentPartialRef.current = "";
       setDuration(0);
-      committedTextsRef.current = [];
+      committedTextsRef.current = new Set();
       stopIntentRef.current = false;
       setState("connecting");
       
@@ -367,9 +370,11 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
           
           switch (msgType) {
             case "partial_transcript":
-              // Live partial transcript
-              currentPartialRef.current = data.text || "";
-              const displayText = [...committedTextsRef.current, currentPartialRef.current]
+              // Live partial transcript - filter out invalid characters
+              currentPartialRef.current = (data.text || "")
+                .replace(/[^\p{L}\p{N}\p{P}\p{Z}]/gu, '');
+              const committedArray = Array.from(committedTextsRef.current);
+              const displayText = [...committedArray, currentPartialRef.current]
                 .filter(Boolean)
                 .join(" ");
               setPartialText(displayText);
@@ -377,13 +382,18 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
               
             case "committed_transcript":
             case "final_transcript":
-              // Final committed transcript
+              // Final committed transcript - use Set to avoid duplicates
               if (data.text && data.text.trim()) {
-                committedTextsRef.current.push(data.text.trim());
-                const fullText = committedTextsRef.current.join(" ");
-                setTranscribedText(fullText);
-                currentPartialRef.current = "";
-                setPartialText(fullText);
+                const cleanText = data.text.trim()
+                  // Filter out invalid characters
+                  .replace(/[^\p{L}\p{N}\p{P}\p{Z}]/gu, '');
+                if (cleanText && !committedTextsRef.current.has(cleanText)) {
+                  committedTextsRef.current.add(cleanText);
+                  const fullText = Array.from(committedTextsRef.current).join(" ");
+                  setTranscribedText(fullText);
+                  currentPartialRef.current = "";
+                  setPartialText(fullText);
+                }
               }
               break;
               
@@ -452,7 +462,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     setPartialText("");
     currentPartialRef.current = "";
     setTranscribedText("");
-    committedTextsRef.current = [];
+    committedTextsRef.current = new Set();
   }, [cleanup]);
 
   const reset = useCallback(() => {
@@ -466,7 +476,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
     setError(null);
     setDuration(0);
     isParsingRef.current = false;
-    committedTextsRef.current = [];
+    committedTextsRef.current = new Set();
   }, [cleanup]);
 
   const retry = useCallback(() => {
@@ -486,7 +496,7 @@ export const useVoiceTransaction = ({ categories, userName }: UseVoiceTransactio
   }, [cleanup]);
 
   // Combined live text (committed + partial)
-  const liveText = [...committedTextsRef.current, currentPartialRef.current].filter(Boolean).join(" ").trim();
+  const liveText = [...Array.from(committedTextsRef.current), currentPartialRef.current].filter(Boolean).join(" ").trim();
 
   return {
     state,
