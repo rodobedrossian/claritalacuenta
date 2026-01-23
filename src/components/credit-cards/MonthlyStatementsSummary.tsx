@@ -4,7 +4,7 @@ import { CreditCard, ChevronDown, ChevronUp, BarChart3 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { StatementImport } from "@/hooks/useCreditCardStatements";
+import { StatementImport, StatementTotals } from "@/hooks/useCreditCardStatements";
 import { useState } from "react";
 
 interface CreditCardType {
@@ -27,6 +27,7 @@ interface MonthlyStatementsSummaryProps {
   creditCards: CreditCardType[];
   onViewAnalytics: (month: string) => void;
   onSelectStatement: (statement: StatementImport) => void;
+  statementTotals: StatementTotals[];
   children?: React.ReactNode;
 }
 
@@ -35,6 +36,7 @@ export const MonthlyStatementsSummary = ({
   creditCards,
   onViewAnalytics,
   onSelectStatement,
+  statementTotals,
   children,
 }: MonthlyStatementsSummaryProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -49,6 +51,11 @@ export const MonthlyStatementsSummary = ({
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount)}`;
+  };
+
+  // Get real totals for a specific statement
+  const getStatementRealTotals = (statementId: string) => {
+    return statementTotals.find(t => t.statementId === statementId);
   };
 
   const cardNames = Array.from(group.cardIds).map((id) => getCardName(id));
@@ -129,13 +136,15 @@ export const MonthlyStatementsSummary = ({
           </div>
         </div>
 
-        {/* Expanded: show individual statements */}
+        {/* Expanded: show individual statements with real totals */}
         {isExpanded && (
           <div className="mt-4 pt-4 border-t space-y-2">
             {group.statements.map((statement) => {
-              const extractedData = statement.extracted_data;
-              const totalArs = extractedData?.resumen?.total_ars || 0;
-              const totalUsd = extractedData?.resumen?.total_usd || 0;
+              // Use real totals from database instead of extracted_data
+              const realTotals = getStatementRealTotals(statement.id);
+              const totalArs = realTotals?.totalArs || 0;
+              const totalUsd = realTotals?.totalUsd || 0;
+              const txCount = realTotals?.transactionCount || 0;
 
               return (
                 <div
@@ -149,7 +158,7 @@ export const MonthlyStatementsSummary = ({
                       {getCardName(statement.credit_card_id || "")}
                     </span>
                     <span className="text-sm text-muted-foreground">
-                      {statement.transactions_created} transacciones
+                      {txCount} transacciones
                     </span>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
@@ -175,4 +184,3 @@ export const MonthlyStatementsSummary = ({
     </Card>
   );
 };
-

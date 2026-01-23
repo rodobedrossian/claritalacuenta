@@ -64,6 +64,13 @@ export interface MonthlyTotals {
   cardIds: string[];
 }
 
+export interface StatementTotals {
+  statementId: string;
+  totalArs: number;
+  totalUsd: number;
+  transactionCount: number;
+}
+
 interface UseCreditCardStatementsReturn {
   statements: StatementImport[];
   loading: boolean;
@@ -75,6 +82,7 @@ interface UseCreditCardStatementsReturn {
   deleteStatement: (statementId: string) => Promise<boolean>;
   getMonthlyTransactions: (month: string) => Promise<CreditCardTransaction[]>;
   getMonthlyTotals: () => Promise<MonthlyTotals[]>;
+  getStatementTotals: () => Promise<StatementTotals[]>;
 }
 
 export function useCreditCardStatements(userId: string | null): UseCreditCardStatementsReturn {
@@ -287,6 +295,50 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
     }));
   }, [userId, statements]);
 
+  // Get real totals for each statement from actual transactions
+  const getStatementTotals = useCallback(async (): Promise<StatementTotals[]> => {
+    if (!userId || statements.length === 0) return [];
+
+    const statementIds = statements.map(s => s.id);
+
+    const { data, error: fetchError } = await supabase
+      .from("credit_card_transactions")
+      .select("statement_import_id, amount, currency")
+      .in("statement_import_id", statementIds);
+
+    if (fetchError) {
+      console.error("Error fetching statement totals:", fetchError);
+      return [];
+    }
+
+    // Group by statement
+    const statementData = new Map<string, { ars: number; usd: number; count: number }>();
+
+    (data || []).forEach(tx => {
+      const stmtId = tx.statement_import_id;
+      if (!stmtId) return;
+
+      if (!statementData.has(stmtId)) {
+        statementData.set(stmtId, { ars: 0, usd: 0, count: 0 });
+      }
+
+      const data = statementData.get(stmtId)!;
+      data.count += 1;
+      if (tx.currency === "ARS") {
+        data.ars += tx.amount;
+      } else if (tx.currency === "USD") {
+        data.usd += tx.amount;
+      }
+    });
+
+    return Array.from(statementData.entries()).map(([statementId, totals]) => ({
+      statementId,
+      totalArs: totals.ars,
+      totalUsd: totals.usd,
+      transactionCount: totals.count,
+    }));
+  }, [userId, statements]);
+
   return {
     statements,
     loading,
@@ -298,5 +350,6 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
     deleteStatement,
     getMonthlyTransactions,
     getMonthlyTotals,
+    getStatementTotals,
   };
 }
