@@ -21,6 +21,7 @@ import { NotificationSetupBanner } from "@/components/notifications/Notification
 import { VoiceRecordingOverlay } from "@/components/voice/VoiceRecordingOverlay";
 import { VoiceConfirmationStep } from "@/components/voice/VoiceConfirmationStep";
 import { TransactionInitialData } from "@/components/AddTransactionDialog";
+import { SuccessConfetti } from "@/components/animations/SuccessConfetti";
 import { InsightsCard } from "@/components/insights/InsightsCard";
 import { MobileHeader } from "@/components/MobileHeader";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
@@ -52,6 +53,8 @@ const Index = () => {
   const [addTransactionDialogOpen, setAddTransactionDialogOpen] = useState(false);
   const [voiceInitialData, setVoiceInitialData] = useState<TransactionInitialData | null>(null);
   const [savingsDropdownOpen, setSavingsDropdownOpen] = useState(false);
+  const [showVoiceSuccess, setShowVoiceSuccess] = useState(false);
+  const [isVoiceTransaction, setIsVoiceTransaction] = useState(false);
 
   // Use the new consolidated data hook
   const { 
@@ -170,6 +173,12 @@ const Index = () => {
   const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
     if (!user) return;
     await addTransaction(transaction);
+    
+    // Show success animation if it was a voice transaction
+    if (isVoiceTransaction) {
+      setShowVoiceSuccess(true);
+      setIsVoiceTransaction(false);
+    }
   };
 
   const handleUpdateTransaction = async (id: string, transaction: Omit<Transaction, "id">) => {
@@ -620,6 +629,7 @@ const Index = () => {
                 description: tx.description,
                 date: new Date(tx.date),
               });
+              setIsVoiceTransaction(true); // Mark as voice transaction for success animation
               setVoiceConfirmationOpen(false);
               setAddTransactionDialogOpen(true);
               voiceTransaction.reset();
@@ -633,6 +643,13 @@ const Index = () => {
             setVoiceConfirmationOpen(false);
             voiceTransaction.reset();
           }}
+        />
+
+        {/* Voice Success Animation */}
+        <SuccessConfetti
+          show={showVoiceSuccess}
+          onComplete={() => setShowVoiceSuccess(false)}
+          message="¡Transacción guardada!"
         />
       </div>
     </AppLayout>
