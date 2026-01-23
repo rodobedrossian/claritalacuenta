@@ -24,6 +24,9 @@ import { toast } from "sonner";
 
 interface AddInvestmentDialogProps {
   onAdd: (investment: Omit<Investment, "id" | "user_id" | "created_at" | "updated_at">) => void;
+  // Controlled mode props
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const investmentTypes = [
@@ -34,8 +37,14 @@ const investmentTypes = [
   { value: "otro", label: "Otro" },
 ] as const;
 
-export const AddInvestmentDialog = ({ onAdd }: AddInvestmentDialogProps) => {
-  const [open, setOpen] = useState(false);
+export const AddInvestmentDialog = ({ onAdd, open: controlledOpen, onOpenChange }: AddInvestmentDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? (v: boolean) => onOpenChange?.(v) : setInternalOpen;
+
   const [name, setName] = useState("");
   const [investmentType, setInvestmentType] = useState<Investment["investment_type"]>("plazo_fijo");
   const [currency, setCurrency] = useState<"USD" | "ARS">("ARS");
@@ -123,12 +132,14 @@ export const AddInvestmentDialog = ({ onAdd }: AddInvestmentDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Inversión
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Inversión
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nueva Inversión</DialogTitle>
