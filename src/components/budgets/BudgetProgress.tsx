@@ -79,7 +79,7 @@ export const BudgetProgress = ({ budgets, projectedExpensesUSD = 0, projectedExp
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.25 }}
     >
-      <Card className="p-6 gradient-card border-border/50">
+      <Card className="p-6 bg-card border-border shadow-stripe">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold">Presupuestos del Mes</h3>

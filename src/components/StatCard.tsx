@@ -14,13 +14,13 @@ interface StatCardProps {
 export const StatCard = ({ title, value, subtitle, change, icon: Icon, trend, onClick }: StatCardProps) => {
   return (
     <Card 
-      className={`p-6 gradient-card border-border/50 hover:border-primary/50 transition-smooth shadow-glow ${onClick ? 'cursor-pointer' : ''}`}
+      className={`p-6 bg-card hover:shadow-stripe-md transition-all duration-200 ${onClick ? 'cursor-pointer hover:scale-[1.02]' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="text-3xl font-bold tracking-tight">{value}</p>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-3xl font-bold tracking-tight text-foreground">{value}</p>
           {subtitle && (
             <p className="text-xs text-muted-foreground mt-1">
               {subtitle}
@@ -34,7 +34,7 @@ export const StatCard = ({ title, value, subtitle, change, icon: Icon, trend, on
             </p>
           )}
         </div>
-        <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+        <div className="p-3 rounded-xl bg-primary/10">
           <Icon className="h-5 w-5 text-primary" />
         </div>
       </div>
