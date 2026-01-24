@@ -38,7 +38,7 @@ export const SavingsQuickStats = ({
     <div className="space-y-3">
       {/* Ahorros Líquidos */}
       <motion.div 
-        className="bg-card rounded-xl p-4 border border-border/50"
+        className="bg-card rounded-xl p-4 border border-border shadow-stripe"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
@@ -46,11 +46,11 @@ export const SavingsQuickStats = ({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
+            <div className="p-2.5 rounded-xl bg-primary/10">
               <Wallet className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Ahorros Líquidos</p>
+              <p className="text-xs font-medium text-muted-foreground">Ahorros Líquidos</p>
               <p className="text-lg font-bold text-primary">
                 {formatCurrency(currentSavings.usd, "USD")}
               </p>
@@ -68,7 +68,7 @@ export const SavingsQuickStats = ({
 
       {/* Total Invertido */}
       <motion.div 
-        className="bg-card rounded-xl p-4 border border-border/50"
+        className="bg-card rounded-xl p-4 border border-border shadow-stripe"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
@@ -76,11 +76,11 @@ export const SavingsQuickStats = ({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-success/10">
+            <div className="p-2.5 rounded-xl bg-success/10">
               <TrendingUp className="h-4 w-4 text-success" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Total Invertido</p>
+              <p className="text-xs font-medium text-muted-foreground">Total Invertido</p>
               <p className="text-lg font-bold text-success">
                 {formatCurrency(totalInvested.usd, "USD")}
               </p>
@@ -98,7 +98,7 @@ export const SavingsQuickStats = ({
 
       {/* Patrimonio Total */}
       <motion.div 
-        className="bg-card rounded-xl p-4 border border-border/50"
+        className="bg-card rounded-xl p-4 border border-border shadow-stripe"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
@@ -106,12 +106,12 @@ export const SavingsQuickStats = ({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-secondary/10">
-              <PiggyBank className="h-4 w-4 text-secondary" />
+            <div className="p-2.5 rounded-xl bg-primary/10">
+              <PiggyBank className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Patrimonio Total</p>
-              <p className="text-lg font-bold text-secondary">
+              <p className="text-xs font-medium text-muted-foreground">Patrimonio Total</p>
+              <p className="text-lg font-bold text-foreground">
                 {formatCurrency(patrimonioARS, "ARS")}
               </p>
             </div>
@@ -126,7 +126,7 @@ export const SavingsQuickStats = ({
 
       {/* Objetivos */}
       <motion.div 
-        className="bg-card rounded-xl p-4 border border-border/50"
+        className="bg-card rounded-xl p-4 border border-border shadow-stripe"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
@@ -134,12 +134,12 @@ export const SavingsQuickStats = ({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-accent/50">
-              <Target className="h-4 w-4 text-accent-foreground" />
+            <div className="p-2.5 rounded-xl bg-warning/10">
+              <Target className="h-4 w-4 text-warning" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Objetivos Activos</p>
-              <p className="text-lg font-bold">
+              <p className="text-xs font-medium text-muted-foreground">Objetivos Activos</p>
+              <p className="text-lg font-bold text-foreground">
                 {activeGoals}
               </p>
             </div>
