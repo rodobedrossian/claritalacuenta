@@ -35,7 +35,7 @@ export const QuickStats = ({
     <div className="space-y-3">
       {/* Income Card */}
       <motion.div 
-        className="bg-card rounded-xl p-4 border border-border/50"
+        className="bg-card rounded-xl p-4 border border-border shadow-stripe hover:shadow-stripe-md transition-shadow"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
@@ -43,11 +43,11 @@ export const QuickStats = ({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-success/10">
+            <div className="p-2.5 rounded-xl bg-success/10">
               <TrendingUp className="h-4 w-4 text-success" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Ingresos del mes</p>
+              <p className="text-xs font-medium text-muted-foreground">Ingresos del mes</p>
               <p className="text-lg font-bold text-success">
                 {formatCurrency(income.total, "ARS")}
               </p>
@@ -70,7 +70,7 @@ export const QuickStats = ({
 
       {/* Expenses Card */}
       <motion.div 
-        className="bg-card rounded-xl p-4 border border-border/50"
+        className="bg-card rounded-xl p-4 border border-border shadow-stripe hover:shadow-stripe-md transition-shadow"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
@@ -78,11 +78,11 @@ export const QuickStats = ({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-destructive/10">
+            <div className="p-2.5 rounded-xl bg-destructive/10">
               <TrendingDown className="h-4 w-4 text-destructive" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Gastos del mes</p>
+              <p className="text-xs font-medium text-muted-foreground">Gastos del mes</p>
               <p className="text-lg font-bold text-destructive">
                 {formatCurrency(expenses.total, "ARS")}
               </p>
@@ -106,7 +106,7 @@ export const QuickStats = ({
       {/* Savings Card */}
       <motion.button 
         onClick={() => navigate("/savings")}
-        className="w-full bg-card rounded-xl p-4 border border-border/50 hover:border-primary/50 transition-colors text-left group"
+        className="w-full bg-card rounded-xl p-4 border border-border shadow-stripe hover:shadow-stripe-md hover:border-primary/30 transition-all text-left group"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
@@ -116,11 +116,11 @@ export const QuickStats = ({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
+            <div className="p-2.5 rounded-xl bg-primary/10">
               <PiggyBank className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Ahorros actuales</p>
+              <p className="text-xs font-medium text-muted-foreground">Ahorros actuales</p>
               <p className="text-lg font-bold text-primary">
                 {formatCurrency(savings.usd, "USD")}
               </p>

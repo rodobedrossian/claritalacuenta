@@ -47,7 +47,7 @@ export const SpendingChart = ({ data }: SpendingChartProps) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.4 }}
     >
-      <Card className="p-6 gradient-card border-border/50">
+      <Card className="p-6 bg-card border-border shadow-stripe">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Gastos por Categoría</h3>
           <div className="flex gap-2">
@@ -117,7 +117,7 @@ export const SpendingChart = ({ data }: SpendingChartProps) => {
             {/* Legend as list - takes remaining space */}
             <div className="flex-1 w-full lg:w-auto">
               {/* Total */}
-              <div className="mb-4 p-3 rounded-lg bg-muted/30 border border-border/50">
+              <div className="mb-4 p-3 rounded-xl bg-muted border border-border">
                 <p className="text-sm text-muted-foreground">Total del mes</p>
                 <p className="text-2xl font-bold">{formatAmount(total)}</p>
               </div>

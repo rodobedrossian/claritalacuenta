@@ -77,19 +77,19 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
 
   // Desktop/Tablet layout with sidebar
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-muted/30 flex">
       {/* Sidebar */}
       <aside
         className={cn(
-          "sticky top-0 left-0 z-40 h-screen border-r border-border/50 bg-card backdrop-blur-sm transition-all duration-300",
+          "sticky top-0 left-0 z-40 h-screen border-r border-border bg-background shadow-stripe transition-all duration-300",
           sidebarWidth
         )}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className={cn("border-b border-border/50", !showExpanded ? "px-2 py-4" : "p-6")}>
+          <div className={cn("border-b border-border", !showExpanded ? "px-2 py-4" : "p-6")}>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg gradient-primary shrink-0">
+              <div className="p-2 rounded-xl gradient-primary shrink-0">
                 <PiggyBank className="h-6 w-6 text-primary-foreground" />
               </div>
               {showExpanded && <h1 className="text-lg font-bold text-foreground truncate">Clarita la cuenta</h1>}
@@ -97,7 +97,7 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
           </div>
 
           {/* Navigation */}
-          <nav className={cn("flex-1 space-y-2", !showExpanded ? "p-2" : "p-4")}>
+          <nav className={cn("flex-1 space-y-1", !showExpanded ? "p-2" : "p-4")}>
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -106,10 +106,10 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
                   onClick={() => navigate(item.path)}
                   title={!showExpanded ? item.title : undefined}
                   className={cn(
-                    "w-full flex items-center gap-3 rounded-lg text-left transition-all",
+                    "w-full flex items-center gap-3 rounded-xl text-left transition-all duration-150",
                     !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
                     isActive(item.path)
-                      ? "bg-primary/10 text-primary border border-primary/20"
+                      ? "bg-primary/10 text-primary font-medium"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
@@ -121,12 +121,12 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
           </nav>
 
           {/* Footer */}
-          <div className={cn("border-t border-border/50", !showExpanded ? "p-2" : "p-4")}>
+          <div className={cn("border-t border-border", !showExpanded ? "p-2" : "p-4")}>
             {/* Collapse toggle */}
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
               className={cn(
-                "w-full flex items-center gap-3 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all mb-2",
+                "w-full flex items-center gap-3 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-all mb-2",
                 !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
               )}
               title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
@@ -144,7 +144,7 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
               onClick={handleSignOut}
               title={!showExpanded ? "Cerrar Sesión" : undefined}
               className={cn(
-                "w-full flex items-center gap-3 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all",
+                "w-full flex items-center gap-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all",
                 !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
               )}
             >

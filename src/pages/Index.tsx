@@ -422,7 +422,7 @@ const Index = () => {
         ) : (
           <>
             {/* Desktop: Original header */}
-            <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+            <header className="border-b border-border bg-background sticky top-0 z-10">
               <div className="container mx-auto px-6 py-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -490,8 +490,8 @@ const Index = () => {
 
               {/* Net Balance - Prominent at top */}
               <div className="mb-8 animate-fade-in">
-                <div className="bg-card rounded-2xl p-6 border border-border/50 text-center max-w-lg mx-auto">
-                  <p className="text-sm text-muted-foreground mb-1">Balance Neto</p>
+                <div className="bg-card rounded-2xl p-6 border border-border shadow-stripe-md text-center max-w-lg mx-auto">
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Balance Neto</p>
                   <p className={`text-4xl font-bold ${globalNetBalanceARS >= 0 ? 'text-success' : 'text-destructive'}`}>
                     {formatCurrency(globalNetBalanceARS, "ARS")}
                   </p>
@@ -533,7 +533,7 @@ const Index = () => {
                     onManageBudgets={() => navigate("/budgets")}
                   />
                 ) : (
-                  <Card className="p-6 gradient-card border-border/50">
+                  <Card className="p-6 bg-card border border-border shadow-stripe">
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-lg font-semibold">Presupuestos del Mes</h3>

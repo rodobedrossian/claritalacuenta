@@ -274,7 +274,7 @@ export const TransactionsList = ({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.5 }}
       >
-        <Card className="p-4 md:p-6 gradient-card border-border/50">{content}</Card>
+        <Card className="p-4 md:p-6 bg-card border-border shadow-stripe">{content}</Card>
       </motion.div>
     );
   }

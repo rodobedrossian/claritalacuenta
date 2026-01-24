@@ -56,7 +56,7 @@ export const BottomNavigation = ({ onAddClick }: BottomNavigationProps) => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-md border-t border-border/50 safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.05)] safe-area-bottom">
       <div className="flex items-center justify-around h-16 px-2">
         {mainNavItems.map((item) => {
           const Icon = item.icon;
@@ -69,7 +69,7 @@ export const BottomNavigation = ({ onAddClick }: BottomNavigationProps) => {
                 onClick={onAddClick}
                 className="flex flex-col items-center justify-center -mt-5"
               >
-                <div className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-lg shadow-primary/30">
+                <div className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-stripe-lg">
                   <Plus className="h-7 w-7 text-primary-foreground" />
                 </div>
               </button>
@@ -125,7 +125,7 @@ const MoreDrawer = ({ items, currentPath, onNavigate, onSignOut }: MoreDrawerPro
           <span className="text-xs">Más</span>
         </Button>
       </DrawerTrigger>
-      <DrawerContent>
+      <DrawerContent className="bg-card border-border">
         <DrawerHeader className="text-left">
           <DrawerTitle>Menú</DrawerTitle>
         </DrawerHeader>
@@ -139,9 +139,9 @@ const MoreDrawer = ({ items, currentPath, onNavigate, onSignOut }: MoreDrawerPro
                 key={item.path}
                 onClick={() => onNavigate(item.path)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all",
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
                   active
-                    ? "bg-primary/10 text-primary border border-primary/20"
+                    ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
@@ -151,10 +151,10 @@ const MoreDrawer = ({ items, currentPath, onNavigate, onSignOut }: MoreDrawerPro
             );
           })}
           
-          <div className="pt-4 border-t border-border/50 mt-4">
+          <div className="pt-4 border-t border-border mt-4">
             <button
               onClick={onSignOut}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
             >
               <LogOut className="h-5 w-5" />
               <span className="font-medium">Cerrar Sesión</span>

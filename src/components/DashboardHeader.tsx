@@ -48,7 +48,7 @@ export const DashboardHeader = ({
   const breakdownText = getBreakdownText();
 
   return (
-    <header className="bg-gradient-to-b from-card to-background">
+    <header className="bg-background">
       <div className="container mx-auto px-4 pt-4 pb-6">
         {/* Exchange Rate row */}
         {lastUpdated && (
@@ -76,7 +76,7 @@ export const DashboardHeader = ({
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4, delay: 0.1 }}
         >
-          <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Balance Neto</p>
+          <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">Balance Neto</p>
           <motion.p 
             className={`text-4xl font-bold tracking-tight ${isPositive ? 'text-success' : 'text-destructive'}`}
             initial={{ opacity: 0, y: 10 }}
@@ -104,16 +104,16 @@ export const DashboardHeader = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.25 }}
         >
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onPreviousMonth}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={onPreviousMonth}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <button
             onClick={onCurrentMonth}
-            className="px-4 py-1.5 text-sm font-medium capitalize bg-muted/50 rounded-full hover:bg-muted transition-colors min-w-[140px]"
+            className="px-4 py-1.5 text-sm font-medium capitalize bg-muted rounded-full hover:bg-muted/80 transition-colors min-w-[140px]"
           >
             {format(activeMonth, "MMMM yyyy", { locale: es })}
           </button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onNextMonth}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={onNextMonth}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </motion.div>

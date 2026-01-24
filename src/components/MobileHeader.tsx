@@ -31,7 +31,7 @@ export const MobileHeader = ({ userName }: MobileHeaderProps) => {
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 px-4 py-3">
+    <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border px-4 py-3">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-foreground">
           Hola, <span className="text-primary">{userName}</span>
@@ -39,11 +39,11 @@ export const MobileHeader = ({ userName }: MobileHeaderProps) => {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9">
+            <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-muted">
               <MoreHorizontal className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-48 bg-card border border-border shadow-stripe-lg">
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (
