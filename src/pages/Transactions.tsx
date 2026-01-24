@@ -12,13 +12,12 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TransactionsListSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useTransactionsData, Transaction, TransactionFilters } from "@/hooks/useTransactionsData";
-import { useIsMobile } from "@/hooks/use-mobile";
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 
 const Transactions = () => {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -139,12 +138,11 @@ const Transactions = () => {
 
         <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
           {/* Filters Section */}
-          <Collapsible open={isMobile ? filtersOpen : true} onOpenChange={setFiltersOpen}>
+          <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
             <div className="mb-6 rounded-lg bg-card border border-border/50 overflow-hidden">
               <CollapsibleTrigger asChild>
                 <button 
-                  className={`w-full flex items-center justify-between p-4 md:p-6 ${isMobile ? 'cursor-pointer hover:bg-muted/50' : 'cursor-default'}`}
-                  disabled={!isMobile}
+                  className="w-full flex items-center justify-between p-4 md:p-6 cursor-pointer hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     <Filter className="h-5 w-5 text-muted-foreground" />
@@ -155,15 +153,18 @@ const Transactions = () => {
                       </span>
                     )}
                   </div>
-                  {isMobile && (
-                    filtersOpen ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                  )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground hidden sm:inline">
+                      {transactions.length} de {totalCount}
+                    </span>
+                    {filtersOpen ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+                  </div>
                 </button>
               </CollapsibleTrigger>
               
               <CollapsibleContent>
-                <div className="px-4 pb-4 md:px-6 md:pb-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="px-4 pb-4 md:px-6 md:pb-6 border-t border-border/50">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">Tipo</label>
                       <Select value={filters.type} onValueChange={(v) => handleUpdateFilter("type", v)}>
@@ -214,10 +215,7 @@ const Transactions = () => {
                     </div>
                   </div>
 
-                  <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <p className="text-sm text-muted-foreground">
-                      Mostrando {transactions.length} de {totalCount} transacciones
-                    </p>
+                  <div className="mt-4 flex justify-end">
                     <Button variant="outline" onClick={resetFilters} size="sm">
                       Limpiar Filtros
                     </Button>
