@@ -129,6 +129,7 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
       // If savings need to be rebuilt from entries, do it now
       if (typedData.needsRebuild) {
         await supabase.from("savings").insert([{
+          user_id: userId,
           usd_amount: typedData.currentSavings.usd,
           ars_amount: typedData.currentSavings.ars
         }]);
@@ -174,6 +175,7 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
           .eq("id", data.currentSavings.recordId);
       } else {
         await supabase.from("savings").insert([{
+          user_id: userId,
           usd_amount: entry.currency === "USD" ? newAmount : 0,
           ars_amount: entry.currency === "ARS" ? newAmount : 0
         }]);
