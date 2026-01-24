@@ -12,7 +12,7 @@ import { TransactionActionsDropdown } from "@/components/TransactionActionsDropd
 import { TransactionsList } from "@/components/TransactionsList";
 import { EditTransactionDialog } from "@/components/EditTransactionDialog";
 import { SpendingChart } from "@/components/SpendingChart";
-import { TimelineChart } from "@/components/TimelineChart";
+
 import { AppLayout } from "@/components/AppLayout";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { BudgetProgress } from "@/components/budgets/BudgetProgress";
@@ -409,7 +409,6 @@ const Index = () => {
               {/* Charts and Transactions */}
               <div className="space-y-4">
                 <SpendingChart data={spendingByCategory} />
-                <TimelineChart transactions={transactions} />
                 <TransactionsList 
                   transactions={transactions.slice(0, 5)} 
                   onEdit={handleEditTransaction}
@@ -489,14 +488,21 @@ const Index = () => {
                 </Button>
               </div>
 
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in">
-                <StatCard 
-                  title="Ahorros Actuales" 
-                  value={`${formatCurrency(currentSavings.usd, "USD")} / ${formatCurrency(currentSavings.ars, "ARS")}`} 
-                  icon={PiggyBank}
-                  onClick={() => navigate("/savings")}
-                />
+              {/* Net Balance - Prominent at top */}
+              <div className="mb-8 animate-fade-in">
+                <div className="bg-card rounded-2xl p-6 border border-border/50 text-center max-w-lg mx-auto">
+                  <p className="text-sm text-muted-foreground mb-1">Balance Neto</p>
+                  <p className={`text-4xl font-bold ${globalNetBalanceARS >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {formatCurrency(globalNetBalanceARS, "ARS")}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {formatCurrency(totals.incomeUSD - totals.expensesUSD - totals.savingsTransfersUSD, "USD")} / {formatCurrency(totals.incomeARS - totals.expensesARS - totals.savingsTransfersARS, "ARS")}
+                  </p>
+                </div>
+              </div>
+
+              {/* Stats Cards - Similar to mobile layout */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fade-in">
                 <StatCard 
                   title="Ingresos Totales" 
                   value={formatCurrency(globalIncomeARS, "ARS")}
@@ -511,11 +517,11 @@ const Index = () => {
                   icon={TrendingDown}
                 />
                 <StatCard 
-                  title="Balance Neto" 
-                  value={formatCurrency(globalNetBalanceARS, "ARS")}
-                  subtitle={`Gastos: ${formatCurrency(globalExpensesARS, "ARS")} | Ahorros: ${formatCurrency(globalSavingsTransfersARS, "ARS")}`}
-                  icon={Wallet}
-                  trend={globalNetBalanceARS >= 0 ? "up" : "down"}
+                  title="Ahorros Actuales" 
+                  value={`${formatCurrency(currentSavings.usd, "USD")}`}
+                  subtitle={currentSavings.ars > 0 ? `+ ${formatCurrency(currentSavings.ars, "ARS")}` : undefined}
+                  icon={PiggyBank}
+                  onClick={() => navigate("/savings")}
                 />
               </div>
 
@@ -557,7 +563,6 @@ const Index = () => {
 
               {/* Charts and Transactions */}
               <div className="space-y-6 animate-slide-up">
-                <TimelineChart transactions={transactions} />
                 <SpendingChart data={spendingByCategory} />
                 <TransactionsList 
                   transactions={transactions.slice(0, 5)} 
