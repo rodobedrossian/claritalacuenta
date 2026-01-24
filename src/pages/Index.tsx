@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Wallet, TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardHeader } from "@/components/DashboardHeader";
+import { QuickStats } from "@/components/QuickStats";
 import { QuickActions } from "@/components/QuickActions";
 import { StatCard } from "@/components/StatCard";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
@@ -11,7 +12,7 @@ import { TransactionActionsDropdown } from "@/components/TransactionActionsDropd
 import { TransactionsList } from "@/components/TransactionsList";
 import { EditTransactionDialog } from "@/components/EditTransactionDialog";
 import { SpendingChart } from "@/components/SpendingChart";
-
+import { TimelineChart } from "@/components/TimelineChart";
 import { AppLayout } from "@/components/AppLayout";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { BudgetProgress } from "@/components/budgets/BudgetProgress";
@@ -354,35 +355,13 @@ const Index = () => {
             />
 
             <main className="container mx-auto px-4 py-4 space-y-4">
-              {/* Stats Grid - same as desktop but responsive */}
-              <div className="grid grid-cols-2 gap-3">
-                <StatCard 
-                  title="Ahorros" 
-                  value={formatCurrency(currentSavings.usd, "USD")}
-                  subtitle={currentSavings.ars > 0 ? `+ ${formatCurrency(currentSavings.ars, "ARS")}` : undefined}
-                  icon={PiggyBank}
-                  onClick={() => navigate("/savings")}
-                />
-                <StatCard 
-                  title="Ingresos" 
-                  value={formatCurrency(globalIncomeARS, "ARS")}
-                  subtitle={`${formatCurrency(totals.incomeUSD, "USD")} / ${formatCurrency(totals.incomeARS, "ARS")}`}
-                  icon={TrendingUp}
-                  trend="up"
-                />
-                <StatCard 
-                  title="Gastos" 
-                  value={formatCurrency(globalExpensesARS, "ARS")}
-                  subtitle={`${formatCurrency(totals.expensesUSD, "USD")} / ${formatCurrency(totals.expensesARS, "ARS")}`}
-                  icon={TrendingDown}
-                />
-                <StatCard 
-                  title="Balance" 
-                  value={formatCurrency(globalNetBalanceARS, "ARS")}
-                  icon={Wallet}
-                  trend={globalNetBalanceARS >= 0 ? "up" : "down"}
-                />
-              </div>
+              {/* Quick Stats */}
+              <QuickStats
+                income={{ usd: totals.incomeUSD, ars: totals.incomeARS, total: globalIncomeARS }}
+                expenses={{ usd: totals.expensesUSD, ars: totals.expensesARS, total: globalExpensesARS }}
+                savings={currentSavings}
+                formatCurrency={formatCurrency}
+              />
 
               {/* Quick Actions */}
               <QuickActions
@@ -430,6 +409,7 @@ const Index = () => {
               {/* Charts and Transactions */}
               <div className="space-y-4">
                 <SpendingChart data={spendingByCategory} />
+                <TimelineChart transactions={transactions} />
                 <TransactionsList 
                   transactions={transactions.slice(0, 5)} 
                   onEdit={handleEditTransaction}
@@ -510,11 +490,10 @@ const Index = () => {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-fade-in">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in">
                 <StatCard 
                   title="Ahorros Actuales" 
-                  value={formatCurrency(currentSavings.usd, "USD")}
-                  subtitle={currentSavings.ars > 0 ? `+ ${formatCurrency(currentSavings.ars, "ARS")}` : undefined}
+                  value={`${formatCurrency(currentSavings.usd, "USD")} / ${formatCurrency(currentSavings.ars, "ARS")}`} 
                   icon={PiggyBank}
                   onClick={() => navigate("/savings")}
                 />
@@ -578,6 +557,7 @@ const Index = () => {
 
               {/* Charts and Transactions */}
               <div className="space-y-6 animate-slide-up">
+                <TimelineChart transactions={transactions} />
                 <SpendingChart data={spendingByCategory} />
                 <TransactionsList 
                   transactions={transactions.slice(0, 5)} 
