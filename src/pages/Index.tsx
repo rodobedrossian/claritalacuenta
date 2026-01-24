@@ -234,6 +234,7 @@ const Index = () => {
         const { error } = await supabase
           .from("savings")
           .insert([{
+            user_id: user.id,
             usd_amount: currency === "USD" ? (entryType === "deposit" ? amount : 0) : 0,
             ars_amount: currency === "ARS" ? (entryType === "deposit" ? amount : 0) : 0
           }]);
