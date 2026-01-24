@@ -7,7 +7,7 @@ import { QuickStats } from "@/components/QuickStats";
 import { QuickActions } from "@/components/QuickActions";
 import { StatCard } from "@/components/StatCard";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
-import { SavingsActionDropdown } from "@/components/SavingsActionDropdown";
+import { AddSavingsWizard } from "@/components/savings-wizard/AddSavingsWizard";
 import { TransactionActionsDropdown } from "@/components/TransactionActionsDropdown";
 import { TransactionsList } from "@/components/TransactionsList";
 import { EditTransactionDialog } from "@/components/EditTransactionDialog";
@@ -52,7 +52,7 @@ const Index = () => {
   const [voiceConfirmationOpen, setVoiceConfirmationOpen] = useState(false);
   const [addTransactionDialogOpen, setAddTransactionDialogOpen] = useState(false);
   const [voiceInitialData, setVoiceInitialData] = useState<TransactionInitialData | null>(null);
-  const [savingsDropdownOpen, setSavingsDropdownOpen] = useState(false);
+  const [savingsWizardOpen, setSavingsWizardOpen] = useState(false);
   const [showVoiceSuccess, setShowVoiceSuccess] = useState(false);
   const [isVoiceTransaction, setIsVoiceTransaction] = useState(false);
 
@@ -366,20 +366,28 @@ const Index = () => {
               <QuickActions
                 onAddExpense={() => setAddTransactionDialogOpen(true)}
                 onVoiceRecord={voiceTransaction.isRecording ? voiceTransaction.stopRecording : voiceTransaction.startRecording}
-                onTransferToSavings={() => setSavingsDropdownOpen(true)}
+                onTransferToSavings={() => setSavingsWizardOpen(true)}
                 isRecording={voiceTransaction.isRecording}
                 isProcessing={voiceTransaction.isProcessing}
               />
 
-              {/* Savings Dialog (controlled, no visible trigger) */}
-              <SavingsActionDropdown
+              {/* Savings Wizard (same as Savings page) */}
+              <AddSavingsWizard
+                open={savingsWizardOpen}
+                onOpenChange={setSavingsWizardOpen}
+                onAdd={async (entry) => {
+                  // The wizard only creates deposits, map entry_type appropriately
+                  const entryType = entry.entry_type === "interest" ? "deposit" : entry.entry_type;
+                  await handleAddSavings(
+                    entry.currency,
+                    entry.amount,
+                    entryType,
+                    entry.savings_type,
+                    entry.notes || undefined
+                  );
+                }}
                 availableBalanceUSD={availableBalanceUSD}
                 availableBalanceARS={availableBalanceARS}
-                onTransferFromBalance={(currency, amount, savingsType, notes) => handleAddSavings(currency, amount, "deposit", savingsType, notes)}
-                onAddSavings={handleAddSavings}
-                open={savingsDropdownOpen}
-                onOpenChange={setSavingsDropdownOpen}
-                hideDropdownTrigger
               />
 
               {/* Budget Progress */}
@@ -441,12 +449,14 @@ const Index = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <SavingsActionDropdown
-                      availableBalanceUSD={availableBalanceUSD}
-                      availableBalanceARS={availableBalanceARS}
-                      onTransferFromBalance={(currency, amount, savingsType, notes) => handleAddSavings(currency, amount, "deposit", savingsType, notes)}
-                      onAddSavings={handleAddSavings}
-                    />
+                    <Button 
+                      variant="outline" 
+                      className="border-primary/50 hover:bg-primary/10"
+                      onClick={() => setSavingsWizardOpen(true)}
+                    >
+                      <PiggyBank className="mr-2 h-4 w-4" />
+                      Ahorrar
+                    </Button>
                     <TransactionActionsDropdown
                       onAddManual={() => setAddTransactionDialogOpen(true)}
                       onVoiceRecord={voiceTransaction.isRecording ? voiceTransaction.stopRecording : voiceTransaction.startRecording}
