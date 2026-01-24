@@ -42,7 +42,7 @@ export const QuickActions = ({
         <Button
           onClick={onAddExpense}
           variant="outline"
-          className="w-full h-auto py-4 flex flex-col gap-2 border-border/50 hover:border-primary/50 hover:bg-primary/5"
+          className="w-full h-auto py-4 flex flex-col gap-2 border-border hover:border-primary/50 hover:bg-primary/5"
         >
           <div className="p-2 rounded-full bg-primary/10">
             <Plus className="h-5 w-5 text-primary" />
@@ -61,13 +61,13 @@ export const QuickActions = ({
           onClick={onVoiceRecord}
           disabled={isRecording || isProcessing}
           variant="outline"
-          className="w-full h-auto py-4 flex flex-col gap-2 border-border/50 hover:border-secondary/50 hover:bg-secondary/5"
+          className="w-full h-auto py-4 flex flex-col gap-2 border-border hover:border-primary/50 hover:bg-primary/5"
         >
-          <div className="p-2 rounded-full bg-secondary/10">
+          <div className="p-2 rounded-full bg-primary/10">
             {isProcessing ? (
-              <Loader2 className="h-5 w-5 text-secondary animate-spin" />
+              <Loader2 className="h-5 w-5 text-primary animate-spin" />
             ) : (
-              <Mic className={`h-5 w-5 text-secondary ${isRecording ? 'animate-pulse' : ''}`} />
+              <Mic className={`h-5 w-5 text-primary ${isRecording ? 'animate-pulse' : ''}`} />
             )}
           </div>
           <span className="text-xs font-medium">
@@ -85,7 +85,7 @@ export const QuickActions = ({
         <Button
           onClick={onTransferToSavings}
           variant="outline"
-          className="w-full h-auto py-4 flex flex-col gap-2 border-border/50 hover:border-success/50 hover:bg-success/5"
+          className="w-full h-auto py-4 flex flex-col gap-2 border-border hover:border-success/50 hover:bg-success/5"
         >
           <div className="p-2 rounded-full bg-success/10">
             <PiggyBank className="h-5 w-5 text-success" />
