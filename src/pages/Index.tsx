@@ -1,0 +1,700 @@
+import { useEffect, useState, useCallback } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Wallet, TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { QuickStats } from "@/components/QuickStats";
+import { QuickActions } from "@/components/QuickActions";
+import { StatCard } from "@/components/StatCard";
+import { AddTransactionDialog } from "@/components/AddTransactionDialog";
+import { AddSavingsWizard } from "@/components/savings-wizard/AddSavingsWizard";
+import { TransactionActionsDropdown } from "@/components/TransactionActionsDropdown";
+import { TransactionsList } from "@/components/TransactionsList";
+import { EditTransactionDialog } from "@/components/EditTransactionDialog";
+import { SpendingChart } from "@/components/SpendingChart";
+
+import { AppLayout } from "@/components/AppLayout";
+import { PullToRefresh } from "@/components/PullToRefresh";
+import { BudgetProgress } from "@/components/budgets/BudgetProgress";
+import { ImportStatementDialog } from "@/components/credit-cards/ImportStatementDialog";
+import { NotificationSetupBanner } from "@/components/notifications/NotificationSetupBanner";
+import { VoiceRecordingOverlay } from "@/components/voice/VoiceRecordingOverlay";
+import { VoiceConfirmationStep } from "@/components/voice/VoiceConfirmationStep";
+import { TransactionInitialData } from "@/components/AddTransactionDialog";
+import { SuccessConfetti } from "@/components/animations/SuccessConfetti";
+import { InsightsCard } from "@/components/insights/InsightsCard";
+import { MobileHeader } from "@/components/MobileHeader";
+import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useVoiceTransaction } from "@/hooks/useVoiceTransaction";
+import { useVoiceTokenPrefetch } from "@/hooks/useVoiceTokenPrefetch";
+import { useInsightsData } from "@/hooks/useInsightsData";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
+import { format, addMonths, subMonths } from "date-fns";
+import { es } from "date-fns/locale";
+import { useDashboardData, Transaction, CreditCard } from "@/hooks/useDashboardData";
+import { useBudgetsData } from "@/hooks/useBudgetsData";
+
+const Index = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isMobile = useIsMobile();
+  const [user, setUser] = useState<any>(null);
+  const [isRefreshingRate, setIsRefreshingRate] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [activeMonth, setActiveMonth] = useState<Date>(new Date());
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [voiceConfirmationOpen, setVoiceConfirmationOpen] = useState(false);
+  const [addTransactionDialogOpen, setAddTransactionDialogOpen] = useState(false);
+  const [voiceInitialData, setVoiceInitialData] = useState<TransactionInitialData | null>(null);
+  const [savingsWizardOpen, setSavingsWizardOpen] = useState(false);
+  const [showVoiceSuccess, setShowVoiceSuccess] = useState(false);
+  const [isVoiceTransaction, setIsVoiceTransaction] = useState(false);
+
+  // Use the new consolidated data hook
+  const { 
+    data: dashboardData, 
+    loading: dataLoading, 
+    refetch,
+    updateTransaction,
+    deleteTransaction,
+    addTransaction,
+    updateCurrentSavings,
+    updateSavingsTransfers
+  } = useDashboardData(activeMonth, user?.id);
+
+  // Budget data
+  const transactionsForBudgets = dashboardData?.transactions.map(t => ({
+    category: t.category,
+    currency: t.currency,
+    amount: t.amount,
+    type: t.type
+  })) || [];
+
+  const {
+    budgets,
+    budgetsWithSpending,
+    addBudget,
+    updateBudget,
+    deleteBudget,
+  } = useBudgetsData(user?.id, activeMonth, transactionsForBudgets);
+
+  // Push notifications hook
+  const pushNotifications = usePushNotifications(user?.id);
+
+  // Insights data
+  const { data: insightsData, loading: insightsLoading, refetch: refetchInsights } = useInsightsData(user?.id);
+
+  // Voice token prefetch - fetches token when dashboard loads
+  const { getToken, prefetch: prefetchToken } = useVoiceTokenPrefetch();
+
+  // Voice transaction hook - uses prefetched token for faster startup
+  const voiceTransaction = useVoiceTransaction({
+    categories: dashboardData?.categories || [],
+    userName: user?.user_metadata?.full_name || user?.email || "Usuario",
+    userId: user?.id,
+    getToken
+  });
+
+  // Open confirmation step when voice transaction is parsed
+  useEffect(() => {
+    if (voiceTransaction.isReady && voiceTransaction.parsedTransaction) {
+      setVoiceConfirmationOpen(true);
+      // Prefetch a new token for the next recording
+      prefetchToken();
+    }
+  }, [voiceTransaction.isReady, voiceTransaction.parsedTransaction, prefetchToken]);
+
+  // Handle URL action params from FAB navigation
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const action = params.get("action");
+    
+    if (action === "add-transaction") {
+      setAddTransactionDialogOpen(true);
+      // Clean up URL
+      navigate("/", { replace: true });
+    } else if (action === "voice-record") {
+      voiceTransaction.startRecording();
+      navigate("/", { replace: true });
+    }
+  }, [location.search, navigate, voiceTransaction]);
+
+  useEffect(() => {
+    // Solo obtener sesión inicial - ProtectedRoute ya validó que existe
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    // Escuchar cambios para logout
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchExchangeRate = async () => {
+    try {
+      setIsRefreshingRate(true);
+      
+      // Call edge function to update
+      const { data, error } = await supabase.functions.invoke('fetch-exchange-rate');
+      
+      if (error) throw error;
+      
+      if (data?.success && data?.rate) {
+        // Refetch dashboard data to get updated rate
+        await refetch();
+        toast.success('Tipo de cambio actualizado');
+      }
+    } catch (error) {
+      console.error('Error fetching exchange rate:', error);
+      toast.error('Error al actualizar tipo de cambio');
+    } finally {
+      setIsRefreshingRate(false);
+    }
+  };
+
+  const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
+    if (!user) return;
+    await addTransaction(transaction);
+    
+    // Show success animation if it was a voice transaction
+    if (isVoiceTransaction) {
+      setShowVoiceSuccess(true);
+      setIsVoiceTransaction(false);
+    }
+  };
+
+  const handleUpdateTransaction = async (id: string, transaction: Omit<Transaction, "id">) => {
+    await updateTransaction(id, transaction);
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    await deleteTransaction(id);
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setEditDialogOpen(true);
+  };
+
+  const handleAddSavings = async (
+    currency: "USD" | "ARS", 
+    amount: number, 
+    entryType: "deposit" | "withdrawal",
+    savingsType: "cash" | "bank" | "other",
+    notes?: string
+  ) => {
+    if (!user) return;
+    
+    try {
+      // Create savings_entries record
+      const { error: entryError } = await supabase
+        .from("savings_entries")
+        .insert([{
+          user_id: user.id,
+          amount,
+          currency,
+          entry_type: entryType,
+          savings_type: savingsType,
+          notes: notes || null
+        }]);
+      
+      if (entryError) throw entryError;
+
+      // Update aggregated savings table
+      const amountDelta = entryType === "deposit" ? amount : -amount;
+      const currentAmount = dashboardData?.currentSavings[currency === "USD" ? "usd" : "ars"] || 0;
+      const newAmount = Math.max(0, currentAmount + amountDelta);
+      
+      // Try to get existing record
+      const { data: savingsRecord } = await supabase
+        .from("savings")
+        .select("id")
+        .maybeSingle();
+      
+      if (savingsRecord) {
+        // Update existing record
+        const { error } = await supabase
+          .from("savings")
+          .update(currency === "USD" ? { usd_amount: newAmount } : { ars_amount: newAmount })
+          .eq("id", savingsRecord.id);
+        if (error) throw error;
+      } else {
+        // Create new record
+        const { error } = await supabase
+          .from("savings")
+          .insert([{
+            user_id: user.id,
+            usd_amount: currency === "USD" ? (entryType === "deposit" ? amount : 0) : 0,
+            ars_amount: currency === "ARS" ? (entryType === "deposit" ? amount : 0) : 0
+          }]);
+        if (error) throw error;
+      }
+      
+      // Update local state
+      updateCurrentSavings({
+        ...dashboardData?.currentSavings || { usd: 0, ars: 0 },
+        [currency === "USD" ? "usd" : "ars"]: newAmount
+      });
+      
+      // If this is a transfer from balance, update savings transfers
+      if (notes?.includes("Transferencia desde balance") && entryType === "deposit") {
+        updateSavingsTransfers(currency, amount);
+      }
+      
+      toast.success(entryType === "deposit" ? "Depósito registrado" : "Retiro registrado");
+    } catch (error) {
+      console.error("Error updating savings:", error);
+      toast.error("Error al registrar movimiento");
+    }
+  };
+
+  const goToPreviousMonth = () => setActiveMonth(prev => subMonths(prev, 1));
+  const goToNextMonth = () => setActiveMonth(prev => addMonths(prev, 1));
+  const goToCurrentMonth = () => setActiveMonth(new Date());
+
+  // Pull to refresh handler
+  const handlePullToRefresh = useCallback(async () => {
+    await refetch();
+    await refetchInsights();
+    toast.success("Dashboard actualizado");
+  }, [refetch, refetchInsights]);
+
+  if (dataLoading) {
+    return (
+      <AppLayout>
+        <DashboardSkeleton />
+      </AppLayout>
+    );
+  }
+
+  // Extract data from dashboard hook
+  const currentSavings = dashboardData?.currentSavings || { usd: 0, ars: 0 };
+  const exchangeRate = dashboardData?.exchangeRate.rate || 1300;
+  const lastUpdated = dashboardData?.exchangeRate.updatedAt;
+  const transactions = dashboardData?.transactions || [];
+  const categories = dashboardData?.categories || [];
+  
+  const creditCards = dashboardData?.creditCards || [];
+  const totals = dashboardData?.totals || {
+    incomeUSD: 0,
+    incomeARS: 0,
+    expensesUSD: 0,
+    expensesARS: 0,
+    projectedExpensesUSD: 0,
+    projectedExpensesARS: 0,
+    savingsTransfersUSD: 0,
+    savingsTransfersARS: 0
+  };
+  const spendingByCategory = dashboardData?.spendingByCategory || [];
+
+  // Calculate available balance (income - expenses - transfers) - projected expenses don't impact balance
+  const availableBalanceUSD = Math.max(0, totals.incomeUSD - totals.expensesUSD - totals.savingsTransfersUSD);
+  const availableBalanceARS = Math.max(0, totals.incomeARS - totals.expensesARS - totals.savingsTransfersARS);
+
+  // Calculate global values in ARS (effective expenses only)
+  const globalIncomeARS = (totals.incomeUSD * exchangeRate) + totals.incomeARS;
+  const globalExpensesARS = (totals.expensesUSD * exchangeRate) + totals.expensesARS;
+  const globalSavingsTransfersARS = (totals.savingsTransfersUSD * exchangeRate) + totals.savingsTransfersARS;
+  const globalNetBalanceARS = globalIncomeARS - globalExpensesARS - globalSavingsTransfersARS;
+
+  const formatCurrency = (amount: number, currency: "USD" | "ARS") => {
+    return `${currency} ${new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount)}`;
+  };
+
+  return (
+    <AppLayout onMobileAddClick={() => setAddTransactionDialogOpen(true)}>
+      <div className="min-h-screen">
+        {/* Notification Banner */}
+        <div className="container mx-auto px-4 pt-4">
+          <NotificationSetupBanner
+            isSupported={pushNotifications.isSupported}
+            isPWA={pushNotifications.isPWA}
+            platform={pushNotifications.platform}
+            hasSubscription={pushNotifications.subscriptions.length > 0}
+            permission={pushNotifications.permission}
+            onSubscribe={pushNotifications.subscribe}
+            subscribing={pushNotifications.subscribing}
+          />
+        </div>
+
+        {/* Mobile: New streamlined header with pull-to-refresh */}
+        {isMobile ? (
+          <>
+            <MobileHeader userName={user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuario'} />
+            <PullToRefresh onRefresh={handlePullToRefresh} className="min-h-[calc(100vh-4rem)]" disabled={dataLoading}>
+              <DashboardHeader
+              userName={user?.user_metadata?.full_name || user?.email}
+              exchangeRate={exchangeRate}
+              lastUpdated={lastUpdated}
+              isRefreshingRate={isRefreshingRate}
+              onRefreshRate={fetchExchangeRate}
+              activeMonth={activeMonth}
+              onPreviousMonth={goToPreviousMonth}
+              onNextMonth={goToNextMonth}
+              onCurrentMonth={goToCurrentMonth}
+              netBalance={globalNetBalanceARS}
+              netBalanceBreakdown={{
+                usd: totals.incomeUSD - totals.expensesUSD - totals.savingsTransfersUSD,
+                ars: totals.incomeARS - totals.expensesARS - totals.savingsTransfersARS
+              }}
+              formatCurrency={formatCurrency}
+            />
+
+            <main className="container mx-auto px-4 py-4 space-y-4">
+              {/* Quick Stats */}
+              <QuickStats
+                income={{ usd: totals.incomeUSD, ars: totals.incomeARS, total: globalIncomeARS }}
+                expenses={{ usd: totals.expensesUSD, ars: totals.expensesARS, total: globalExpensesARS }}
+                savings={currentSavings}
+                formatCurrency={formatCurrency}
+              />
+
+              {/* Quick Actions */}
+              <QuickActions
+                onAddExpense={() => setAddTransactionDialogOpen(true)}
+                onVoiceRecord={voiceTransaction.isRecording ? voiceTransaction.stopRecording : voiceTransaction.startRecording}
+                onTransferToSavings={() => setSavingsWizardOpen(true)}
+                isRecording={voiceTransaction.isRecording}
+                isProcessing={voiceTransaction.isProcessing}
+              />
+
+              {/* Savings Wizard (same as Savings page) */}
+              <AddSavingsWizard
+                open={savingsWizardOpen}
+                onOpenChange={setSavingsWizardOpen}
+                onAdd={async (entry) => {
+                  // The wizard only creates deposits, map entry_type appropriately
+                  const entryType = entry.entry_type === "interest" ? "deposit" : entry.entry_type;
+                  await handleAddSavings(
+                    entry.currency,
+                    entry.amount,
+                    entryType,
+                    entry.savings_type,
+                    entry.notes || undefined
+                  );
+                }}
+                availableBalanceUSD={availableBalanceUSD}
+                availableBalanceARS={availableBalanceARS}
+              />
+
+              {/* Budget Progress */}
+              {budgetsWithSpending.length > 0 && (
+                <BudgetProgress
+                  budgets={budgetsWithSpending}
+                  onManageBudgets={() => navigate("/budgets")}
+                />
+              )}
+
+              {/* Insights */}
+              <InsightsCard
+                insights={insightsData?.insights || []}
+                loading={insightsLoading}
+                onRefresh={refetchInsights}
+              />
+
+              {/* Charts and Transactions */}
+              <div className="space-y-4">
+                <SpendingChart data={spendingByCategory} />
+                <TransactionsList 
+                  transactions={transactions.slice(0, 5)} 
+                  onEdit={handleEditTransaction}
+                  showViewAll={transactions.length > 5}
+                  onViewAll={() => navigate("/transactions")}
+                />
+              </div>
+            </main>
+            </PullToRefresh>
+          </>
+        ) : (
+          <>
+            {/* Desktop: Original header */}
+            <header className="border-b border-border bg-background sticky top-0 z-10">
+              <div className="container mx-auto px-6 py-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Bienvenido, {user?.user_metadata?.full_name || user?.email}
+                      </p>
+                      {lastUpdated && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-muted-foreground">
+                            USD/ARS: {exchangeRate.toFixed(2)}
+                          </span>
+                          <button
+                            onClick={fetchExchangeRate}
+                            disabled={isRefreshingRate}
+                            className="text-xs text-primary hover:underline disabled:opacity-50 flex items-center gap-1"
+                            title="Actualizar tipo de cambio"
+                          >
+                            <RefreshCw className={`h-3 w-3 ${isRefreshingRate ? 'animate-spin' : ''}`} />
+                            {isRefreshingRate ? 'Actualizando...' : 'Actualizar'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button 
+                      variant="outline" 
+                      className="border-primary/50 hover:bg-primary/10"
+                      onClick={() => setSavingsWizardOpen(true)}
+                    >
+                      <PiggyBank className="mr-2 h-4 w-4" />
+                      Ahorrar
+                    </Button>
+                    <TransactionActionsDropdown
+                      onAddManual={() => setAddTransactionDialogOpen(true)}
+                      onVoiceRecord={voiceTransaction.isRecording ? voiceTransaction.stopRecording : voiceTransaction.startRecording}
+                      onImportStatement={() => setImportDialogOpen(true)}
+                      isRecording={voiceTransaction.isRecording}
+                      isProcessing={voiceTransaction.isProcessing}
+                      showImport={creditCards.length > 0}
+                    />
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            {/* Desktop: Main Content */}
+            <main className="container mx-auto px-6 py-8">
+              {/* Month Selector */}
+              <div className="flex items-center justify-center gap-4 mb-6">
+                <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <button
+                  onClick={goToCurrentMonth}
+                  className="text-xl font-semibold capitalize min-w-[200px] text-center hover:text-primary transition-colors"
+                >
+                  {format(activeMonth, "MMMM yyyy", { locale: es })}
+                </button>
+                <Button variant="ghost" size="icon" onClick={goToNextMonth}>
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+              </div>
+
+              {/* Net Balance - Prominent at top */}
+              <div className="mb-8 animate-fade-in">
+                <div className="bg-card rounded-2xl p-6 border border-border shadow-stripe-md text-center max-w-lg mx-auto">
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Balance Neto</p>
+                  <p className={`text-4xl font-bold ${globalNetBalanceARS >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {formatCurrency(globalNetBalanceARS, "ARS")}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {formatCurrency(totals.incomeUSD - totals.expensesUSD - totals.savingsTransfersUSD, "USD")} / {formatCurrency(totals.incomeARS - totals.expensesARS - totals.savingsTransfersARS, "ARS")}
+                  </p>
+                </div>
+              </div>
+
+              {/* Stats Cards - Similar to mobile layout */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fade-in">
+                <StatCard 
+                  title="Ingresos Totales" 
+                  value={formatCurrency(globalIncomeARS, "ARS")}
+                  subtitle={`${formatCurrency(totals.incomeUSD, "USD")} / ${formatCurrency(totals.incomeARS, "ARS")}`}
+                  icon={TrendingUp}
+                  trend="up"
+                />
+                <StatCard 
+                  title="Gastos Totales" 
+                  value={formatCurrency(globalExpensesARS, "ARS")}
+                  subtitle={`${formatCurrency(totals.expensesUSD, "USD")} / ${formatCurrency(totals.expensesARS, "ARS")}`}
+                  icon={TrendingDown}
+                />
+                <StatCard 
+                  title="Ahorros Actuales" 
+                  value={`${formatCurrency(currentSavings.usd, "USD")}`}
+                  subtitle={currentSavings.ars > 0 ? `+ ${formatCurrency(currentSavings.ars, "ARS")}` : undefined}
+                  icon={PiggyBank}
+                  onClick={() => navigate("/savings")}
+                />
+              </div>
+
+              {/* Budget Progress */}
+              <div className="animate-fade-in mb-6">
+                {budgetsWithSpending.length > 0 ? (
+                  <BudgetProgress
+                    budgets={budgetsWithSpending}
+                    onManageBudgets={() => navigate("/budgets")}
+                  />
+                ) : (
+                  <Card className="p-6 bg-card border border-border shadow-stripe">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold">Presupuestos del Mes</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Configura límites de gasto por categoría para controlar tus finanzas
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={() => navigate("/budgets")}
+                        className="gradient-primary"
+                      >
+                        Crear Presupuesto
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+              </div>
+
+              {/* Insights */}
+              <div className="animate-fade-in mb-6">
+                <InsightsCard
+                  insights={insightsData?.insights || []}
+                  loading={insightsLoading}
+                  onRefresh={refetchInsights}
+                />
+              </div>
+
+              {/* Charts and Transactions */}
+              <div className="space-y-6 animate-slide-up">
+                <SpendingChart data={spendingByCategory} />
+                <TransactionsList 
+                  transactions={transactions.slice(0, 5)} 
+                  onEdit={handleEditTransaction}
+                  showViewAll={transactions.length > 5}
+                  onViewAll={() => navigate("/transactions")}
+                />
+              </div>
+            </main>
+          </>
+        )}
+
+        <EditTransactionDialog
+          transaction={editingTransaction}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onUpdate={handleUpdateTransaction}
+          onDelete={handleDeleteTransaction}
+          categories={categories}
+        />
+
+        <AddTransactionDialog 
+          onAdd={handleAddTransaction} 
+          categories={categories} 
+          currentUserId={user?.id || ""}
+          currentSavings={currentSavings} 
+          open={addTransactionDialogOpen}
+          onOpenChange={(open) => {
+            setAddTransactionDialogOpen(open);
+            if (!open) setVoiceInitialData(null);
+          }}
+          initialData={voiceInitialData}
+        />
+
+        <ImportStatementDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          userId={user?.id || ""}
+          creditCards={creditCards}
+          onSuccess={refetch}
+        />
+
+        {/* Voice Recording Overlay - Immersive experience with live transcription */}
+        <VoiceRecordingOverlay
+          isOpen={voiceTransaction.isActive && !voiceTransaction.isReady}
+          state={voiceTransaction.state}
+          duration={voiceTransaction.duration}
+          transcribedText={voiceTransaction.transcribedText}
+          partialText={voiceTransaction.partialText}
+          getAudioLevels={voiceTransaction.getAudioLevels}
+          onStop={voiceTransaction.stopRecording}
+          onCancel={voiceTransaction.cancel}
+          error={voiceTransaction.error}
+        />
+
+        {/* Voice Confirmation Step - Shows parsed transaction */}
+        <VoiceConfirmationStep
+          open={voiceConfirmationOpen}
+          onOpenChange={(open) => {
+            setVoiceConfirmationOpen(open);
+            if (!open) voiceTransaction.reset();
+          }}
+          transaction={voiceTransaction.parsedTransaction}
+          transcribedText={voiceTransaction.transcribedText}
+          onConfirmDirect={async () => {
+            // Save transaction directly without opening wizard
+            if (voiceTransaction.parsedTransaction && user) {
+              const tx = voiceTransaction.parsedTransaction;
+              
+              // Find category ID using fuzzy matching
+              const categoryMatch = categories.find(c => 
+                c.name.toLowerCase() === tx.category.toLowerCase() ||
+                c.name.toLowerCase().includes(tx.category.toLowerCase()) ||
+                tx.category.toLowerCase().includes(c.name.toLowerCase())
+              );
+              
+              const newTransaction: Omit<Transaction, "id"> = {
+                user_id: user.id,
+                type: tx.type,
+                amount: tx.amount,
+                currency: tx.currency,
+                category: categoryMatch?.name || tx.category,
+                description: tx.description || "",
+                date: tx.date || new Date().toISOString().split('T')[0],
+                payment_method: "debit",
+                from_savings: false,
+              };
+              
+              setIsVoiceTransaction(true);
+              setVoiceConfirmationOpen(false);
+              await addTransaction(newTransaction);
+              voiceTransaction.reset();
+              setShowVoiceSuccess(true);
+            }
+          }}
+          onEdit={() => {
+            // Transfer data to wizard and open it for editing
+            if (voiceTransaction.parsedTransaction) {
+              const tx = voiceTransaction.parsedTransaction;
+              setVoiceInitialData({
+                type: tx.type,
+                amount: tx.amount,
+                currency: tx.currency,
+                category: tx.category,
+                description: tx.description,
+                date: new Date(tx.date),
+              });
+              setIsVoiceTransaction(true);
+              setVoiceConfirmationOpen(false);
+              setAddTransactionDialogOpen(true);
+              voiceTransaction.reset();
+            }
+          }}
+          onRetry={() => {
+            setVoiceConfirmationOpen(false);
+            voiceTransaction.retry();
+          }}
+          onCancel={() => {
+            setVoiceConfirmationOpen(false);
+            voiceTransaction.reset();
+          }}
+        />
+
+        {/* Voice Success Animation */}
+        <SuccessConfetti
+          show={showVoiceSuccess}
+          onComplete={() => setShowVoiceSuccess(false)}
+          message="¡Transacción guardada!"
+        />
+      </div>
+    </AppLayout>
+  );
+};
+
+export default Index;

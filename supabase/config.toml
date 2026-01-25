@@ -1,0 +1,58 @@
+project_id = "vxqrvepgtvdraqjavxsz"
+
+[functions.fetch-exchange-rate]
+verify_jwt = false
+
+[functions.get-dashboard-data]
+verify_jwt = false
+
+[functions.get-savings-data]
+verify_jwt = false
+
+[functions.get-transactions-data]
+verify_jwt = false
+
+[functions.gmail-oauth]
+verify_jwt = false
+
+[functions.gmail-webhook]
+verify_jwt = false
+
+[functions.gmail-process-history]
+verify_jwt = false
+
+[functions.gmail-sync]
+verify_jwt = false
+
+[functions.send-push-notification]
+verify_jwt = false
+
+[functions.daily-notifications]
+verify_jwt = false
+
+[functions.check-budget-alerts]
+verify_jwt = false
+
+[functions.monthly-recurring-reminder]
+verify_jwt = false
+
+[functions.get-vapid-key]
+verify_jwt = false
+
+[functions.parse-credit-card-statement]
+verify_jwt = false
+
+[functions.transcribe-audio]
+verify_jwt = false
+
+[functions.parse-voice-transaction]
+verify_jwt = false
+
+[functions.generate-insights]
+verify_jwt = false
+
+[functions.auto-categorize-transactions]
+verify_jwt = false
+
+[functions.elevenlabs-scribe-token]
+verify_jwt = false
