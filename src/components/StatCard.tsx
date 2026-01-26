@@ -45,21 +45,21 @@ export const StatCard = ({
   return (
     <Card 
       className={cn(
-        "p-5 bg-card hover:shadow-md transition-all duration-200 border-border/50",
+        "p-4 bg-card hover:shadow-md transition-all duration-200 border-border/50",
         onClick && "cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
       )}
       onClick={onClick}
     >
       <div className="flex items-center gap-4">
         {/* Left: Icon */}
-        <div className={cn("p-3 rounded-2xl shrink-0", styles.iconBg)}>
-          <Icon className={cn("h-6 w-6", styles.iconColor)} />
+        <div className={cn("p-2.5 rounded-2xl shrink-0", styles.iconBg)}>
+          <Icon className={cn("h-5 w-5", styles.iconColor)} />
         </div>
 
         {/* Center: Title and Main Value */}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-muted-foreground mb-0.5">{title}</p>
-          <div className={cn("text-2xl font-bold tracking-tight truncate", styles.valueColor)}>
+          <div className={cn("text-xl font-bold tracking-tight truncate", styles.valueColor)}>
             {value}
           </div>
         </div>

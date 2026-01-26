@@ -49,11 +49,11 @@ export const DashboardHeader = ({
 
   return (
     <header className="bg-background transition-all duration-300">
-      <div className="container mx-auto px-4 pt-2 pb-8">
+      <div className="container mx-auto px-4 pt-2 pb-6">
         {/* Exchange Rate row - more subtle */}
         {lastUpdated && (
           <motion.div 
-            className="flex items-center justify-end mb-6"
+            className="flex items-center justify-end mb-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
@@ -71,14 +71,14 @@ export const DashboardHeader = ({
 
         {/* Main Balance - Enhanced hierarchy */}
         <motion.div 
-          className="text-center mb-8"
+          className="text-center mb-6"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
           <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-[0.2em] font-bold">Balance Neto</p>
           <motion.p 
-            className={`text-5xl font-black tracking-tight ${isPositive ? 'text-success' : 'text-destructive'}`}
+            className={`text-4xl font-black tracking-tight ${isPositive ? 'text-success' : 'text-destructive'}`}
             initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
