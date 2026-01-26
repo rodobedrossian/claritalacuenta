@@ -17,6 +17,7 @@ export interface InsightsData {
   metadata: {
     analyzedMonths: number;
     totalTransactions: number;
+    totalStatementTransactions: number;
     generatedAt: string;
   } | null;
 }

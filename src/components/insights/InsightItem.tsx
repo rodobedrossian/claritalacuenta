@@ -82,23 +82,25 @@ export function InsightItem({ insight, compact = false }: InsightItemProps) {
     return (
       <div 
         className={cn(
-          "flex items-start gap-3 p-3 rounded-lg border transition-colors",
-          "hover:bg-muted/50 cursor-pointer",
-          insight.priority === "high" && "border-destructive/30 bg-destructive/5"
+          "flex items-start gap-3 p-3.5 rounded-2xl border border-border/40 transition-all duration-200",
+          "hover:bg-muted/30 cursor-pointer active:scale-[0.98]",
+          insight.priority === "high" && "border-destructive/20 bg-destructive/[0.02]"
         )}
         onClick={handleAction}
       >
-        <div className={cn("p-2 rounded-lg shrink-0", config.bgClassName)}>
+        <div className={cn("p-2.5 rounded-xl shrink-0", config.bgClassName)}>
           <TrendIcon className={cn("h-4 w-4", config.className)} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{insight.title}</p>
-          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+          <p className="font-bold text-sm tracking-tight">{insight.title}</p>
+          <p className="text-xs text-muted-foreground/80 line-clamp-2 mt-0.5 leading-relaxed">
             {insight.description}
           </p>
         </div>
         {insight.action && (
-          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          <div className="self-center">
+            <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+          </div>
         )}
       </div>
     );
@@ -107,32 +109,32 @@ export function InsightItem({ insight, compact = false }: InsightItemProps) {
   return (
     <div 
       className={cn(
-        "p-4 rounded-xl border bg-card transition-all",
-        insight.priority === "high" && "border-destructive/30 shadow-lg shadow-destructive/5"
+        "p-5 rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm transition-all duration-300",
+        insight.priority === "high" && "border-destructive/20 shadow-sm shadow-destructive/5"
       )}
     >
       <div className="flex items-start gap-4">
-        <div className={cn("p-3 rounded-xl shrink-0", config.bgClassName)}>
+        <div className={cn("p-3 rounded-2xl shrink-0 shadow-sm", config.bgClassName)}>
           <TrendIcon className={cn("h-5 w-5", config.className)} />
         </div>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <Badge variant="outline" className={cn("text-xs", priority.className)}>
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <Badge variant="outline" className={cn("text-[10px] uppercase font-bold tracking-wider px-1.5 h-5", priority.className)}>
               {priority.label}
             </Badge>
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider px-1.5 h-5 bg-muted/50">
               {config.label}
             </Badge>
             {insight.category && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider px-1.5 h-5 opacity-60">
                 {insight.category}
               </Badge>
             )}
           </div>
           
-          <h4 className="font-semibold text-foreground">{insight.title}</h4>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h4 className="font-bold text-base tracking-tight text-foreground">{insight.title}</h4>
+          <p className="text-sm text-muted-foreground/90 mt-1.5 leading-relaxed">
             {insight.description}
           </p>
 
@@ -140,11 +142,11 @@ export function InsightItem({ insight, compact = false }: InsightItemProps) {
             <Button
               variant="link"
               size="sm"
-              className="px-0 h-auto mt-2"
+              className="px-0 h-auto mt-3 text-primary font-bold text-xs"
               onClick={handleAction}
             >
               {insight.action.label}
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <ChevronRight className="h-3.5 w-3.5 ml-1" />
             </Button>
           )}
         </div>

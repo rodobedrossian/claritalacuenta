@@ -6,21 +6,23 @@ import {
   AlertTriangle,
   Repeat,
   TrendingUp,
-  Lightbulb
+  Lightbulb,
+  ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InsightItem } from "./InsightItem";
 import type { Insight } from "@/hooks/useInsightsData";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 interface InsightsPanelProps {
   insights: Insight[];
@@ -28,6 +30,7 @@ interface InsightsPanelProps {
   metadata: {
     analyzedMonths: number;
     totalTransactions: number;
+    totalStatementTransactions: number;
     generatedAt: string;
   } | null;
   onRefresh: () => void;
@@ -90,96 +93,106 @@ export function InsightsPanel({ insights, loading, metadata, onRefresh }: Insigh
     );
   }
 
+  const currentPriorityLabel = priorityFilters.find(f => f.value === priorityFilter)?.label;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <Sparkles className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold">Insights Financieros</h2>
-              {metadata && (
-                <p className="text-sm text-muted-foreground">
-                  Análisis de {metadata.analyzedMonths} meses • {metadata.totalTransactions} transacciones
-                </p>
-              )}
-            </div>
-          </div>
+    <div className="space-y-6 pb-12">
+      {/* Header - Minimal iOS Style */}
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col">
+          <h2 className="text-lg font-bold tracking-tight">Análisis Inteligente</h2>
+          {metadata && (
+            <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">
+              {metadata.analyzedMonths} meses • {metadata.totalTransactions + (metadata.totalStatementTransactions || 0)} transacciones
+            </span>
+          )}
         </div>
-        <Button onClick={onRefresh} disabled={loading} variant="outline">
-          <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-          Actualizar
+        <Button 
+          onClick={onRefresh} 
+          disabled={loading} 
+          variant="ghost" 
+          size="icon"
+          className="h-9 w-9 rounded-full bg-muted/30 hover:bg-muted/50"
+        >
+          <RefreshCw className={cn("h-4 w-4 text-muted-foreground", loading && "animate-spin")} />
         </Button>
       </div>
 
-      {/* Type filters */}
-      <div className="flex flex-wrap gap-2">
-        {typeFilters.map((filter) => {
-          const Icon = filter.icon;
-          const count = countByType[filter.value] || 0;
-          const isActive = typeFilter === filter.value;
-          
-          return (
-            <Button
-              key={filter.value}
-              variant={isActive ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTypeFilter(filter.value)}
-              className="gap-2"
-            >
-              <Icon className="h-4 w-4" />
-              {filter.label}
-              {count > 0 && (
-                <Badge 
-                  variant="secondary" 
-                  className={cn(
-                    "ml-1 h-5 px-1.5 text-xs",
-                    isActive && "bg-primary-foreground/20 text-primary-foreground"
-                  )}
+      {/* Filters Row - Compact */}
+      <div className="flex flex-col gap-4">
+        {/* Type Filter - Segmented Control Style */}
+        <div className="w-full overflow-x-auto no-scrollbar -mx-4 px-4">
+          <Tabs value={typeFilter} onValueChange={setTypeFilter} className="w-full">
+            <TabsList className="bg-muted/40 p-1 h-10 w-full justify-start sm:justify-center">
+              {typeFilters.map((filter) => (
+                <TabsTrigger 
+                  key={filter.value} 
+                  value={filter.value}
+                  className="px-4 py-1.5 text-xs font-medium rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
                 >
-                  {count}
-                </Badge>
-              )}
-            </Button>
-          );
-        })}
-      </div>
+                  {filter.label}
+                  {countByType[filter.value] > 0 && (
+                    <span className="ml-1.5 opacity-40 font-bold">{countByType[filter.value]}</span>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
 
-      {/* Priority filter */}
-      <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-muted-foreground" />
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {priorityFilters.map((filter) => (
-              <SelectItem key={filter.value} value={filter.value}>
-                {filter.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Priority Filter - Minimal Dropdown */}
+        <div className="flex items-center justify-between">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 px-2 text-xs font-medium text-muted-foreground hover:text-foreground gap-1">
+                <Filter className="h-3 w-3" />
+                {currentPriorityLabel}
+                <ChevronDown className="h-3 w-3 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              {priorityFilters.map((filter) => (
+                <DropdownMenuItem 
+                  key={filter.value} 
+                  onClick={() => setPriorityFilter(filter.value)}
+                  className={cn("text-xs", priorityFilter === filter.value && "bg-muted font-medium")}
+                >
+                  {filter.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Insights list */}
       {filteredInsights.length === 0 ? (
-        <div className="text-center py-12">
-          <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">No hay insights</h3>
-          <p className="text-muted-foreground">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-16"
+        >
+          <div className="p-4 rounded-full bg-muted/30 w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="h-8 w-8 text-muted-foreground/40" />
+          </div>
+          <h3 className="text-sm font-semibold mb-1">Sin resultados</h3>
+          <p className="text-xs text-muted-foreground px-8">
             {insights.length === 0
-              ? "Necesitamos más datos para generar insights útiles"
-              : "No hay insights que coincidan con los filtros seleccionados"}
+              ? "Necesitamos más datos para generar insights útiles."
+              : "No hay insights que coincidan con los filtros seleccionados."}
           </p>
-        </div>
+        </motion.div>
       ) : (
         <div className="grid gap-4">
           {filteredInsights.map((insight, index) => (
-            <InsightItem key={index} insight={insight} />
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <InsightItem insight={insight} />
+            </motion.div>
           ))}
         </div>
       )}

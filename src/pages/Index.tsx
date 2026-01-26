@@ -360,9 +360,9 @@ const Index = () => {
                 formatCurrency={formatCurrency}
               />
 
-              <main className="container mx-auto px-4 py-4 space-y-4">
+              <main className="container mx-auto px-4 py-3 space-y-4">
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 gap-4 animate-fade-in">
+                <div className="grid grid-cols-1 gap-3 animate-fade-in">
                   <StatCard 
                     title="Ingresos del mes" 
                     value={formatCurrency(globalIncomeARS, "ARS")}
@@ -384,12 +384,12 @@ const Index = () => {
                     value={
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-baseline gap-1.5">
-                          <span>{formatCurrency(liquidSavings.usd, "USD")}</span>
+                          <span className="text-xl font-bold">{formatCurrency(liquidSavings.usd, "USD")}</span>
                           <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Líquidos</span>
                         </div>
                         {(Number(totalInvested.ars) > 0 || Number(totalInvested.usd) > 0) && (
                           <div className="flex items-baseline gap-1.5">
-                            <span>{formatCurrency(totalInvested.ars, "ARS")}</span>
+                            <span className="text-xl font-bold">{formatCurrency(totalInvested.ars, "ARS")}</span>
                             <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Invertidos</span>
                           </div>
                         )}
@@ -561,12 +561,12 @@ const Index = () => {
                   value={
                     <div className="flex flex-col gap-0.5">
                       <div className="flex items-baseline gap-1.5">
-                        <span>{formatCurrency(liquidSavings.usd, "USD")}</span>
+                        <span className="text-xl font-bold">{formatCurrency(liquidSavings.usd, "USD")}</span>
                         <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Líquidos</span>
                       </div>
                       {(Number(totalInvested.ars) > 0 || Number(totalInvested.usd) > 0) && (
                         <div className="flex items-baseline gap-1.5">
-                          <span>{formatCurrency(totalInvested.ars, "ARS")}</span>
+                          <span className="text-xl font-bold">{formatCurrency(totalInvested.ars, "ARS")}</span>
                           <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Invertidos</span>
                         </div>
                       )}

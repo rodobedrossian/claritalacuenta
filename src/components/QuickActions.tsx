@@ -42,7 +42,7 @@ export const QuickActions = ({
         <Button
           onClick={onAddExpense}
           variant="outline"
-          className="w-full h-auto py-4 flex flex-col gap-2 border-border hover:border-primary/50 hover:bg-primary/5"
+          className="w-full h-auto py-3 flex flex-col gap-2 border-border hover:border-primary/50 hover:bg-primary/5"
         >
           <div className="p-2 rounded-full bg-primary/10">
             <Plus className="h-5 w-5 text-primary" />
@@ -61,7 +61,7 @@ export const QuickActions = ({
           onClick={onVoiceRecord}
           disabled={isRecording || isProcessing}
           variant="outline"
-          className="w-full h-auto py-4 flex flex-col gap-2 border-border hover:border-primary/50 hover:bg-primary/5"
+          className="w-full h-auto py-3 flex flex-col gap-2 border-border hover:border-primary/50 hover:bg-primary/5"
         >
           <div className="p-2 rounded-full bg-primary/10">
             {isProcessing ? (
@@ -85,7 +85,7 @@ export const QuickActions = ({
         <Button
           onClick={onTransferToSavings}
           variant="outline"
-          className="w-full h-auto py-4 flex flex-col gap-2 border-border hover:border-success/50 hover:bg-success/5"
+          className="w-full h-auto py-3 flex flex-col gap-2 border-border hover:border-success/50 hover:bg-success/5"
         >
           <div className="p-2 rounded-full bg-success/10">
             <PiggyBank className="h-5 w-5 text-success" />
