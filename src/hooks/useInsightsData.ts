@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export interface Insight {
   type: "anomaly" | "pattern" | "trend" | "recommendation";
@@ -25,22 +26,25 @@ export interface InsightsData {
 export interface UseInsightsDataReturn {
   data: InsightsData | null;
   loading: boolean;
+  isFetching: boolean;
   error: string | null;
   refetch: () => Promise<void>;
 }
 
 export function useInsightsData(userId: string | null): UseInsightsDataReturn {
-  const [data, setData] = useState<InsightsData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchInsights = useCallback(async () => {
-    if (!userId) return;
+  const { 
+    data, 
+    isLoading: loading, 
+    isFetching,
+    error: queryError,
+    refetch: queryRefetch 
+  } = useQuery({
+    queryKey: ["insights-data", userId],
+    queryFn: async () => {
+      if (!userId) return null;
 
-    setLoading(true);
-    setError(null);
-
-    try {
       const { data: response, error: fnError } = await supabase.functions.invoke(
         "generate-insights",
         {
@@ -48,38 +52,26 @@ export function useInsightsData(userId: string | null): UseInsightsDataReturn {
         }
       );
 
-      if (fnError) {
-        throw fnError;
-      }
+      if (fnError) throw fnError;
 
-      setData({
+      return {
         insights: response.insights || [],
         metadata: response.metadata || null,
-      });
-    } catch (err) {
-      console.error("Error fetching insights:", err);
-      const message = err instanceof Error ? err.message : "Error al generar insights";
-      setError(message);
-      toast({
-        title: "Error",
-        description: message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]);
+      } as InsightsData;
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 15, // 15 minutos
+  });
 
-  useEffect(() => {
-    if (userId) {
-      fetchInsights();
-    }
-  }, [userId, fetchInsights]);
+  const refetch = useCallback(async () => {
+    await queryRefetch();
+  }, [queryRefetch]);
 
   return {
-    data,
+    data: data || null,
     loading,
-    error,
-    refetch: fetchInsights,
+    isFetching,
+    error: queryError ? (queryError as Error).message : null,
+    refetch,
   };
 }

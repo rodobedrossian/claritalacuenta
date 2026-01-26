@@ -56,10 +56,10 @@ const Index = () => {
   const [showVoiceSuccess, setShowVoiceSuccess] = useState(false);
   const [isVoiceTransaction, setIsVoiceTransaction] = useState(false);
 
-  // Use the new consolidated data hook
   const { 
     data: dashboardData, 
     loading: dataLoading, 
+    isFetching: isDashboardFetching,
     refetch,
     updateTransaction,
     deleteTransaction,
@@ -67,6 +67,11 @@ const Index = () => {
     updateCurrentSavings,
     updateSavingsTransfers
   } = useDashboardData(activeMonth, user?.id);
+
+  // Insights data
+  const { data: insightsData, loading: insightsLoading, isFetching: isInsightsFetching, refetch: refetchInsights } = useInsightsData(user?.id);
+
+  const isFetchingAny = !!(isDashboardFetching || isInsightsFetching);
 
   // Budget data
   const transactionsForBudgets = dashboardData?.transactions.map(t => ({
@@ -86,9 +91,6 @@ const Index = () => {
 
   // Push notifications hook
   const pushNotifications = usePushNotifications(user?.id);
-
-  // Insights data
-  const { data: insightsData, loading: insightsLoading, refetch: refetchInsights } = useInsightsData(user?.id);
 
   // Voice token prefetch - fetches token when dashboard loads
   const { getToken, prefetch: prefetchToken } = useVoiceTokenPrefetch();
@@ -342,23 +344,33 @@ const Index = () => {
           <div className="flex flex-col h-full overflow-hidden">
             <MobileHeader userName={user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuario'} />
             <PullToRefresh onRefresh={handlePullToRefresh} className="flex-1 overflow-y-auto" disabled={dataLoading}>
-              <DashboardHeader
-                userName={user?.user_metadata?.full_name || user?.email}
-                exchangeRate={exchangeRate}
-                lastUpdated={lastUpdated}
-                isRefreshingRate={isRefreshingRate}
-                onRefreshRate={fetchExchangeRate}
-                activeMonth={activeMonth}
-                onPreviousMonth={goToPreviousMonth}
-                onNextMonth={goToNextMonth}
-                onCurrentMonth={goToCurrentMonth}
-                netBalance={globalNetBalanceARS}
-                netBalanceBreakdown={{
-                  usd: totals.incomeUSD - totals.expensesUSD - totals.savingsTransfersUSD,
-                  ars: totals.incomeARS - totals.expensesARS - totals.savingsTransfersARS
-                }}
-                formatCurrency={formatCurrency}
-              />
+              <div className="relative">
+                {/* Sincronizando indicator */}
+                {isFetchingAny && (
+                  <div className="absolute top-2 right-4 flex items-center gap-1.5 z-50 bg-background/60 backdrop-blur-md px-2 py-1 rounded-full border border-border/40 animate-in fade-in duration-500">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Sincronizando</span>
+                  </div>
+                )}
+                
+                <DashboardHeader
+                  userName={user?.user_metadata?.full_name || user?.email}
+                  exchangeRate={exchangeRate}
+                  lastUpdated={lastUpdated}
+                  isRefreshingRate={isRefreshingRate}
+                  onRefreshRate={fetchExchangeRate}
+                  activeMonth={activeMonth}
+                  onPreviousMonth={goToPreviousMonth}
+                  onNextMonth={goToNextMonth}
+                  onCurrentMonth={goToCurrentMonth}
+                  netBalance={globalNetBalanceARS}
+                  netBalanceBreakdown={{
+                    usd: totals.incomeUSD - totals.expensesUSD - totals.savingsTransfersUSD,
+                    ars: totals.incomeARS - totals.expensesARS - totals.savingsTransfersARS
+                  }}
+                  formatCurrency={formatCurrency}
+                />
+              </div>
 
               <main className="container mx-auto px-4 py-3 space-y-4">
                 {/* Stats Cards */}

@@ -2,6 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { persistQueryClient } from '@tanstack/react-query-persist-client';
+import { queryPersister } from '@/lib/queryPersister';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -17,7 +19,24 @@ import Insights from "./pages/Insights";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      gcTime: 1000 * 60 * 60 * 24, // 24 horas
+      staleTime: 1000 * 60 * 5,    // 5 minutos
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+// Habilitar persistencia
+persistQueryClient({
+  queryClient,
+  persister: queryPersister,
+  maxAge: 1000 * 60 * 60 * 24, // 24 horas
+  buster: 'v1',
+});
 
 const App = () => {
   const isIOSApp = Capacitor.getPlatform() === 'ios';

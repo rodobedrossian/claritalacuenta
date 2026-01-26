@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export interface Transaction {
   id: string;
@@ -56,6 +57,7 @@ export interface DashboardData {
 interface UseDashboardDataReturn {
   data: DashboardData | null;
   loading: boolean;
+  isFetching: boolean;
   error: string | null;
   refetch: () => Promise<void>;
   // Local state update functions for optimistic updates
@@ -67,24 +69,19 @@ interface UseDashboardDataReturn {
 }
 
 export function useDashboardData(activeMonth: Date, userId: string | null): UseDashboardDataReturn {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const monthStr = format(activeMonth, "yyyy-MM");
 
-  const fetchData = useCallback(async () => {
-    if (!userId) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const monthStr = format(activeMonth, "yyyy-MM");
-      console.log(`Fetching dashboard data for month: ${monthStr}`);
-
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.session?.access_token) {
-        throw new Error("No active session");
-      }
+  const { 
+    data, 
+    isLoading: loading, 
+    isFetching,
+    error: queryError,
+    refetch: queryRefetch 
+  } = useQuery({
+    queryKey: ["dashboard-data", monthStr, userId],
+    queryFn: async () => {
+      if (!userId) return null;
 
       const { data: responseData, error: functionError } = await supabase.functions.invoke(
         "get-dashboard-data",
@@ -93,11 +90,9 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
         }
       );
 
-      if (functionError) {
-        throw functionError;
-      }
+      if (functionError) throw functionError;
 
-      // Fallback: If totalInvested is missing (e.g. edge function not updated), fetch it manually
+      // Fallback: If totalInvested is missing, fetch it manually
       let totalInvested = responseData.totalInvested;
       if (!totalInvested) {
         const { data: invData } = await supabase
@@ -116,7 +111,6 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
         totalInvested = invested;
       }
 
-      // Type-cast transactions to ensure correct types
       const typedTransactions: Transaction[] = (responseData.transactions || []).map((t: any) => ({
         ...t,
         type: t.type as "income" | "expense",
@@ -126,26 +120,20 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
         categoryName: t.categoryName || t.category
       }));
 
-      setData({
+      return {
         ...responseData,
         totalInvested,
         transactions: typedTransactions,
         creditCards: responseData.creditCards || []
-      });
+      } as DashboardData;
+    },
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+  });
 
-      console.log(`Dashboard data loaded: ${typedTransactions.length} transactions`);
-    } catch (err: any) {
-      console.error("Error fetching dashboard data:", err);
-      setError(err.message || "Failed to load dashboard data");
-      toast.error("Error al cargar datos del dashboard");
-    } finally {
-      setLoading(false);
-    }
-  }, [activeMonth, userId]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const refetch = useCallback(async () => {
+    await queryRefetch();
+  }, [queryRefetch]);
 
   const updateTransaction = useCallback(async (id: string, transaction: Omit<Transaction, "id">) => {
     try {
@@ -165,24 +153,15 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
 
       if (error) throw error;
 
-      // Optimistically update local state
-      setData(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          transactions: prev.transactions.map(t =>
-            t.id === id ? { ...transaction, id } : t
-          )
-        };
-      });
-
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       toast.success("Transacción actualizada");
     } catch (err: any) {
       console.error("Error updating transaction:", err);
       toast.error("Error al actualizar transacción");
       throw err;
     }
-  }, []);
+  }, [queryClient]);
 
   const deleteTransaction = useCallback(async (id: string) => {
     try {
@@ -193,22 +172,14 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
 
       if (error) throw error;
 
-      // Optimistically update local state
-      setData(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          transactions: prev.transactions.filter(t => t.id !== id)
-        };
-      });
-
+      queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       toast.success("Transacción eliminada");
     } catch (err: any) {
       console.error("Error deleting transaction:", err);
       toast.error("Error al eliminar transacción");
       throw err;
     }
-  }, []);
+  }, [queryClient]);
 
   const addTransaction = useCallback(async (transaction: Omit<Transaction, "id">) => {
     try {
@@ -237,7 +208,6 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
         const userId = session?.session?.user?.id;
         
         if (userId) {
-          // Create savings withdrawal entry
           await supabase.from("savings_entries").insert([{
             user_id: userId,
             amount: transaction.amount,
@@ -247,7 +217,6 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
             notes: `Gasto: ${transaction.description}`
           }]);
 
-          // Update savings table
           const { data: savingsRecord } = await supabase
             .from("savings")
             .select("id, usd_amount, ars_amount")
@@ -264,78 +233,34 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
               .from("savings")
               .update(transaction.currency === "USD" ? { usd_amount: newAmount } : { ars_amount: newAmount })
               .eq("id", savingsRecord.id);
-
-            // Update local savings state
-            setData(prev => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                currentSavings: {
-                  ...prev.currentSavings,
-                  [transaction.currency === "USD" ? "usd" : "ars"]: newAmount
-                }
-              };
-            });
           }
         }
       }
 
-      // Optimistically update local state
-      const typedTransaction: Transaction = {
-        ...newTransaction,
-        type: newTransaction.type as "income" | "expense",
-        currency: newTransaction.currency as "USD" | "ARS",
-        amount: typeof newTransaction.amount === "string" ? parseFloat(newTransaction.amount) : newTransaction.amount,
-        from_savings: newTransaction.from_savings || false,
-        savings_source: newTransaction.savings_source,
-        payment_method: newTransaction.payment_method || "cash"
-      };
-
-      setData(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          transactions: [typedTransaction, ...prev.transactions]
-        };
-      });
-
+      queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       toast.success(`${transaction.type === "income" ? "Ingreso" : "Gasto"} registrado correctamente`);
     } catch (err: any) {
       console.error("Error adding transaction:", err);
       toast.error("Error al registrar transacción");
       throw err;
     }
-  }, []);
+  }, [queryClient]);
 
   const updateCurrentSavings = useCallback((savings: { usd: number; ars: number }) => {
-    setData(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        currentSavings: savings
-      };
-    });
-  }, []);
+    // This could also be a mutation or just invalidation
+    queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
+  }, [queryClient]);
 
   const updateSavingsTransfers = useCallback((currency: "USD" | "ARS", amount: number) => {
-    setData(prev => {
-      if (!prev) return prev;
-      const key = currency === "USD" ? "savingsTransfersUSD" : "savingsTransfersARS";
-      return {
-        ...prev,
-        totals: {
-          ...prev.totals,
-          [key]: prev.totals[key] + amount
-        }
-      };
-    });
-  }, []);
+    queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
+  }, [queryClient]);
 
   return {
-    data,
+    data: data || null,
     loading,
-    error,
-    refetch: fetchData,
+    isFetching,
+    error: queryError ? (queryError as Error).message : null,
+    refetch,
     updateTransaction,
     deleteTransaction,
     addTransaction,
