@@ -5,7 +5,12 @@ import { motion } from "framer-motion";
 interface QuickStatsProps {
   income: { usd: number; ars: number; total: number };
   expenses: { usd: number; ars: number; total: number };
-  savings: { usd: number; ars: number };
+  savings: { 
+    liquidUsd: number; 
+    liquidArs: number; 
+    investedUsd: number; 
+    investedArs: number;
+  };
   formatCurrency: (amount: number, currency: "USD" | "ARS") => string;
 }
 
@@ -119,21 +124,35 @@ export const QuickStats = ({
             <div className="p-2.5 rounded-xl bg-primary/10">
               <PiggyBank className="h-4 w-4 text-primary" />
             </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Ahorros actuales</p>
-              <p className="text-lg font-bold text-primary">
-                {formatCurrency(savings.usd, "USD")}
-              </p>
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Ahorros e Inversiones</p>
+              
+              {/* Liquid Savings */}
+              {(savings.liquidUsd > 0 || savings.liquidArs > 0) && (
+                <div className="flex flex-wrap items-baseline gap-x-1.5">
+                  <p className="text-base font-bold text-primary">
+                    {savings.liquidUsd > 0 && formatCurrency(savings.liquidUsd, "USD")}
+                    {savings.liquidUsd > 0 && savings.liquidArs > 0 && " / "}
+                    {savings.liquidArs > 0 && formatCurrency(savings.liquidArs, "ARS")}
+                  </p>
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Líquidos</span>
+                </div>
+              )}
+
+              {/* Invested Savings */}
+              {(savings.investedUsd > 0 || savings.investedArs > 0) && (
+                <div className="flex flex-wrap items-baseline gap-x-1.5">
+                  <p className="text-base font-bold text-primary">
+                    {savings.investedUsd > 0 && formatCurrency(savings.investedUsd, "USD")}
+                    {savings.investedUsd > 0 && savings.investedArs > 0 && " / "}
+                    {savings.investedArs > 0 && formatCurrency(savings.investedArs, "ARS")}
+                  </p>
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Invertidos</span>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-right">
-              {savings.ars > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  + {formatCurrency(savings.ars, "ARS")}
-                </p>
-              )}
-            </div>
             <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
         </div>

@@ -38,6 +38,10 @@ export interface DashboardData {
     usd: number;
     ars: number;
   };
+  totalInvested: {
+    usd: number;
+    ars: number;
+  };
   exchangeRate: {
     rate: number;
     updatedAt: string | null;
@@ -93,6 +97,25 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
         throw functionError;
       }
 
+      // Fallback: If totalInvested is missing (e.g. edge function not updated), fetch it manually
+      let totalInvested = responseData.totalInvested;
+      if (!totalInvested) {
+        const { data: invData } = await supabase
+          .from("investments")
+          .select("current_amount, currency")
+          .eq("is_active", true);
+        
+        const invested = { usd: 0, ars: 0 };
+        if (invData) {
+          invData.forEach(i => {
+            const amount = typeof i.current_amount === "string" ? parseFloat(i.current_amount) : i.current_amount;
+            if (i.currency === "USD") invested.usd += amount;
+            else invested.ars += amount;
+          });
+        }
+        totalInvested = invested;
+      }
+
       // Type-cast transactions to ensure correct types
       const typedTransactions: Transaction[] = (responseData.transactions || []).map((t: any) => ({
         ...t,
@@ -105,6 +128,7 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
 
       setData({
         ...responseData,
+        totalInvested,
         transactions: typedTransactions,
         creditCards: responseData.creditCards || []
       });

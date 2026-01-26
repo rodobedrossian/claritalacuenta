@@ -139,10 +139,10 @@ export const DashboardSkeleton = () => (
 export const SavingsSkeleton = () => (
   <div className="min-h-screen pb-20">
     {/* Mobile Header Skeleton */}
-    <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 px-4 py-3 md:hidden">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-6 w-32" />
-        <Skeleton className="h-9 w-9 rounded-md" />
+    <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/50 px-4 pt-safe pb-3 md:hidden">
+      <div className="flex items-center justify-between h-12">
+        <Skeleton className="h-7 w-32" />
+        <Skeleton className="h-9 w-9 rounded-full" />
       </div>
     </div>
     
@@ -230,10 +230,12 @@ export const CreditCardsSkeleton = () => (
 // Budgets Page Skeleton
 export const BudgetsSkeleton = () => (
   <div className="min-h-screen">
-    <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-      <div className="container mx-auto px-4 md:px-6 py-4 pl-14 md:pl-6">
-        <Skeleton className="h-7 w-40" />
-        <Skeleton className="h-4 w-28 mt-1" />
+    <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3">
+      <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
+        <div className="h-10 flex flex-col justify-center">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-3 w-28 mt-1.5" />
+        </div>
       </div>
     </header>
     <main className="container mx-auto px-4 md:px-6 py-6">
@@ -327,11 +329,11 @@ export const PendingTransactionsContentSkeleton = () => (
 // Pending Transactions Skeleton - full page version
 export const PendingTransactionsSkeleton = () => (
   <div className="min-h-screen">
-    <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-      <div className="container mx-auto px-4 md:px-6 py-4 pl-14 md:pl-6">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-7 w-52" />
-          <Skeleton className="h-6 w-8 rounded-full" />
+    <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3">
+      <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
+        <div className="h-10 flex items-center gap-3">
+          <Skeleton className="h-6 w-52" />
+          <Skeleton className="h-5 w-8 rounded-full" />
         </div>
       </div>
     </header>
@@ -344,9 +346,11 @@ export const PendingTransactionsSkeleton = () => (
 // Settings Page Skeleton
 export const SettingsSkeleton = () => (
   <div className="min-h-screen">
-    <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-      <div className="container mx-auto px-4 md:px-6 py-4 pl-14 md:pl-6">
-        <Skeleton className="h-7 w-36" />
+    <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3">
+      <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
+        <div className="h-10 flex items-center">
+          <Skeleton className="h-6 w-36" />
+        </div>
       </div>
     </header>
     <main className="container mx-auto px-4 md:px-6 py-6 space-y-6">

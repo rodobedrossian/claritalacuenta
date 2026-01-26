@@ -56,8 +56,8 @@ export const BottomNavigation = ({ onAddClick }: BottomNavigationProps) => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.05)] safe-area-bottom">
-      <div className="flex items-center justify-around h-16 px-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom transition-all duration-300">
+      <div className="flex items-center justify-around h-[72px] px-2">
         {mainNavItems.map((item) => {
           const Icon = item.icon;
           
@@ -67,10 +67,10 @@ export const BottomNavigation = ({ onAddClick }: BottomNavigationProps) => {
               <button
                 key="add"
                 onClick={onAddClick}
-                className="flex flex-col items-center justify-center -mt-5"
+                className="flex flex-col items-center justify-center -mt-8 active:scale-95 transition-transform"
               >
-                <div className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-stripe-lg">
-                  <Plus className="h-7 w-7 text-primary-foreground" />
+                <div className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-stripe-lg border-4 border-background">
+                  <Plus className="h-8 w-8 text-primary-foreground" />
                 </div>
               </button>
             );
@@ -83,14 +83,14 @@ export const BottomNavigation = ({ onAddClick }: BottomNavigationProps) => {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 min-w-[64px] py-2 transition-all",
+                "flex flex-col items-center justify-center gap-1.5 min-w-[64px] py-2 transition-all active:opacity-70",
                 active ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <Icon className={cn("h-5 w-5", active && "scale-110")} />
+              <Icon className={cn("h-6 w-6 transition-transform", active && "scale-110")} strokeWidth={active ? 2.5 : 2} />
               <span className={cn(
-                "text-[10px] font-medium",
-                active && "text-primary"
+                "text-[10px] font-bold tracking-tight",
+                active ? "text-primary" : "text-muted-foreground/80"
               )}>
                 {item.title}
               </span>

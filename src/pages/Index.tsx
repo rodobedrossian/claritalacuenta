@@ -279,7 +279,13 @@ const Index = () => {
   }
 
   // Extract data from dashboard hook
-  const currentSavings = dashboardData?.currentSavings || { usd: 0, ars: 0 };
+  const liquidSavings = dashboardData?.currentSavings || { usd: 0, ars: 0 };
+  const totalInvested = dashboardData?.totalInvested || { usd: 0, ars: 0 };
+  
+  const currentSavings = {
+    usd: (Number(liquidSavings.usd) || 0) + (Number(totalInvested.usd) || 0),
+    ars: (Number(liquidSavings.ars) || 0) + (Number(totalInvested.ars) || 0)
+  };
   const exchangeRate = dashboardData?.exchangeRate.rate || 1300;
   const lastUpdated = dashboardData?.exchangeRate.updatedAt;
   const transactions = dashboardData?.transactions || [];
@@ -359,7 +365,12 @@ const Index = () => {
               <QuickStats
                 income={{ usd: totals.incomeUSD, ars: totals.incomeARS, total: globalIncomeARS }}
                 expenses={{ usd: totals.expensesUSD, ars: totals.expensesARS, total: globalExpensesARS }}
-                savings={currentSavings}
+                savings={{
+                  liquidUsd: Number(liquidSavings.usd) || 0,
+                  liquidArs: Number(liquidSavings.ars) || 0,
+                  investedUsd: Number(totalInvested.usd) || 0,
+                  investedArs: Number(totalInvested.ars) || 0,
+                }}
                 formatCurrency={formatCurrency}
               />
 
@@ -519,7 +530,7 @@ const Index = () => {
                 <StatCard 
                   title="Ahorros Actuales" 
                   value={`${formatCurrency(currentSavings.usd, "USD")}`}
-                  subtitle={currentSavings.ars > 0 ? `+ ${formatCurrency(currentSavings.ars, "ARS")}` : undefined}
+                  subtitle={Number(currentSavings.ars) > 0 ? `+ ${formatCurrency(currentSavings.ars, "ARS")}` : undefined}
                   icon={PiggyBank}
                   onClick={() => navigate("/savings")}
                 />

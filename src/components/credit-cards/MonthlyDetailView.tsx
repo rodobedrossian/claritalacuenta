@@ -75,23 +75,23 @@ export const MonthlyDetailView = ({
 
   return (
     <div className="space-y-6">
-      {/* Header - with mobile margin to avoid menu button overlap */}
-      <div className="flex items-center gap-4 ml-12 md:ml-0">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold capitalize">
-            {format(parseISO(month), "MMMM yyyy", { locale: es })}
-          </h1>
-          <p className="text-muted-foreground">
-            Analíticas consolidadas de {transactions.length} transacciones
-          </p>
+      {/* Header - Fixed sticky with safe area */}
+      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/50 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-safe pb-3 transition-all duration-300">
+        <div className="flex items-center gap-4 h-10">
+          <Button variant="ghost" size="icon" onClick={onBack} className="h-9 w-9">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight capitalize">
+              {format(parseISO(month), "MMMM yyyy", { locale: es })}
+            </h1>
+          </div>
         </div>
       </div>
 
-      {/* Summary stats */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+      <div className="space-y-6 pt-2">
+        {/* Summary stats */}
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="text-xl md:text-2xl font-bold text-warning">
@@ -129,6 +129,7 @@ export const MonthlyDetailView = ({
         creditCards={creditCards}
       />
 
+      </div>
     </div>
   );
 };
