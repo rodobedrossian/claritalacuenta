@@ -1,41 +1,89 @@
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { ReactNode } from "react";
 
 interface StatCardProps {
   title: string;
-  value: string;
-  subtitle?: string;
-  change?: string;
+  value: string | ReactNode;
+  secondaryTop?: string;
+  secondaryBottom?: string;
   icon: LucideIcon;
-  trend?: "up" | "down";
+  variant?: "success" | "destructive" | "primary";
   onClick?: () => void;
 }
 
-export const StatCard = ({ title, value, subtitle, change, icon: Icon, trend, onClick }: StatCardProps) => {
+export const StatCard = ({ 
+  title, 
+  value, 
+  secondaryTop, 
+  secondaryBottom, 
+  icon: Icon, 
+  variant = "primary", 
+  onClick 
+}: StatCardProps) => {
+  const variantStyles = {
+    success: {
+      iconBg: "bg-success/10",
+      iconColor: "text-success",
+      valueColor: "text-success",
+    },
+    destructive: {
+      iconBg: "bg-destructive/10",
+      iconColor: "text-destructive",
+      valueColor: "text-destructive",
+    },
+    primary: {
+      iconBg: "bg-primary/10",
+      iconColor: "text-primary",
+      valueColor: "text-primary",
+    },
+  };
+
+  const styles = variantStyles[variant];
+
   return (
     <Card 
-      className={`p-6 bg-card hover:shadow-stripe-md transition-all duration-200 ${onClick ? 'cursor-pointer hover:scale-[1.02]' : ''}`}
+      className={cn(
+        "p-5 bg-card hover:shadow-md transition-all duration-200 border-border/50",
+        onClick && "cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+      )}
       onClick={onClick}
     >
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-3xl font-bold tracking-tight text-foreground">{value}</p>
-          {subtitle && (
-            <p className="text-xs text-muted-foreground mt-1">
-              {subtitle}
-            </p>
-          )}
-          {change && (
-            <p className={`text-sm flex items-center gap-1 ${
-              trend === "up" ? "text-success" : "text-destructive"
-            }`}>
-              {change}
-            </p>
-          )}
+      <div className="flex items-center gap-4">
+        {/* Left: Icon */}
+        <div className={cn("p-3 rounded-2xl shrink-0", styles.iconBg)}>
+          <Icon className={cn("h-6 w-6", styles.iconColor)} />
         </div>
-        <div className="p-3 rounded-xl bg-primary/10">
-          <Icon className="h-5 w-5 text-primary" />
+
+        {/* Center: Title and Main Value */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-muted-foreground mb-0.5">{title}</p>
+          <div className={cn("text-2xl font-bold tracking-tight truncate", styles.valueColor)}>
+            {value}
+          </div>
+        </div>
+
+        {/* Right: Secondary values or Arrow */}
+        <div className="flex flex-col items-end justify-center text-right shrink-0">
+          {secondaryTop && (
+            <p className="text-xs font-medium text-muted-foreground/70 mb-1">
+              {secondaryTop}
+            </p>
+          )}
+          {secondaryBottom && (
+            <p className="text-xs font-medium text-muted-foreground/70">
+              {secondaryBottom}
+            </p>
+          )}
+          {onClick && !secondaryTop && !secondaryBottom && (
+            <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+          )}
+          {onClick && (secondaryTop || secondaryBottom) && (
+             <div className="mt-1">
+                <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
+             </div>
+          )}
         </div>
       </div>
     </Card>

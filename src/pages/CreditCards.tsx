@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { CreditCard, TrendingDown, Receipt, Upload, Settings2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { StatementsList } from "@/components/credit-cards/StatementsList";
 import { StatementDetail } from "@/components/credit-cards/StatementDetail";
 import { MonthlyDetailView } from "@/components/credit-cards/MonthlyDetailView";
@@ -216,14 +217,13 @@ const CreditCards = () => {
       </div>
 
       <ImportStatementDialog
-          open={importDialogOpen}
-          onOpenChange={setImportDialogOpen}
-          userId={userId}
-          creditCards={creditCards}
-          onSuccess={refetch}
-          onAddCard={addCreditCard}
-        />
-      </div>
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        userId={userId}
+        creditCards={creditCards}
+        onSuccess={refetch}
+        onAddCard={addCreditCard}
+      />
     </AppLayout>
   );
 };

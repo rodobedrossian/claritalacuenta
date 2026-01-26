@@ -366,20 +366,35 @@ const Index = () => {
                   <StatCard 
                     title="Ingresos del mes" 
                     value={formatCurrency(globalIncomeARS, "ARS")}
-                    subtitle={`${formatCurrency(totals.incomeUSD, "USD")} / ${formatCurrency(totals.incomeARS, "ARS")}`}
+                    secondaryTop={formatCurrency(totals.incomeUSD, "USD")}
+                    secondaryBottom={formatCurrency(totals.incomeARS, "ARS")}
                     icon={TrendingUp}
-                    trend="up"
+                    variant="success"
                   />
                   <StatCard 
                     title="Gastos del mes" 
                     value={formatCurrency(globalExpensesARS, "ARS")}
-                    subtitle={`${formatCurrency(totals.expensesUSD, "USD")} / ${formatCurrency(totals.expensesARS, "ARS")}`}
+                    secondaryTop={formatCurrency(totals.expensesUSD, "USD")}
+                    secondaryBottom={formatCurrency(totals.expensesARS, "ARS")}
                     icon={TrendingDown}
+                    variant="destructive"
                   />
                   <StatCard 
-                    title="Ahorros actuales" 
-                    value={formatCurrency(currentSavings.usd, "USD")}
-                    subtitle={Number(currentSavings.ars) > 0 ? `+ ${formatCurrency(currentSavings.ars, "ARS")}` : undefined}
+                    title="Ahorros e Inversiones" 
+                    value={
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-baseline gap-1.5">
+                          <span>{formatCurrency(liquidSavings.usd, "USD")}</span>
+                          <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Líquidos</span>
+                        </div>
+                        {(Number(totalInvested.ars) > 0 || Number(totalInvested.usd) > 0) && (
+                          <div className="flex items-baseline gap-1.5">
+                            <span>{formatCurrency(totalInvested.ars, "ARS")}</span>
+                            <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Invertidos</span>
+                          </div>
+                        )}
+                      </div>
+                    }
                     icon={PiggyBank}
                     onClick={() => navigate("/savings")}
                   />
@@ -528,20 +543,35 @@ const Index = () => {
                 <StatCard 
                   title="Ingresos Totales" 
                   value={formatCurrency(globalIncomeARS, "ARS")}
-                  subtitle={`${formatCurrency(totals.incomeUSD, "USD")} / ${formatCurrency(totals.incomeARS, "ARS")}`}
+                  secondaryTop={formatCurrency(totals.incomeUSD, "USD")}
+                  secondaryBottom={formatCurrency(totals.incomeARS, "ARS")}
                   icon={TrendingUp}
-                  trend="up"
+                  variant="success"
                 />
                 <StatCard 
                   title="Gastos Totales" 
                   value={formatCurrency(globalExpensesARS, "ARS")}
-                  subtitle={`${formatCurrency(totals.expensesUSD, "USD")} / ${formatCurrency(totals.expensesARS, "ARS")}`}
+                  secondaryTop={formatCurrency(totals.expensesUSD, "USD")}
+                  secondaryBottom={formatCurrency(totals.expensesARS, "ARS")}
                   icon={TrendingDown}
+                  variant="destructive"
                 />
                 <StatCard 
-                  title="Ahorros Actuales" 
-                  value={`${formatCurrency(currentSavings.usd, "USD")}`}
-                  subtitle={Number(currentSavings.ars) > 0 ? `+ ${formatCurrency(currentSavings.ars, "ARS")}` : undefined}
+                  title="Ahorros e Inversiones" 
+                  value={
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-baseline gap-1.5">
+                        <span>{formatCurrency(liquidSavings.usd, "USD")}</span>
+                        <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Líquidos</span>
+                      </div>
+                      {(Number(totalInvested.ars) > 0 || Number(totalInvested.usd) > 0) && (
+                        <div className="flex items-baseline gap-1.5">
+                          <span>{formatCurrency(totalInvested.ars, "ARS")}</span>
+                          <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Invertidos</span>
+                        </div>
+                      )}
+                    </div>
+                  }
                   icon={PiggyBank}
                   onClick={() => navigate("/savings")}
                 />
