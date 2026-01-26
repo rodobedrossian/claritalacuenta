@@ -65,9 +65,11 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
   // For mobile, we use bottom navigation instead of sidebar
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="h-screen bg-background flex flex-col overflow-hidden">
         {/* Main content with padding for bottom nav */}
-        <main className="flex-1 min-w-0 pb-20">{children}</main>
+        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-20 -webkit-overflow-scrolling-touch">
+          {children}
+        </main>
 
         {/* Bottom Navigation */}
         <BottomNavigation onAddClick={onMobileAddClick || (() => navigate("/?action=add-transaction"))} />
