@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -19,7 +20,14 @@ import Onboarding from "./pages/Onboarding";
 const queryClient = new QueryClient();
 
 const App = () => {
+  const isIOSApp = Capacitor.getPlatform() === 'ios';
   const hasSeenOnboarding = localStorage.getItem("clarita_onboarding_seen") === "true";
+  
+  // For development/testing: allow forcing onboarding via URL param
+  const forceOnboarding = new URLSearchParams(window.location.search).get('onboarding') === 'true';
+  
+  // Only show onboarding on iOS app if not seen yet, or if forced via URL
+  const shouldShowOnboarding = (isIOSApp && !hasSeenOnboarding) || forceOnboarding;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -28,7 +36,7 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {!hasSeenOnboarding ? (
+            {shouldShowOnboarding ? (
               <Route path="*" element={<Onboarding />} />
             ) : (
               <>
