@@ -65,6 +65,8 @@ Deno.serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
+    console.log('Using Lovable API Key (first 4 chars):', LOVABLE_API_KEY.substring(0, 4));
+
     // Use OpenAI Whisper via Lovable AI gateway for transcription
     // Note: For audio transcription, we need to use a chat model to process audio
     // Since Lovable AI doesn't have direct Whisper support, we'll use a workaround

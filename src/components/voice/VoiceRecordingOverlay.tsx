@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button";
 import {
   Drawer,
   DrawerContent,
+  DrawerTitle,
+  DrawerDescription,
 } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface VoiceRecordingOverlayProps {
   isOpen: boolean;
@@ -374,6 +377,12 @@ export const VoiceRecordingOverlay = ({
         }}
       >
         <DrawerContent className="h-[85vh]">
+          <VisuallyHidden>
+            <DrawerTitle>Grabación de Voz</DrawerTitle>
+            <DrawerDescription>
+              Escuchando tu voz para registrar una transacción automáticamente.
+            </DrawerDescription>
+          </VisuallyHidden>
           {content}
         </DrawerContent>
       </Drawer>
@@ -395,7 +404,14 @@ export const VoiceRecordingOverlay = ({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             className="bg-card border border-border rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden"
+            role="dialog"
+            aria-labelledby="voice-dialog-title"
+            aria-describedby="voice-dialog-description"
           >
+            <VisuallyHidden>
+              <h2 id="voice-dialog-title">Grabación de Voz</h2>
+              <p id="voice-dialog-description">Escuchando tu voz para registrar una transacción automáticamente.</p>
+            </VisuallyHidden>
             {content}
           </motion.div>
         </motion.div>

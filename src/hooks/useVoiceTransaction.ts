@@ -313,6 +313,12 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
       console.log("[Voice] Token ready, setting up audio capture...");
 
       // 2. Request microphone access
+      console.log("[Voice] Requesting microphone access...");
+      
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("La grabación de voz no está disponible en este dispositivo o navegador. Asegúrate de estar usando HTTPS.");
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           sampleRate: 16000,
