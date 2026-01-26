@@ -14,31 +14,42 @@ import Budgets from "./pages/Budgets";
 import CreditCards from "./pages/CreditCards";
 import Insights from "./pages/Insights";
 import NotFound from "./pages/NotFound";
+import Onboarding from "./pages/Onboarding";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-          <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
-          <Route path="/pending" element={<ProtectedRoute><PendingTransactions /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/savings" element={<ProtectedRoute><Savings /></ProtectedRoute>} />
-          <Route path="/budgets" element={<ProtectedRoute><Budgets /></ProtectedRoute>} />
-          <Route path="/credit-cards" element={<ProtectedRoute><CreditCards /></ProtectedRoute>} />
-          <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const hasSeenOnboarding = localStorage.getItem("clarita_onboarding_seen") === "true";
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {!hasSeenOnboarding ? (
+              <Route path="*" element={<Onboarding />} />
+            ) : (
+              <>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
+                <Route path="/pending" element={<ProtectedRoute><PendingTransactions /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/savings" element={<ProtectedRoute><Savings /></ProtectedRoute>} />
+                <Route path="/budgets" element={<ProtectedRoute><Budgets /></ProtectedRoute>} />
+                <Route path="/credit-cards" element={<ProtectedRoute><CreditCards /></ProtectedRoute>} />
+                <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </>
+            )}
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
