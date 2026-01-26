@@ -2,8 +2,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { persistQueryClient } from '@tanstack/react-query-persist-client';
+import { queryPersister } from '@/lib/queryPersister';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
+import { IOSSystemBanner } from "@/components/ui/ios-system-banner";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useOfflineDetection } from "@/hooks/use-offline-detection";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -17,11 +22,31 @@ import Insights from "./pages/Insights";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      gcTime: 1000 * 60 * 60 * 24, // 24 horas
+      staleTime: 1000 * 60 * 5,    // 5 minutos
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+// Habilitar persistencia
+persistQueryClient({
+  queryClient,
+  persister: queryPersister,
+  maxAge: 1000 * 60 * 60 * 24, // 24 horas
+  buster: 'v1',
+});
 
 const App = () => {
+  const isMobile = useIsMobile();
   const isIOSApp = Capacitor.getPlatform() === 'ios';
   const hasSeenOnboarding = localStorage.getItem("clarita_onboarding_seen") === "true";
+  
+  useOfflineDetection();
   
   // For development/testing: allow forcing onboarding via URL param
   const forceOnboarding = new URLSearchParams(window.location.search).get('onboarding') === 'true';
@@ -32,8 +57,13 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
+        <IOSSystemBanner />
+        {!isMobile && (
+          <>
+            <Toaster />
+            <Sonner />
+          </>
+        )}
         <BrowserRouter>
           <Routes>
             {shouldShowOnboarding ? (

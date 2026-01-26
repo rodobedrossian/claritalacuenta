@@ -167,17 +167,20 @@ Deno.serve(async (req) => {
       .from("transactions")
       .select("*")
       .eq("user_id", user.id)
-      .eq("type", "expense")
       .gte("date", sixMonthsAgo.toISOString().split("T")[0])
-      .order("date", { ascending: false });
+      .order("date", { ascending: false })
+      .limit(2000);
 
     if (txError) {
       console.error("Error fetching transactions:", txError);
       throw txError;
     }
 
+    // Filter for analysis but keep all for metadata if needed
+    const expenseTransactions = (rawTransactions || []).filter((t: any) => t.type === "expense");
+
     // Map category IDs to names
-    const allTransactions: Transaction[] = (rawTransactions || []).map((t: any) => ({
+    const allTransactions: Transaction[] = expenseTransactions.map((t: any) => ({
       ...t,
       category: categoryMap.get(t.category) || t.category
     }));
@@ -211,7 +214,8 @@ Deno.serve(async (req) => {
         .from("credit_card_transactions")
         .select("id, description, amount, currency, category_id, date, transaction_type, user_id, statement_import_id, credit_card_id, categories(name)")
         .eq("user_id", user.id)
-        .in("statement_import_id", statementIds);
+        .in("statement_import_id", statementIds)
+        .limit(2000);
 
       if (ccTxError) {
         console.error("Error fetching CC consumption transactions:", ccTxError);
@@ -769,7 +773,7 @@ Deno.serve(async (req) => {
         insights: topInsights,
         metadata: {
           analyzedMonths: sortedMonths.length,
-          totalTransactions: allTransactions.length,
+          totalTransactions: rawTransactions?.length || 0,
           totalStatementTransactions: ccConsumptionTransactions.length,
           generatedAt: new Date().toISOString(),
         }

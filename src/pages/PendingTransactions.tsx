@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Loader2, Mail, Pencil, Trash2 } from "lucide-react";
+import { Check, Loader2, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -157,7 +157,7 @@ const PendingTransactions = () => {
 
   return (
     <AppLayout>
-      <div className="min-h-screen">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden -webkit-overflow-scrolling-touch">
         <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3 transition-all duration-300">
           <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
             <div className="h-10 flex items-center gap-3">
@@ -180,8 +180,7 @@ const PendingTransactions = () => {
                   No hay transacciones pendientes
                 </h3>
                 <p className="text-muted-foreground">
-                  Las transacciones importadas desde Gmail aparecerán aquí para
-                  que las revises antes de confirmarlas.
+                  Las transacciones que requieran tu revisión aparecerán aquí.
                 </p>
               </CardContent>
             </Card>
@@ -205,12 +204,6 @@ const PendingTransactions = () => {
                           >
                             {transaction.type === "income" ? "Ingreso" : "Gasto"}
                           </Badge>
-                          {transaction.source === "email" && (
-                            <Badge variant="outline" className="gap-1">
-                              <Mail className="h-3 w-3" />
-                              Email
-                            </Badge>
-                          )}
                         </div>
                         <span className="text-sm text-muted-foreground">
                           {format(new Date(transaction.date), "dd/MM/yyyy HH:mm")}
@@ -240,23 +233,11 @@ const PendingTransactions = () => {
                               <label className="text-sm font-medium mb-1 block">
                                 Moneda
                               </label>
-                              <Select
+                              <Input
                                 value={editForm.currency}
-                                onValueChange={(value) =>
-                                  setEditForm((prev) => ({
-                                    ...prev,
-                                    currency: value as "USD" | "ARS",
-                                  }))
-                                }
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="ARS">ARS</SelectItem>
-                                  <SelectItem value="USD">USD</SelectItem>
-                                </SelectContent>
-                              </Select>
+                                readOnly
+                                className="bg-muted"
+                              />
                             </div>
                             <div>
                               <label className="text-sm font-medium mb-1 block">
@@ -395,6 +376,9 @@ const PendingTransactions = () => {
             </div>
           )}
         </main>
+        
+        {/* Spacer to clear bottom nav */}
+        <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden" />
       </div>
     </AppLayout>
   );

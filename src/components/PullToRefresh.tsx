@@ -43,7 +43,11 @@ export const PullToRefresh = ({
     if (!isPulling || disabled || isRefreshing) return;
     
     const container = containerRef.current;
-    if (!container || container.scrollTop > 0) {
+    if (!container) return;
+
+    // Double check we are at the top. If not, cancel pulling.
+    if (container.scrollTop > 5) {
+      setIsPulling(false);
       setPullDistance(0);
       return;
     }
@@ -53,14 +57,18 @@ export const PullToRefresh = ({
     
     if (diff > 0) {
       // Apply resistance for natural feel
-      const resistance = 0.5;
+      const resistance = 0.4; // Slightly more resistance
       const distance = Math.min(diff * resistance, MAX_PULL);
       setPullDistance(distance);
       
       // Prevent scroll while pulling
-      if (distance > 10) {
-        e.preventDefault();
+      if (distance > 5) {
+        if (e.cancelable) e.preventDefault();
       }
+    } else {
+      // If pulling up, cancel
+      setPullDistance(0);
+      setIsPulling(false);
     }
   }, [isPulling, disabled, isRefreshing]);
 
@@ -147,6 +155,8 @@ export const PullToRefresh = ({
         }}
       >
         {children}
+        {/* Generous spacer to ensure content clears the bottom navigation on mobile */}
+        <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden" />
       </div>
     </div>
   );

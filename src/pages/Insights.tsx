@@ -49,7 +49,7 @@ const Insights = () => {
 
   return (
     <AppLayout>
-      <div className="min-h-screen">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden -webkit-overflow-scrolling-touch">
         <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3 transition-all duration-300">
           <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
             <div className="h-10 flex items-center">
@@ -66,6 +66,9 @@ const Insights = () => {
             onRefresh={refetch}
           />
         </main>
+        
+        {/* Spacer to clear bottom nav */}
+        <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden" />
       </div>
     </AppLayout>
   );

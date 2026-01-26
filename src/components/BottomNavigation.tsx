@@ -56,7 +56,7 @@ export const BottomNavigation = ({ onAddClick }: BottomNavigationProps) => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom transition-all duration-300">
+    <nav className="shrink-0 z-50 md:hidden bg-background/80 backdrop-blur-xl border-t border-border safe-area-bottom transition-all duration-300">
       <div className="flex items-center justify-around h-[72px] px-2">
         {mainNavItems.map((item) => {
           const Icon = item.icon;

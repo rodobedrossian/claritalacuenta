@@ -21,8 +21,8 @@ export function InsightsCard({ insights, loading }: InsightsCardProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50">
-        <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+      <div className="flex items-center gap-3 p-4 rounded-2xl bg-card border border-border/40">
+        <Skeleton className="h-10 w-10 rounded-xl shrink-0" />
         <div className="flex-1 space-y-2">
           <Skeleton className="h-4 w-3/4" />
           <Skeleton className="h-3 w-1/2" />
@@ -37,26 +37,25 @@ export function InsightsCard({ insights, loading }: InsightsCardProps) {
 
   return (
     <motion.div 
-      className="space-y-2"
+      className="space-y-3"
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.3 }}
     >
+      <div className="flex items-center justify-between px-1">
+        <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.15em]">Sugerencias</h3>
+        {hasMore && (
+          <button 
+            onClick={() => navigate("/insights")}
+            className="text-[10px] font-bold text-primary uppercase tracking-wider hover:opacity-70 transition-opacity"
+          >
+            Ver {insights.length} total
+          </button>
+        )}
+      </div>
+
       {/* Single insight - compact */}
       <InsightItem insight={topInsight} compact />
-      
-      {/* See all button - minimal */}
-      {hasMore && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full h-8 text-xs text-muted-foreground hover:text-primary"
-          onClick={() => navigate("/insights")}
-        >
-          Ver {insights.length - 1} insights más
-          <ArrowRight className="h-3 w-3 ml-1" />
-        </Button>
-      )}
     </motion.div>
   );
 }

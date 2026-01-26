@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { CreditCard, TrendingDown, Receipt, Upload, Settings2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { StatementsList } from "@/components/credit-cards/StatementsList";
 import { StatementDetail } from "@/components/credit-cards/StatementDetail";
 import { MonthlyDetailView } from "@/components/credit-cards/MonthlyDetailView";
@@ -190,37 +191,39 @@ const CreditCards = () => {
 
   return (
     <AppLayout>
-      <div className="min-h-screen">
-        {/* Header - only show when not in detail views */}
-        {!selectedStatement && !selectedMonth && (
-          <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3 transition-all duration-300">
-            <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
-              <div className="h-10 flex items-center gap-3">
-                <div className="p-1.5 rounded-lg bg-primary/10">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold tracking-tight">Tarjetas</h1>
+      <div className="flex flex-col h-full overflow-hidden bg-background">
+        <PullToRefresh onRefresh={refetch} className="flex-1 overflow-y-auto" disabled={loading}>
+          {/* Header - only show when not in detail views */}
+          {!selectedStatement && !selectedMonth && (
+            <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3 transition-all duration-300">
+              <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
+                <div className="h-10 flex items-center gap-3">
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold tracking-tight">Tarjetas</h1>
+                  </div>
                 </div>
               </div>
-            </div>
-          </header>
-        )}
+            </header>
+          )}
 
-        <main className="p-4 md:p-6 lg:p-8 space-y-6">
-          {/* Content */}
-          {renderContent()}
-        </main>
-
-        <ImportStatementDialog
-          open={importDialogOpen}
-          onOpenChange={setImportDialogOpen}
-          userId={userId}
-          creditCards={creditCards}
-          onSuccess={refetch}
-          onAddCard={addCreditCard}
-        />
+          <main className="p-4 md:p-6 lg:p-8 space-y-6">
+            {/* Content */}
+            {renderContent()}
+          </main>
+        </PullToRefresh>
       </div>
+
+      <ImportStatementDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        userId={userId}
+        creditCards={creditCards}
+        onSuccess={refetch}
+        onAddCard={addCreditCard}
+      />
     </AppLayout>
   );
 };

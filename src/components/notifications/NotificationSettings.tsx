@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Capacitor } from "@capacitor/core";
 
 interface NotificationSettingsProps {
   isSupported: boolean;
@@ -118,7 +119,7 @@ export function NotificationSettings({
               </p>
             </div>
             {permission !== "denied" && !hasSubscription && (
-              <Button onClick={onSubscribe} disabled={subscribing || (platform === 'ios' && !isPWA)}>
+              <Button onClick={onSubscribe} disabled={subscribing || (platform === 'ios' && !isPWA && !Capacitor.isNativePlatform())}>
                 {subscribing ? "Activando..." : "Activar notificaciones"}
               </Button>
             )}
@@ -166,7 +167,7 @@ export function NotificationSettings({
             )}
           </div>
 
-          {platform === 'ios' && !isPWA && (
+          {platform === 'ios' && !isPWA && !Capacitor.isNativePlatform() && (
             <div className="p-3 rounded-lg bg-muted text-sm">
               <p className="font-medium mb-1">Para activar notificaciones en iOS:</p>
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
@@ -177,7 +178,7 @@ export function NotificationSettings({
             </div>
           )}
 
-          {platform === 'android' && !isPWA && (
+          {platform === 'android' && !isPWA && !Capacitor.isNativePlatform() && (
             <div className="p-3 rounded-lg bg-muted text-sm">
               <p className="font-medium mb-1">💡 Tip para mejor experiencia:</p>
               <p className="text-muted-foreground">

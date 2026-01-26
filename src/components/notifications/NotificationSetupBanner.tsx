@@ -2,6 +2,7 @@ import { Bell, Smartphone, X, Monitor, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
+import { Capacitor } from "@capacitor/core";
 
 interface NotificationSetupBannerProps {
   isSupported: boolean;
@@ -76,7 +77,7 @@ export function NotificationSetupBanner({
   }
 
   // iOS requires PWA installation first
-  if (platform === 'ios' && !isPWA && isSupported) {
+  if (platform === 'ios' && !isPWA && isSupported && !Capacitor.isNativePlatform()) {
     return (
       <Card className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
         <CardContent className="py-4">
@@ -105,6 +106,45 @@ export function NotificationSetupBanner({
             >
               <X className="h-4 w-4" />
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Capacitor / Native iOS - show subscription prompt directly
+  if (platform === 'ios' && Capacitor.isNativePlatform() && isSupported) {
+    return (
+      <Card className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
+        <CardContent className="py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-primary/20">
+                <Bell className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm">Activa las notificaciones</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Recibe alertas de presupuesto, recordatorios de gastos y más directamente en tu iPhone.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDismissed(true)}
+              >
+                Ahora no
+              </Button>
+              <Button
+                size="sm"
+                onClick={onSubscribe}
+                disabled={subscribing}
+              >
+                {subscribing ? "Activando..." : "Activar"}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

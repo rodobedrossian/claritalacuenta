@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, X, Send, Loader2, Wifi, AudioWaveform } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import {
   Drawer,
   DrawerContent,
@@ -10,6 +11,8 @@ import {
 } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+
+import { showIOSBanner } from "@/hooks/use-ios-banner";
 
 interface VoiceRecordingOverlayProps {
   isOpen: boolean;
@@ -40,6 +43,30 @@ export const VoiceRecordingOverlay = ({
   const isMobile = useIsMobile();
   const [barHeights, setBarHeights] = useState<number[]>(new Array(NUM_BARS).fill(10));
   const animationRef = useRef<number>();
+  const [orbScale, setOrbScale] = useState(1);
+
+  // Haptic feedback
+  const triggerHaptic = useCallback(async (type: 'light' | 'medium' | 'heavy' = 'light') => {
+    try {
+      const styles = {
+        light: ImpactStyle.Light,
+        medium: ImpactStyle.Medium,
+        heavy: ImpactStyle.Heavy
+      };
+      await Haptics.impact({ style: styles[type] });
+    } catch (e) {
+      // Fallback
+    }
+  }, []);
+
+  // Define derived states first to avoid ReferenceErrors
+  const isProcessing = state === "transcribing" || state === "parsing";
+  const isRecording = state === "recording" || state === "connecting";
+  const isConnecting = state === "connecting";
+  const isDismissible = state === "error" || state === "idle";
+  
+  const displayText = isRecording ? (partialText || "") : (transcribedText || "");
+  const hasText = displayText.trim().length > 0;
 
   // Format duration as MM:SS
   const formatDuration = (seconds: number) => {
@@ -48,31 +75,35 @@ export const VoiceRecordingOverlay = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Haptic feedback
-  const triggerHaptic = useCallback((type: 'light' | 'medium' | 'heavy' = 'light') => {
-    if ('vibrate' in navigator) {
-      const durations = { light: 10, medium: 25, heavy: 50 };
-      navigator.vibrate(durations[type]);
+  // Trigger banner on error
+  useEffect(() => {
+    if (state === "error" && error) {
+      showIOSBanner(error, 'error');
     }
-  }, []);
+  }, [state, error]);
 
-  // Animate audio waveform bars
+  // Animate audio waveform bars and orb
   useEffect(() => {
     if (state !== "recording") {
-      // Reset bars when not recording
       setBarHeights(new Array(NUM_BARS).fill(10));
+      setOrbScale(1);
       return;
     }
 
     const animate = () => {
       const levels = getAudioLevels();
-      const step = Math.max(1, Math.floor(levels.length / NUM_BARS));
       
+      // Calculate average level for orb scaling
+      const sum = levels.reduce((a, b) => a + b, 0);
+      const avg = sum / levels.length;
+      const normalizedAvg = avg / 255;
+      setOrbScale(1 + normalizedAvg * 0.5);
+
+      const step = Math.max(1, Math.floor(levels.length / NUM_BARS));
       const newHeights = new Array(NUM_BARS).fill(0).map((_, i) => {
         const dataIndex = (i * step) % levels.length;
         const value = levels[dataIndex] || 0;
         const normalized = value / 255;
-        // Map to height: min 8px, max 60px
         return 8 + normalized * 52;
       });
       
@@ -89,35 +120,80 @@ export const VoiceRecordingOverlay = ({
     };
   }, [state, getAudioLevels]);
 
+  // Trigger haptic on text change
+  useEffect(() => {
+    if (isRecording && hasText) {
+      triggerHaptic('light');
+    }
+  }, [displayText, isRecording, hasText, triggerHaptic]);
+
   // Trigger haptic on state change
   useEffect(() => {
     if (state === "recording") {
       triggerHaptic('medium');
-    } else if (state === "transcribing" || state === "parsing" || state === "connecting") {
+    } else if (state === "transcribing" || state === "parsing") {
       triggerHaptic('light');
+    } else if (state === "ready") {
+      triggerHaptic('heavy');
     }
   }, [state, triggerHaptic]);
 
-  const isProcessing = state === "transcribing" || state === "parsing";
-  const isRecording = state === "recording";
-  const isConnecting = state === "connecting";
-  const isDismissible = state === "error";
-
-  // Display text (live partial during recording, final after)
-  const displayText = isRecording ? partialText : transcribedText;
-  const hasText = displayText && displayText.trim().length > 0;
-
   // Get state-specific UI elements
   const getStateIcon = () => {
-    if (isConnecting) {
+    if (isConnecting || isRecording) {
       return (
-        <motion.div
-          className="flex flex-col items-center gap-3"
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        >
-          <Wifi className="h-16 w-16 text-primary" />
-        </motion.div>
+        <div className="relative flex items-center justify-center h-48 w-48">
+          {/* Siri-style Animated Orb */}
+          <motion.div
+            className="absolute inset-0 rounded-full bg-primary/20 blur-3xl"
+            animate={{
+              scale: isRecording ? [1 * orbScale, 1.2 * orbScale, 1 * orbScale] : [1, 1.2, 1],
+              opacity: [0.3, 0.6, 0.3],
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute inset-4 rounded-full bg-gradient-to-tr from-primary via-primary/80 to-primary/40 blur-xl"
+            animate={{
+              scale: isRecording ? orbScale : 1,
+              rotate: [0, 180, 360],
+            }}
+            transition={{ 
+              scale: { duration: 0.1, ease: "easeOut" },
+              rotate: { duration: 10, repeat: Infinity, ease: "linear" }
+            }}
+          />
+          <motion.div 
+            className="relative z-10 h-24 w-24 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-2xl"
+            animate={{ scale: isRecording ? 0.9 + orbScale * 0.1 : 1 }}
+            transition={{ duration: 0.1 }}
+          >
+            <Mic className="h-10 w-10 text-primary" />
+          </motion.div>
+          
+          {/* Audio reactive rings */}
+          {isRecording && (
+            <>
+              {[1, 2, 3].map((i) => (
+                <motion.div
+                  key={i}
+                  className="absolute inset-0 rounded-full border-2 border-primary/30"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ 
+                    scale: [0.8, 1.8], 
+                    opacity: [0.5, 0] 
+                  }}
+                  transition={{ 
+                    duration: 2, 
+                    repeat: Infinity, 
+                    delay: i * 0.6,
+                    ease: "easeOut" 
+                  }}
+                />
+              ))}
+            </>
+          )}
+        </div>
       );
     }
     
@@ -151,15 +227,15 @@ export const VoiceRecordingOverlay = ({
   const getStatusText = () => {
     switch (state) {
       case "connecting":
-        return "Conectando...";
+        return ""; // Totally silent connecting
       case "recording":
-        return hasText ? "" : "Esperando voz...";
+        return hasText ? "" : "Escuchando...";
       case "transcribing":
-        return "Finalizando...";
+        return "Procesando...";
       case "parsing":
         return "Analizando...";
       case "error":
-        return "Error";
+        return "Reintentar";
       default:
         return "";
     }
@@ -167,16 +243,10 @@ export const VoiceRecordingOverlay = ({
 
   const getStatusSubtext = () => {
     switch (state) {
-      case "connecting":
-        return "Iniciando transcripción en tiempo real";
       case "recording":
-        return hasText ? "" : "Habla claro para mejores resultados";
-      case "transcribing":
-        return "Procesando audio final";
-      case "parsing":
-        return "Extrayendo datos de la transacción";
+        return hasText ? "" : "Decí algo como 'Gasto 5000 en comida'";
       case "error":
-        return error || "Algo salió mal";
+        return "Hubo un problema con la grabación";
       default:
         return "";
     }
@@ -186,53 +256,14 @@ export const VoiceRecordingOverlay = ({
     <div className="flex flex-col items-center justify-between px-6 py-8 h-full min-h-[500px]">
       {/* Top section: Waveform + Status */}
       <div className="flex-1 flex flex-col items-center justify-center w-full">
-        {/* Audio Waveform Visualizer */}
-        {isRecording && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-center gap-[3px] h-16 mb-8"
-          >
-            {barHeights.map((height, i) => (
-              <motion.div
-                key={i}
-                className="w-[4px] rounded-full bg-primary"
-                initial={{ height: 8 }}
-                animate={{ height }}
-                transition={{ duration: 0.05, ease: "easeOut" }}
-              />
-            ))}
-          </motion.div>
-        )}
-
-        {/* State Icon (when not recording or no text) */}
-        {(!isRecording || !hasText) && (
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="mb-8"
-          >
-            {getStateIcon()}
-            
-            {/* Pulsing mic when waiting for voice */}
-            {isRecording && !hasText && (
-              <motion.div
-                className="relative"
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <div className="h-24 w-24 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Mic className="h-12 w-12 text-primary" />
-                </div>
-                <motion.div
-                  className="absolute inset-0 rounded-full border-2 border-primary"
-                  animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                />
-              </motion.div>
-            )}
-          </motion.div>
-        )}
+        {/* State Icon (Siri Orb included here) */}
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="mb-12"
+        >
+          {getStateIcon()}
+        </motion.div>
 
         {/* Main Transcription Text Area */}
         <AnimatePresence mode="wait">
@@ -245,19 +276,35 @@ export const VoiceRecordingOverlay = ({
               className="w-full max-w-md px-4 mb-6"
             >
               <div className="relative min-h-[120px] flex items-center justify-center">
-                <motion.p
-                  className="text-2xl md:text-3xl font-medium text-foreground text-center leading-relaxed"
-                  key={displayText}
-                >
-                  "{displayText}"
+                <div className="text-2xl md:text-3xl font-bold text-foreground text-center leading-relaxed">
+                  {displayText.split(' ').map((word, i, arr) => (
+                    <motion.span
+                      key={`${i}-${word}`}
+                      initial={{ opacity: 0, y: 10, filter: "blur(10px)", scale: 0.8 }}
+                      animate={{ 
+                        opacity: i === arr.length - 1 ? 1 : 0.5, 
+                        y: 0,
+                        filter: "blur(0px)",
+                        scale: 1,
+                        color: i === arr.length - 1 ? "var(--primary)" : "currentColor"
+                      }}
+                      transition={{ 
+                        duration: 0.4,
+                        ease: [0.23, 1, 0.32, 1]
+                      }}
+                      className="inline-block mr-2"
+                    >
+                      {word}
+                    </motion.span>
+                  ))}
                   {isRecording && (
                     <motion.span
                       animate={{ opacity: [1, 0, 1] }}
                       transition={{ duration: 0.6, repeat: Infinity }}
-                      className="inline-block w-[3px] h-7 bg-primary ml-1 align-middle rounded-full"
+                      className="inline-block w-[3px] h-7 bg-primary ml-1 align-middle rounded-full shadow-[0_0_10px_hsl(var(--primary))]"
                     />
                   )}
-                </motion.p>
+                </div>
               </div>
             </motion.div>
           )}

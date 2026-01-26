@@ -2,6 +2,9 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+import { triggerHaptic, triggerNotificationHaptic } from "@/lib/haptics";
+import { ImpactStyle, NotificationType } from "@capacitor/haptics";
+
 export interface VoiceTransactionData {
   type: "income" | "expense";
   amount: number;
@@ -78,7 +81,7 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
   const hasReceivedSpeechRef = useRef<boolean>(false);
 
   const MAX_DURATION_MS = 30_000;
-  const SILENCE_TIMEOUT_MS = 3_000; // Stop after 3 seconds of silence
+  const SILENCE_TIMEOUT_MS = 2_000; // Stop after 2 seconds of silence (optimized for iOS feel)
 
   useEffect(() => {
     stateRef.current = state;
@@ -88,7 +91,8 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
     console.error("[Voice] Fatal:", message);
     setError(message);
     setState("error");
-    toast.error(message);
+    triggerNotificationHaptic(NotificationType.Error);
+    // Suppress generic toast on mobile if handled by banner in component
   }, []);
 
   // Cleanup all resources
@@ -200,6 +204,7 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
     stopInFlightRef.current = true;
     stopIntentRef.current = true;
     console.log("[Voice] Stopping recording...");
+    triggerHaptic(ImpactStyle.Light);
     
     // Stop timers
     if (durationIntervalRef.current) {
@@ -356,6 +361,7 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
 
       ws.onopen = () => {
         console.log("[Voice] WebSocket connected successfully!");
+        triggerHaptic(ImpactStyle.Medium);
         
         if (stopIntentRef.current) {
           ws.close();
