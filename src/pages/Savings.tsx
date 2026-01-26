@@ -108,9 +108,9 @@ const Savings = () => {
 
   return (
     <AppLayout>
-      <div className="min-h-screen">
+      <div className="flex flex-col h-full overflow-hidden bg-background">
         {/* Header - Fixed sticky with safe area */}
-        <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3 transition-all duration-300">
+        <header className="shrink-0 border-b border-border/50 bg-background/80 backdrop-blur-xl z-40 pt-safe pb-3 transition-all duration-300">
           <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
             <div className="h-10 flex flex-col justify-center">
               <h1 className="text-xl font-bold tracking-tight">Ahorros e Inversiones</h1>
@@ -121,8 +121,8 @@ const Savings = () => {
           </div>
         </header>
 
-        {/* Main Content */}
-        <PullToRefresh onRefresh={handlePullToRefresh} disabled={dataLoading}>
+        {/* Main Content - Scrollable area */}
+        <PullToRefresh onRefresh={handlePullToRefresh} className="flex-1 overflow-y-auto" disabled={dataLoading}>
           <main className="container mx-auto px-4 md:px-6 py-4 md:py-6 space-y-4">
             {/* Quick Stats */}
             <SavingsQuickStats
@@ -149,8 +149,8 @@ const Savings = () => {
               transition={{ duration: 0.4, delay: 0.5 }}
             >
               <Tabs defaultValue="historial" className="pt-2">
-                <TabsList className="w-full justify-start">
-                  <TabsTrigger value="historial" className="flex-1 sm:flex-none gap-2">
+                <TabsList className="w-full justify-start overflow-x-auto">
+                  <TabsTrigger value="historial" className="flex-1 sm:flex-none gap-2 whitespace-nowrap">
                     Historial
                     {entries.length > 0 && (
                       <Badge variant="secondary" className="h-5 px-1.5 text-xs">
@@ -158,7 +158,7 @@ const Savings = () => {
                       </Badge>
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="inversiones" className="flex-1 sm:flex-none gap-2">
+                  <TabsTrigger value="inversiones" className="flex-1 sm:flex-none gap-2 whitespace-nowrap">
                     Inversiones
                     {investments.length > 0 && (
                       <Badge variant="secondary" className="h-5 px-1.5 text-xs">
@@ -166,7 +166,7 @@ const Savings = () => {
                       </Badge>
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="objetivos" className="flex-1 sm:flex-none gap-2">
+                  <TabsTrigger value="objetivos" className="flex-1 sm:flex-none gap-2 whitespace-nowrap">
                     Objetivos
                     {goals.length > 0 && (
                       <Badge variant="secondary" className="h-5 px-1.5 text-xs">

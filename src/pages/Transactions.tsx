@@ -129,16 +129,17 @@ const Transactions = () => {
 
   return (
     <AppLayout>
-      <PullToRefresh onRefresh={handleRefresh} className="min-h-screen" disabled={loading}>
-        <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3 transition-all duration-300">
-          <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
-            <div className="h-10 flex items-center">
-              <h1 className="text-xl font-bold tracking-tight">Transacciones</h1>
+      <div className="flex flex-col h-full overflow-hidden bg-background">
+        <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-y-auto" disabled={loading}>
+          <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3 transition-all duration-300">
+            <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
+              <div className="h-10 flex items-center">
+                <h1 className="text-xl font-bold tracking-tight">Transacciones</h1>
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
+          <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
           {/* Filters Section */}
           <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
             <div className="mb-6 rounded-lg bg-card border border-border/50 overflow-hidden">

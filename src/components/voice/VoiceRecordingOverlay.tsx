@@ -75,7 +75,8 @@ export const VoiceRecordingOverlay = ({
   const isDismissible = state === "error";
 
   // Display text (live partial during recording, final after)
-  const displayText = isRecording ? partialText : transcribedText;
+  const isRecordingState = isRecording;
+  const displayText = isRecordingState ? (partialText || "") : (transcribedText || "");
   const hasText = displayText && displayText.trim().length > 0;
 
   // Animate audio waveform bars and orb

@@ -339,9 +339,9 @@ const Index = () => {
 
         {/* Mobile: New streamlined header with pull-to-refresh */}
         {isMobile ? (
-          <>
+          <div className="flex flex-col h-full overflow-hidden">
             <MobileHeader userName={user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuario'} />
-            <PullToRefresh onRefresh={handlePullToRefresh} className="min-h-[calc(100vh-4rem)]" disabled={dataLoading}>
+            <PullToRefresh onRefresh={handlePullToRefresh} className="flex-1 overflow-y-auto" disabled={dataLoading}>
               <DashboardHeader
                 userName={user?.user_metadata?.full_name || user?.email}
                 exchangeRate={exchangeRate}
@@ -361,13 +361,86 @@ const Index = () => {
               />
 
               <main className="container mx-auto px-4 py-4 space-y-4">
-                {/* ... existing content ... */}
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 gap-4 animate-fade-in">
+                  <StatCard 
+                    title="Ingresos del mes" 
+                    value={formatCurrency(globalIncomeARS, "ARS")}
+                    subtitle={`${formatCurrency(totals.incomeUSD, "USD")} / ${formatCurrency(totals.incomeARS, "ARS")}`}
+                    icon={TrendingUp}
+                    trend="up"
+                  />
+                  <StatCard 
+                    title="Gastos del mes" 
+                    value={formatCurrency(globalExpensesARS, "ARS")}
+                    subtitle={`${formatCurrency(totals.expensesUSD, "USD")} / ${formatCurrency(totals.expensesARS, "ARS")}`}
+                    icon={TrendingDown}
+                  />
+                  <StatCard 
+                    title="Ahorros actuales" 
+                    value={formatCurrency(currentSavings.usd, "USD")}
+                    subtitle={Number(currentSavings.ars) > 0 ? `+ ${formatCurrency(currentSavings.ars, "ARS")}` : undefined}
+                    icon={PiggyBank}
+                    onClick={() => navigate("/savings")}
+                  />
+                </div>
+
+                {/* Quick Actions Grid */}
+                <QuickActions 
+                  onAddTransaction={() => setAddTransactionDialogOpen(true)}
+                  onVoiceRecord={() => voiceTransaction.startRecording()}
+                  onAddSavings={() => setSavingsWizardOpen(true)}
+                />
+
+                {/* Budget Progress */}
+                <div className="animate-fade-in">
+                  {budgetsWithSpending.length > 0 ? (
+                    <BudgetProgress
+                      budgets={budgetsWithSpending}
+                      onManageBudgets={() => navigate("/budgets")}
+                    />
+                  ) : (
+                    <Card className="p-6 bg-card border border-border shadow-stripe">
+                      <div className="flex flex-col gap-4">
+                        <div>
+                          <h3 className="text-lg font-semibold">Presupuestos del Mes</h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Configura límites de gasto por categoría
+                          </p>
+                        </div>
+                        <Button 
+                          onClick={() => navigate("/budgets")}
+                          className="gradient-primary w-full"
+                        >
+                          Crear Presupuesto
+                        </Button>
+                      </div>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Insights Section */}
+                <div className="animate-fade-in">
+                  <InsightsCard
+                    insights={insightsData?.insights || []}
+                    loading={insightsLoading}
+                    onRefresh={refetchInsights}
+                  />
+                </div>
+
+                {/* Charts and Transactions */}
+                <div className="space-y-6 animate-slide-up pb-8">
+                  <SpendingChart data={spendingByCategory} />
+                  <TransactionsList 
+                    transactions={transactions.slice(0, 5)} 
+                    onEdit={handleEditTransaction}
+                    showViewAll={transactions.length > 5}
+                    onViewAll={() => navigate("/transactions")}
+                  />
+                </div>
               </main>
-              
-              {/* Extra spacer inside PullToRefresh to ensure scroll reaches bottom */}
-              <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden" />
             </PullToRefresh>
-          </>
+          </div>
         ) : (
           <>
             {/* Desktop: Original header */}
