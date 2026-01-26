@@ -190,7 +190,7 @@ const CreditCards = () => {
 
   return (
     <AppLayout>
-      <div className="min-h-screen">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden -webkit-overflow-scrolling-touch">
         {/* Header - only show when not in detail views */}
         {!selectedStatement && !selectedMonth && (
           <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3 transition-all duration-300">
@@ -211,6 +211,9 @@ const CreditCards = () => {
           {/* Content */}
           {renderContent()}
         </main>
+
+        {/* Spacer to clear bottom nav */}
+        <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden" />
 
         <ImportStatementDialog
           open={importDialogOpen}

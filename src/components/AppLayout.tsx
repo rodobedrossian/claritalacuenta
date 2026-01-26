@@ -65,9 +65,9 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
   // For mobile, we use bottom navigation instead of sidebar
   if (isMobile) {
     return (
-      <div className="h-screen bg-background flex flex-col overflow-hidden">
-        {/* Main content with padding for bottom nav */}
-        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-20 -webkit-overflow-scrolling-touch">
+      <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
+        {/* Main content area - scroll handled by individual pages */}
+        <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
           {children}
         </main>
 

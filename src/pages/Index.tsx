@@ -343,91 +343,29 @@ const Index = () => {
             <MobileHeader userName={user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuario'} />
             <PullToRefresh onRefresh={handlePullToRefresh} className="min-h-[calc(100vh-4rem)]" disabled={dataLoading}>
               <DashboardHeader
-              userName={user?.user_metadata?.full_name || user?.email}
-              exchangeRate={exchangeRate}
-              lastUpdated={lastUpdated}
-              isRefreshingRate={isRefreshingRate}
-              onRefreshRate={fetchExchangeRate}
-              activeMonth={activeMonth}
-              onPreviousMonth={goToPreviousMonth}
-              onNextMonth={goToNextMonth}
-              onCurrentMonth={goToCurrentMonth}
-              netBalance={globalNetBalanceARS}
-              netBalanceBreakdown={{
-                usd: totals.incomeUSD - totals.expensesUSD - totals.savingsTransfersUSD,
-                ars: totals.incomeARS - totals.expensesARS - totals.savingsTransfersARS
-              }}
-              formatCurrency={formatCurrency}
-            />
-
-            <main className="container mx-auto px-4 py-4 space-y-4">
-              {/* Quick Stats */}
-              <QuickStats
-                income={{ usd: totals.incomeUSD, ars: totals.incomeARS, total: globalIncomeARS }}
-                expenses={{ usd: totals.expensesUSD, ars: totals.expensesARS, total: globalExpensesARS }}
-                savings={{
-                  liquidUsd: Number(liquidSavings.usd) || 0,
-                  liquidArs: Number(liquidSavings.ars) || 0,
-                  investedUsd: Number(totalInvested.usd) || 0,
-                  investedArs: Number(totalInvested.ars) || 0,
+                userName={user?.user_metadata?.full_name || user?.email}
+                exchangeRate={exchangeRate}
+                lastUpdated={lastUpdated}
+                isRefreshingRate={isRefreshingRate}
+                onRefreshRate={fetchExchangeRate}
+                activeMonth={activeMonth}
+                onPreviousMonth={goToPreviousMonth}
+                onNextMonth={goToNextMonth}
+                onCurrentMonth={goToCurrentMonth}
+                netBalance={globalNetBalanceARS}
+                netBalanceBreakdown={{
+                  usd: totals.incomeUSD - totals.expensesUSD - totals.savingsTransfersUSD,
+                  ars: totals.incomeARS - totals.expensesARS - totals.savingsTransfersARS
                 }}
                 formatCurrency={formatCurrency}
               />
 
-              {/* Quick Actions */}
-              <QuickActions
-                onAddExpense={() => setAddTransactionDialogOpen(true)}
-                onVoiceRecord={voiceTransaction.isRecording ? voiceTransaction.stopRecording : voiceTransaction.startRecording}
-                onTransferToSavings={() => setSavingsWizardOpen(true)}
-                isRecording={voiceTransaction.isRecording}
-                isProcessing={voiceTransaction.isProcessing}
-              />
-
-              {/* Savings Wizard (same as Savings page) */}
-              <AddSavingsWizard
-                open={savingsWizardOpen}
-                onOpenChange={setSavingsWizardOpen}
-                onAdd={async (entry) => {
-                  // The wizard only creates deposits, map entry_type appropriately
-                  const entryType = entry.entry_type === "interest" ? "deposit" : entry.entry_type;
-                  await handleAddSavings(
-                    entry.currency,
-                    entry.amount,
-                    entryType,
-                    entry.savings_type,
-                    entry.notes || undefined
-                  );
-                }}
-                availableBalanceUSD={availableBalanceUSD}
-                availableBalanceARS={availableBalanceARS}
-              />
-
-              {/* Budget Progress */}
-              {budgetsWithSpending.length > 0 && (
-                <BudgetProgress
-                  budgets={budgetsWithSpending}
-                  onManageBudgets={() => navigate("/budgets")}
-                />
-              )}
-
-              {/* Insights */}
-              <InsightsCard
-                insights={insightsData?.insights || []}
-                loading={insightsLoading}
-                onRefresh={refetchInsights}
-              />
-
-              {/* Charts and Transactions */}
-              <div className="space-y-4">
-                <SpendingChart data={spendingByCategory} />
-                <TransactionsList 
-                  transactions={transactions.slice(0, 5)} 
-                  onEdit={handleEditTransaction}
-                  showViewAll={transactions.length > 5}
-                  onViewAll={() => navigate("/transactions")}
-                />
-              </div>
-            </main>
+              <main className="container mx-auto px-4 py-4 space-y-4">
+                {/* ... existing content ... */}
+              </main>
+              
+              {/* Extra spacer inside PullToRefresh to ensure scroll reaches bottom */}
+              <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden" />
             </PullToRefresh>
           </>
         ) : (

@@ -147,6 +147,8 @@ export const PullToRefresh = ({
         }}
       >
         {children}
+        {/* Generous spacer to ensure content clears the bottom navigation on mobile */}
+        <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden" />
       </div>
     </div>
   );

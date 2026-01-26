@@ -92,43 +92,45 @@ export const MonthlyDetailView = ({
       <div className="space-y-6 pt-2">
         {/* Summary stats */}
         <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-xl md:text-2xl font-bold text-warning">
-              {formatCurrency(totals.ars, "ARS")}
-            </div>
-            <p className="text-xs text-muted-foreground">Total en pesos</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-xl md:text-2xl font-bold text-warning">
-              {formatCurrency(totals.usd, "USD")}
-            </div>
-            <p className="text-xs text-muted-foreground">Total en dólares</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-xl md:text-2xl font-bold">{transactions.length}</div>
-            <p className="text-xs text-muted-foreground">Transacciones</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-xl md:text-2xl font-bold">{uniqueCardIds.length}</div>
-            <p className="text-xs text-muted-foreground">Tarjetas</p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-xl md:text-2xl font-bold text-warning">
+                {formatCurrency(totals.ars, "ARS")}
+              </div>
+              <p className="text-xs text-muted-foreground">Total en pesos</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-xl md:text-2xl font-bold text-warning">
+                {formatCurrency(totals.usd, "USD")}
+              </div>
+              <p className="text-xs text-muted-foreground">Total en dólares</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-xl md:text-2xl font-bold">{transactions.length}</div>
+              <p className="text-xs text-muted-foreground">Transacciones</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-xl md:text-2xl font-bold">{uniqueCardIds.length}</div>
+              <p className="text-xs text-muted-foreground">Tarjetas</p>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Charts */}
-      <MonthlyAnalyticsChart
-        transactions={transactions}
-        categories={categories}
-        creditCards={creditCards}
-      />
+        {/* Charts */}
+        <MonthlyAnalyticsChart
+          transactions={transactions}
+          categories={categories}
+          creditCards={creditCards}
+        />
 
+        {/* Spacer to clear bottom nav */}
+        <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden" />
       </div>
     </div>
   );
