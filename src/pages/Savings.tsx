@@ -108,42 +108,22 @@ const Savings = () => {
 
   return (
     <AppLayout>
-      <div className="min-h-screen pb-20">
-        {/* Mobile Header */}
-        {isMobile && <MobileHeader userName={userName} />}
-
-        {/* Desktop Header */}
-        {!isMobile && (
-          <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-            <div className="container mx-auto px-4 md:px-6 py-4 pl-14 md:pl-6">
-              <div className="flex items-center gap-3">
-                <div>
-                  <h1 className="text-xl md:text-2xl font-bold">Ahorros e Inversiones</h1>
-                  <p className="text-sm text-muted-foreground">
-                    Gestiona tu patrimonio
-                  </p>
-                </div>
-              </div>
+      <div className="min-h-screen">
+        {/* Header - Fixed sticky with safe area */}
+        <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3 transition-all duration-300">
+          <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
+            <div className="h-10 flex flex-col justify-center">
+              <h1 className="text-xl font-bold tracking-tight">Ahorros e Inversiones</h1>
+              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                Gestiona tu patrimonio
+              </p>
             </div>
-          </header>
-        )}
+          </div>
+        </header>
 
         {/* Main Content */}
         <PullToRefresh onRefresh={handlePullToRefresh} disabled={dataLoading}>
           <main className="container mx-auto px-4 md:px-6 py-4 md:py-6 space-y-4">
-            {/* Page title on mobile */}
-            {isMobile && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="pt-2"
-              >
-                <h1 className="text-lg font-semibold">Ahorros e Inversiones</h1>
-                <p className="text-xs text-muted-foreground">Gestiona tu patrimonio</p>
-              </motion.div>
-            )}
-
             {/* Quick Stats */}
             <SavingsQuickStats
               currentSavings={currentSavings}

@@ -190,24 +190,27 @@ const CreditCards = () => {
 
   return (
     <AppLayout>
-      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+      <div className="min-h-screen">
         {/* Header - only show when not in detail views */}
         {!selectedStatement && !selectedMonth && (
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <CreditCard className="h-6 w-6 text-primary" />
+          <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3 transition-all duration-300">
+            <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
+              <div className="h-10 flex items-center gap-3">
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold tracking-tight">Tarjetas</h1>
+                </div>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold">Resúmenes de Tarjeta</h1>
-              <p className="text-muted-foreground">
-                Historial de resúmenes importados y detalle de consumos
-              </p>
-            </div>
-          </div>
+          </header>
         )}
 
-        {/* Content */}
-        {renderContent()}
+        <main className="p-4 md:p-6 lg:p-8 space-y-6">
+          {/* Content */}
+          {renderContent()}
+        </main>
 
         <ImportStatementDialog
           open={importDialogOpen}

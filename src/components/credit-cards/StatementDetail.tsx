@@ -419,23 +419,26 @@ export const StatementDetail = ({
 
   return (
     <div className="space-y-6">
-      {/* Header - with mobile margin to avoid menu button overlap */}
-      <div className="flex items-center gap-4 ml-12 md:ml-0">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h2 className="text-xl font-bold">
-            Resumen de {format(parseISO(statement.statement_month), "MMMM yyyy", { locale: es })}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {statement.file_name}
-          </p>
+      {/* Header - Fixed sticky with safe area */}
+      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/50 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-safe pb-3 transition-all duration-300">
+        <div className="flex items-center gap-4 h-10">
+          <Button variant="ghost" size="icon" onClick={onBack} className="h-9 w-9">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex flex-col">
+            <h2 className="text-xl font-bold tracking-tight">
+              {format(parseISO(statement.statement_month), "MMMM yyyy", { locale: es })}
+            </h2>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider truncate max-w-[200px] sm:max-w-none">
+              {statement.file_name}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Auto-assign notification */}
-      {autoAssignedCount > 0 && (
+      <div className="space-y-6 pt-2">
+        {/* Auto-assign notification */}
+        {autoAssignedCount > 0 && (
         <Card className="p-3 bg-primary/5 border-primary/20">
           <div className="flex items-center gap-2 text-sm">
             <Sparkles className="h-4 w-4 text-primary" />
@@ -646,6 +649,7 @@ export const StatementDetail = ({
           </Table>
         </Card>
       )}
+      </div>
     </div>
   );
 };
