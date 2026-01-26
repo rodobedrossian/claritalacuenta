@@ -78,7 +78,7 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
   const hasReceivedSpeechRef = useRef<boolean>(false);
 
   const MAX_DURATION_MS = 30_000;
-  const SILENCE_TIMEOUT_MS = 3_000; // Stop after 3 seconds of silence
+  const SILENCE_TIMEOUT_MS = 2_000; // Stop after 2 seconds of silence (optimized for iOS feel)
 
   useEffect(() => {
     stateRef.current = state;
