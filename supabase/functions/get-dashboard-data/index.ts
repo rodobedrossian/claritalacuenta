@@ -121,7 +121,13 @@ Deno.serve(async (req) => {
       supabase
         .from("credit_cards")
         .select("id, name, bank, closing_day")
-        .order("name")
+        .order("name"),
+      
+      // Investments
+      supabase
+        .from("investments")
+        .select("current_amount, currency, is_active")
+        .eq("is_active", true)
     ]);
 
     // Log any errors
@@ -132,6 +138,7 @@ Deno.serve(async (req) => {
     if (usersResult.error) console.error("Users error:", usersResult.error);
     if (savingsEntriesResult.error) console.error("Savings entries error:", savingsEntriesResult.error);
     if (creditCardsResult.error) console.error("Credit cards error:", creditCardsResult.error);
+    if (investmentsResult.error) console.error("Investments error:", investmentsResult.error);
 
     const transactions: Transaction[] = (transactionsResult.data || []).map((t: any) => ({
       ...t,
@@ -139,6 +146,16 @@ Deno.serve(async (req) => {
       from_savings: t.from_savings || false,
       payment_method: t.payment_method || "cash"
     }));
+
+    // Calculate invested totals
+    const investments = investmentsResult.data || [];
+    let investedUSD = 0;
+    let investedARS = 0;
+    for (const i of investments) {
+      const amount = typeof i.current_amount === "string" ? parseFloat(i.current_amount) : i.current_amount;
+      if (i.currency === "USD") investedUSD += amount;
+      else investedARS += amount;
+    }
 
     // Calculate totals server-side
     // All transactions in this table are now real cashflow (credit card consumptions are in credit_card_transactions)
@@ -225,6 +242,10 @@ Deno.serve(async (req) => {
     const response = {
       totals,
       currentSavings,
+      totalInvested: {
+        usd: investedUSD,
+        ars: investedARS
+      },
       exchangeRate,
       transactions: enrichedTransactions,
       spendingByCategory,
