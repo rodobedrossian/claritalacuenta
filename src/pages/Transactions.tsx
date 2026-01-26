@@ -130,9 +130,11 @@ const Transactions = () => {
   return (
     <AppLayout>
       <PullToRefresh onRefresh={handleRefresh} className="min-h-screen" disabled={loading}>
-        <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-          <div className="container mx-auto px-4 md:px-6 py-4 pl-14 md:pl-6">
-            <h1 className="text-xl md:text-2xl font-bold">Transacciones</h1>
+        <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3 transition-all duration-300">
+          <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
+            <div className="h-10 flex items-center">
+              <h1 className="text-xl font-bold tracking-tight">Transacciones</h1>
+            </div>
           </div>
         </header>
 

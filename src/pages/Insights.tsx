@@ -49,13 +49,23 @@ const Insights = () => {
 
   return (
     <AppLayout>
-      <div className="p-4 md:p-6 max-w-4xl mx-auto">
-        <InsightsPanel
-          insights={data?.insights || []}
-          loading={insightsLoading}
-          metadata={data?.metadata || null}
-          onRefresh={refetch}
-        />
+      <div className="min-h-screen">
+        <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3 transition-all duration-300">
+          <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
+            <div className="h-10 flex items-center">
+              <h1 className="text-xl font-bold tracking-tight">Insights</h1>
+            </div>
+          </div>
+        </header>
+
+        <main className="p-4 md:p-6 max-w-4xl mx-auto">
+          <InsightsPanel
+            insights={data?.insights || []}
+            loading={insightsLoading}
+            metadata={data?.metadata || null}
+            onRefresh={refetch}
+          />
+        </main>
       </div>
     </AppLayout>
   );

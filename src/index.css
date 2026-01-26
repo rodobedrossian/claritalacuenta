@@ -43,7 +43,7 @@
     --input: 214 32% 91%;
     --ring: 250 84% 54%;
 
-    --radius: 0.75rem;
+    --radius: 1.25rem;
 
     /* Chart colors - vibrant for contrast */
     --chart-1: 250 84% 54%;
@@ -154,7 +154,15 @@
     animation: slide-up 0.5s ease-out;
   }
 
-  /* Safe area for bottom navigation */
+  /* Safe area utilities */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+
+  .h-safe-top {
+    height: env(safe-area-inset-top, 0);
+  }
+
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0);
   }

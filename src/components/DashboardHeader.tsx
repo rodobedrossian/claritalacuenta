@@ -48,73 +48,73 @@ export const DashboardHeader = ({
   const breakdownText = getBreakdownText();
 
   return (
-    <header className="bg-background">
-      <div className="container mx-auto px-4 pt-4 pb-6">
-        {/* Exchange Rate row */}
+    <header className="bg-background transition-all duration-300">
+      <div className="container mx-auto px-4 pt-2 pb-8">
+        {/* Exchange Rate row - more subtle */}
         {lastUpdated && (
           <motion.div 
-            className="flex items-center justify-end mb-4"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
+            className="flex items-center justify-end mb-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
           >
             <button
               onClick={onRefreshRate}
               disabled={isRefreshingRate}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             >
-              <span className="font-medium">USD {exchangeRate.toFixed(0)}</span>
-              <RefreshCw className={`h-3 w-3 ${isRefreshingRate ? 'animate-spin' : ''}`} />
+              <span className="font-semibold">USD {exchangeRate.toFixed(0)}</span>
+              <RefreshCw className={`h-2.5 w-2.5 ${isRefreshingRate ? 'animate-spin' : ''}`} />
             </button>
           </motion.div>
         )}
 
-        {/* Main Balance */}
+        {/* Main Balance - Enhanced hierarchy */}
         <motion.div 
-          className="text-center mb-4"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
+          className="text-center mb-8"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">Balance Neto</p>
+          <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-[0.2em] font-bold">Balance Neto</p>
           <motion.p 
-            className={`text-4xl font-bold tracking-tight ${isPositive ? 'text-success' : 'text-destructive'}`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
+            className={`text-5xl font-black tracking-tight ${isPositive ? 'text-success' : 'text-destructive'}`}
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
             {formatCurrency(netBalance, "ARS")}
           </motion.p>
           {breakdownText && (
             <motion.p 
-              className="text-xs text-muted-foreground mt-1"
+              className="text-[11px] font-medium text-muted-foreground mt-2 opacity-80"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3, delay: 0.3 }}
+              animate={{ opacity: 0.8 }}
+              transition={{ delay: 0.4 }}
             >
               {breakdownText}
             </motion.p>
           )}
         </motion.div>
 
-        {/* Month Selector */}
+        {/* Month Selector - Pill style */}
         <motion.div 
-          className="flex items-center justify-center gap-2"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.25 }}
+          className="flex items-center justify-center gap-3"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
         >
-          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={onPreviousMonth}>
-            <ChevronLeft className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-muted" onClick={onPreviousMonth}>
+            <ChevronLeft className="h-5 w-5" />
           </Button>
           <button
             onClick={onCurrentMonth}
-            className="px-4 py-1.5 text-sm font-medium capitalize bg-muted rounded-full hover:bg-muted/80 transition-colors min-w-[140px]"
+            className="px-6 py-2 text-sm font-bold capitalize bg-muted rounded-full hover:bg-muted/80 transition-all active:scale-95 shadow-sm"
           >
             {format(activeMonth, "MMMM yyyy", { locale: es })}
           </button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={onNextMonth}>
-            <ChevronRight className="h-4 w-4" />
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-muted" onClick={onNextMonth}>
+            <ChevronRight className="h-5 w-5" />
           </Button>
         </motion.div>
       </div>
