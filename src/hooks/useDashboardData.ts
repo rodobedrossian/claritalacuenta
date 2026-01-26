@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { triggerNotificationHaptic } from "@/lib/haptics";
+import { NotificationType } from "@capacitor/haptics";
 
 export interface Transaction {
   id: string;
@@ -155,6 +157,7 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
 
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
+      triggerNotificationHaptic(NotificationType.Success);
       toast.success("Transacción actualizada");
     } catch (err: any) {
       console.error("Error updating transaction:", err);
@@ -173,6 +176,7 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
+      triggerNotificationHaptic(NotificationType.Warning);
       toast.success("Transacción eliminada");
     } catch (err: any) {
       console.error("Error deleting transaction:", err);
@@ -238,6 +242,7 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
       }
 
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
+      triggerNotificationHaptic(NotificationType.Success);
       toast.success(`${transaction.type === "income" ? "Ingreso" : "Gasto"} registrado correctamente`);
     } catch (err: any) {
       console.error("Error adding transaction:", err);

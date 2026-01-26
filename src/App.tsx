@@ -6,6 +6,9 @@ import { persistQueryClient } from '@tanstack/react-query-persist-client';
 import { queryPersister } from '@/lib/queryPersister';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
+import { IOSSystemBanner } from "@/components/ui/ios-system-banner";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useOfflineDetection } from "@/hooks/use-offline-detection";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -39,8 +42,11 @@ persistQueryClient({
 });
 
 const App = () => {
+  const isMobile = useIsMobile();
   const isIOSApp = Capacitor.getPlatform() === 'ios';
   const hasSeenOnboarding = localStorage.getItem("clarita_onboarding_seen") === "true";
+  
+  useOfflineDetection();
   
   // For development/testing: allow forcing onboarding via URL param
   const forceOnboarding = new URLSearchParams(window.location.search).get('onboarding') === 'true';
@@ -51,8 +57,13 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
+        <IOSSystemBanner />
+        {!isMobile && (
+          <>
+            <Toaster />
+            <Sonner />
+          </>
+        )}
         <BrowserRouter>
           <Routes>
             {shouldShowOnboarding ? (

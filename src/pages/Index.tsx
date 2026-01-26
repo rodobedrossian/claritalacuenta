@@ -1,18 +1,14 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Wallet, TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { TrendingUp, TrendingDown, PiggyBank, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { QuickStats } from "@/components/QuickStats";
 import { QuickActions } from "@/components/QuickActions";
 import { StatCard } from "@/components/StatCard";
 import { AddTransactionDialog } from "@/components/AddTransactionDialog";
-import { AddSavingsWizard } from "@/components/savings-wizard/AddSavingsWizard";
-import { TransactionActionsDropdown } from "@/components/TransactionActionsDropdown";
 import { TransactionsList } from "@/components/TransactionsList";
 import { EditTransactionDialog } from "@/components/EditTransactionDialog";
 import { SpendingChart } from "@/components/SpendingChart";
-
 import { AppLayout } from "@/components/AppLayout";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { BudgetProgress } from "@/components/budgets/BudgetProgress";
@@ -30,13 +26,12 @@ import { useVoiceTransaction } from "@/hooks/useVoiceTransaction";
 import { useVoiceTokenPrefetch } from "@/hooks/useVoiceTokenPrefetch";
 import { useInsightsData } from "@/hooks/useInsightsData";
 import { useIsMobile } from "@/hooks/use-mobile";
-
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { format, addMonths, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
-import { useDashboardData, Transaction, CreditCard } from "@/hooks/useDashboardData";
+import { useDashboardData, Transaction } from "@/hooks/useDashboardData";
 import { useBudgetsData } from "@/hooks/useBudgetsData";
 
 const Index = () => {
@@ -56,6 +51,20 @@ const Index = () => {
   const [showVoiceSuccess, setShowVoiceSuccess] = useState(false);
   const [isVoiceTransaction, setIsVoiceTransaction] = useState(false);
 
+  // Auth setup
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Dashboard data
   const { 
     data: dashboardData, 
     loading: dataLoading, 
@@ -64,38 +73,38 @@ const Index = () => {
     updateTransaction,
     deleteTransaction,
     addTransaction,
-    updateCurrentSavings,
     updateSavingsTransfers
   } = useDashboardData(activeMonth, user?.id);
 
   // Insights data
-  const { data: insightsData, loading: insightsLoading, isFetching: isInsightsFetching, refetch: refetchInsights } = useInsightsData(user?.id);
+  const { 
+    data: insightsData, 
+    loading: insightsLoading, 
+    isFetching: isInsightsFetching, 
+    refetch: refetchInsights 
+  } = useInsightsData(user?.id);
 
   const isFetchingAny = !!(isDashboardFetching || isInsightsFetching);
 
   // Budget data
-  const transactionsForBudgets = dashboardData?.transactions.map(t => ({
-    category: t.category,
-    currency: t.currency,
-    amount: t.amount,
-    type: t.type
-  })) || [];
+  const transactionsForBudgets = useMemo(() => 
+    dashboardData?.transactions.map(t => ({
+      category: t.category,
+      currency: t.currency,
+      amount: t.amount,
+      type: t.type
+    })) || [], 
+  [dashboardData?.transactions]);
 
   const {
-    budgets,
     budgetsWithSpending,
-    addBudget,
-    updateBudget,
-    deleteBudget,
   } = useBudgetsData(user?.id, activeMonth, transactionsForBudgets);
 
   // Push notifications hook
   const pushNotifications = usePushNotifications(user?.id);
 
-  // Voice token prefetch - fetches token when dashboard loads
+  // Voice setup
   const { getToken, prefetch: prefetchToken } = useVoiceTokenPrefetch();
-
-  // Voice transaction hook - uses prefetched token for faster startup
   const voiceTransaction = useVoiceTransaction({
     categories: dashboardData?.categories || [],
     userName: user?.user_metadata?.full_name || user?.email || "Usuario",
@@ -103,23 +112,19 @@ const Index = () => {
     getToken
   });
 
-  // Open confirmation step when voice transaction is parsed
   useEffect(() => {
     if (voiceTransaction.isReady && voiceTransaction.parsedTransaction) {
       setVoiceConfirmationOpen(true);
-      // Prefetch a new token for the next recording
       prefetchToken();
     }
   }, [voiceTransaction.isReady, voiceTransaction.parsedTransaction, prefetchToken]);
 
-  // Handle URL action params from FAB navigation
+  // Handle URL actions
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const action = params.get("action");
-    
     if (action === "add-transaction") {
       setAddTransactionDialogOpen(true);
-      // Clean up URL
       navigate("/", { replace: true });
     } else if (action === "voice-record") {
       voiceTransaction.startRecording();
@@ -127,33 +132,17 @@ const Index = () => {
     }
   }, [location.search, navigate, voiceTransaction]);
 
-  useEffect(() => {
-    // Solo obtener sesión inicial - ProtectedRoute ya validó que existe
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-
-    // Escuchar cambios para logout
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const handlePullToRefresh = useCallback(async () => {
+    await Promise.all([refetch(), refetchInsights()]);
+    toast.success("Datos actualizados");
+  }, [refetch, refetchInsights]);
 
   const fetchExchangeRate = async () => {
     try {
       setIsRefreshingRate(true);
-      
-      // Call edge function to update
       const { data, error } = await supabase.functions.invoke('fetch-exchange-rate');
-      
       if (error) throw error;
-      
-      if (data?.success && data?.rate) {
-        // Refetch dashboard data to get updated rate
+      if (data?.success) {
         await refetch();
         toast.success('Tipo de cambio actualizado');
       }
@@ -165,114 +154,11 @@ const Index = () => {
     }
   };
 
-  const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
-    if (!user) return;
-    await addTransaction(transaction);
-    
-    // Show success animation if it was a voice transaction
-    if (isVoiceTransaction) {
-      setShowVoiceSuccess(true);
-      setIsVoiceTransaction(false);
-    }
-  };
-
-  const handleUpdateTransaction = async (id: string, transaction: Omit<Transaction, "id">) => {
-    await updateTransaction(id, transaction);
-  };
-
-  const handleDeleteTransaction = async (id: string) => {
-    await deleteTransaction(id);
-  };
-
-  const handleEditTransaction = (transaction: Transaction) => {
-    setEditingTransaction(transaction);
-    setEditDialogOpen(true);
-  };
-
-  const handleAddSavings = async (
-    currency: "USD" | "ARS", 
-    amount: number, 
-    entryType: "deposit" | "withdrawal",
-    savingsType: "cash" | "bank" | "other",
-    notes?: string
-  ) => {
-    if (!user) return;
-    
-    try {
-      // Create savings_entries record
-      const { error: entryError } = await supabase
-        .from("savings_entries")
-        .insert([{
-          user_id: user.id,
-          amount,
-          currency,
-          entry_type: entryType,
-          savings_type: savingsType,
-          notes: notes || null
-        }]);
-      
-      if (entryError) throw entryError;
-
-      // Update aggregated savings table
-      const amountDelta = entryType === "deposit" ? amount : -amount;
-      const currentAmount = dashboardData?.currentSavings[currency === "USD" ? "usd" : "ars"] || 0;
-      const newAmount = Math.max(0, currentAmount + amountDelta);
-      
-      // Try to get existing record
-      const { data: savingsRecord } = await supabase
-        .from("savings")
-        .select("id")
-        .maybeSingle();
-      
-      if (savingsRecord) {
-        // Update existing record
-        const { error } = await supabase
-          .from("savings")
-          .update(currency === "USD" ? { usd_amount: newAmount } : { ars_amount: newAmount })
-          .eq("id", savingsRecord.id);
-        if (error) throw error;
-      } else {
-        // Create new record
-        const { error } = await supabase
-          .from("savings")
-          .insert([{
-            user_id: user.id,
-            usd_amount: currency === "USD" ? (entryType === "deposit" ? amount : 0) : 0,
-            ars_amount: currency === "ARS" ? (entryType === "deposit" ? amount : 0) : 0
-          }]);
-        if (error) throw error;
-      }
-      
-      // Update local state
-      updateCurrentSavings({
-        ...dashboardData?.currentSavings || { usd: 0, ars: 0 },
-        [currency === "USD" ? "usd" : "ars"]: newAmount
-      });
-      
-      // If this is a transfer from balance, update savings transfers
-      if (notes?.includes("Transferencia desde balance") && entryType === "deposit") {
-        updateSavingsTransfers(currency, amount);
-      }
-      
-      toast.success(entryType === "deposit" ? "Depósito registrado" : "Retiro registrado");
-    } catch (error) {
-      console.error("Error updating savings:", error);
-      toast.error("Error al registrar movimiento");
-    }
-  };
-
   const goToPreviousMonth = () => setActiveMonth(prev => subMonths(prev, 1));
   const goToNextMonth = () => setActiveMonth(prev => addMonths(prev, 1));
   const goToCurrentMonth = () => setActiveMonth(new Date());
 
-  // Pull to refresh handler
-  const handlePullToRefresh = useCallback(async () => {
-    await refetch();
-    await refetchInsights();
-    toast.success("Dashboard actualizado");
-  }, [refetch, refetchInsights]);
-
-  if (dataLoading) {
+  if (dataLoading && !dashboardData) {
     return (
       <AppLayout>
         <DashboardSkeleton />
@@ -280,10 +166,9 @@ const Index = () => {
     );
   }
 
-  // Extract data from dashboard hook
+  // Data extraction
   const liquidSavings = dashboardData?.currentSavings || { usd: 0, ars: 0 };
   const totalInvested = dashboardData?.totalInvested || { usd: 0, ars: 0 };
-  
   const currentSavings = {
     usd: (Number(liquidSavings.usd) || 0) + (Number(totalInvested.usd) || 0),
     ars: (Number(liquidSavings.ars) || 0) + (Number(totalInvested.ars) || 0)
@@ -292,25 +177,13 @@ const Index = () => {
   const lastUpdated = dashboardData?.exchangeRate.updatedAt;
   const transactions = dashboardData?.transactions || [];
   const categories = dashboardData?.categories || [];
-  
   const creditCards = dashboardData?.creditCards || [];
   const totals = dashboardData?.totals || {
-    incomeUSD: 0,
-    incomeARS: 0,
-    expensesUSD: 0,
-    expensesARS: 0,
-    projectedExpensesUSD: 0,
-    projectedExpensesARS: 0,
-    savingsTransfersUSD: 0,
-    savingsTransfersARS: 0
+    incomeUSD: 0, incomeARS: 0, expensesUSD: 0, expensesARS: 0,
+    projectedExpensesUSD: 0, projectedExpensesARS: 0, savingsTransfersUSD: 0, savingsTransfersARS: 0
   };
   const spendingByCategory = dashboardData?.spendingByCategory || [];
 
-  // Calculate available balance (income - expenses - transfers) - projected expenses don't impact balance
-  const availableBalanceUSD = Math.max(0, totals.incomeUSD - totals.expensesUSD - totals.savingsTransfersUSD);
-  const availableBalanceARS = Math.max(0, totals.incomeARS - totals.expensesARS - totals.savingsTransfersARS);
-
-  // Calculate global values in ARS (effective expenses only)
   const globalIncomeARS = (totals.incomeUSD * exchangeRate) + totals.incomeARS;
   const globalExpensesARS = (totals.expensesUSD * exchangeRate) + totals.expensesARS;
   const globalSavingsTransfersARS = (totals.savingsTransfersUSD * exchangeRate) + totals.savingsTransfersARS;
@@ -325,29 +198,15 @@ const Index = () => {
 
   return (
     <AppLayout onMobileAddClick={() => setAddTransactionDialogOpen(true)}>
-      <div className="min-h-screen">
-        {/* Notification Banner */}
-        <div className="container mx-auto px-4 pt-4">
-          <NotificationSetupBanner
-            isSupported={pushNotifications.isSupported}
-            isPWA={pushNotifications.isPWA}
-            platform={pushNotifications.platform}
-            hasSubscription={pushNotifications.subscriptions.length > 0}
-            permission={pushNotifications.permission}
-            onSubscribe={pushNotifications.subscribe}
-            subscribing={pushNotifications.subscribing}
-          />
-        </div>
-
-        {/* Mobile: New streamlined header with pull-to-refresh */}
+      <div className="flex flex-col h-full bg-background overflow-hidden">
+        {/* Mobile View */}
         {isMobile ? (
-          <div className="flex flex-col h-full overflow-hidden">
+          <>
             <MobileHeader userName={user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuario'} />
             <PullToRefresh onRefresh={handlePullToRefresh} className="flex-1 overflow-y-auto" disabled={dataLoading}>
               <div className="relative">
-                {/* Sincronizando indicator */}
                 {isFetchingAny && (
-                  <div className="absolute top-2 right-4 flex items-center gap-1.5 z-50 bg-background/60 backdrop-blur-md px-2 py-1 rounded-full border border-border/40 animate-in fade-in duration-500">
+                  <div className="absolute top-2 right-4 flex items-center gap-1.5 z-50 bg-background/60 backdrop-blur-md px-2 py-1 rounded-full border border-border/40">
                     <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                     <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Sincronizando</span>
                   </div>
@@ -370,294 +229,166 @@ const Index = () => {
                   }}
                   formatCurrency={formatCurrency}
                 />
-              </div>
 
-              <main className="container mx-auto px-4 py-3 space-y-4">
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 gap-3 animate-fade-in">
-                  <StatCard 
-                    title="Ingresos del mes" 
-                    value={formatCurrency(globalIncomeARS, "ARS")}
-                    secondaryTop={formatCurrency(totals.incomeUSD, "USD")}
-                    secondaryBottom={formatCurrency(totals.incomeARS, "ARS")}
-                    icon={TrendingUp}
-                    variant="success"
+                <main className="container mx-auto px-4 py-3 space-y-4">
+                  <NotificationSetupBanner
+                    isSupported={pushNotifications.isSupported}
+                    isPWA={pushNotifications.isPWA}
+                    platform={pushNotifications.platform}
+                    hasSubscription={pushNotifications.subscriptions.length > 0}
+                    permission={pushNotifications.permission}
+                    onSubscribe={pushNotifications.subscribe}
+                    subscribing={pushNotifications.subscribing}
                   />
-                  <StatCard 
-                    title="Gastos del mes" 
-                    value={formatCurrency(globalExpensesARS, "ARS")}
-                    secondaryTop={formatCurrency(totals.expensesUSD, "USD")}
-                    secondaryBottom={formatCurrency(totals.expensesARS, "ARS")}
-                    icon={TrendingDown}
-                    variant="destructive"
-                  />
-                  <StatCard 
-                    title="Ahorros e Inversiones" 
-                    value={
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-xl font-bold">{formatCurrency(liquidSavings.usd, "USD")}</span>
-                          <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Líquidos</span>
-                        </div>
-                        {(Number(totalInvested.ars) > 0 || Number(totalInvested.usd) > 0) && (
+
+                  <div className="grid grid-cols-1 gap-3 animate-fade-in">
+                    <StatCard 
+                      title="Ingresos del mes" 
+                      value={formatCurrency(globalIncomeARS, "ARS")}
+                      secondaryTop={formatCurrency(totals.incomeUSD, "USD")}
+                      secondaryBottom={formatCurrency(totals.incomeARS, "ARS")}
+                      icon={TrendingUp}
+                      variant="success"
+                    />
+                    <StatCard 
+                      title="Gastos del mes" 
+                      value={formatCurrency(globalExpensesARS, "ARS")}
+                      secondaryTop={formatCurrency(totals.expensesUSD, "USD")}
+                      secondaryBottom={formatCurrency(totals.expensesARS, "ARS")}
+                      icon={TrendingDown}
+                      variant="destructive"
+                    />
+                    <StatCard 
+                      title="Ahorros e Inversiones" 
+                      value={
+                        <div className="flex flex-col gap-0.5">
                           <div className="flex items-baseline gap-1.5">
-                            <span className="text-xl font-bold">{formatCurrency(totalInvested.ars, "ARS")}</span>
-                            <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Invertidos</span>
+                            <span className="text-xl font-bold">{formatCurrency(liquidSavings.usd, "USD")}</span>
+                            <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Líquidos</span>
                           </div>
-                        )}
-                      </div>
-                    }
-                    icon={PiggyBank}
-                    onClick={() => navigate("/savings")}
-                  />
-                </div>
-
-                {/* Quick Actions Grid */}
-                <QuickActions 
-                  onAddTransaction={() => setAddTransactionDialogOpen(true)}
-                  onVoiceRecord={() => voiceTransaction.startRecording()}
-                  onAddSavings={() => setSavingsWizardOpen(true)}
-                />
-
-                {/* Budget Progress */}
-                <div className="animate-fade-in">
-                  {budgetsWithSpending.length > 0 ? (
-                    <BudgetProgress
-                      budgets={budgetsWithSpending}
-                      onManageBudgets={() => navigate("/budgets")}
+                          {(Number(totalInvested.ars) > 0 || Number(totalInvested.usd) > 0) && (
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-xl font-bold">{formatCurrency(totalInvested.ars, "ARS")}</span>
+                              <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Invertidos</span>
+                            </div>
+                          )}
+                        </div>
+                      }
+                      icon={PiggyBank}
+                      onClick={() => navigate("/savings")}
                     />
-                  ) : (
-                    <Card className="p-6 bg-card border border-border shadow-stripe">
-                      <div className="flex flex-col gap-4">
-                        <div>
+                  </div>
+
+                  <QuickActions 
+                    onAddExpense={() => setAddTransactionDialogOpen(true)}
+                    onVoiceRecord={() => voiceTransaction.startRecording()}
+                    onTransferToSavings={() => setSavingsWizardOpen(true)}
+                    isRecording={voiceTransaction.isRecording}
+                    isProcessing={voiceTransaction.isProcessing}
+                  />
+
+                  <div className="animate-fade-in">
+                    {budgetsWithSpending.length > 0 ? (
+                      <BudgetProgress budgets={budgetsWithSpending} onManageBudgets={() => navigate("/budgets")} />
+                    ) : (
+                      <Card className="p-6 bg-card border border-border shadow-stripe">
+                        <div className="flex flex-col gap-4 text-center">
                           <h3 className="text-lg font-semibold">Presupuestos del Mes</h3>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Configura límites de gasto por categoría
-                          </p>
+                          <Button onClick={() => navigate("/budgets")} className="gradient-primary w-full">Crear Presupuesto</Button>
                         </div>
-                        <Button 
-                          onClick={() => navigate("/budgets")}
-                          className="gradient-primary w-full"
-                        >
-                          Crear Presupuesto
-                        </Button>
-                      </div>
-                    </Card>
-                  )}
-                </div>
-
-                {/* Insights Section */}
-                <div className="animate-fade-in">
-                  <InsightsCard
-                    insights={insightsData?.insights || []}
-                    loading={insightsLoading}
-                    onRefresh={refetchInsights}
-                  />
-                </div>
-
-                {/* Charts and Transactions */}
-                <div className="space-y-6 animate-slide-up pb-8">
-                  <SpendingChart data={spendingByCategory} />
-                  <TransactionsList 
-                    transactions={transactions.slice(0, 5)} 
-                    onEdit={handleEditTransaction}
-                    showViewAll={transactions.length > 5}
-                    onViewAll={() => navigate("/transactions")}
-                  />
-                </div>
-              </main>
-            </PullToRefresh>
-          </div>
-        ) : (
-          <>
-            {/* Desktop: Original header */}
-            <header className="border-b border-border bg-background sticky top-0 z-10">
-              <div className="container mx-auto px-6 py-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Bienvenido, {user?.user_metadata?.full_name || user?.email}
-                      </p>
-                      {lastUpdated && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">
-                            USD/ARS: {exchangeRate.toFixed(2)}
-                          </span>
-                          <button
-                            onClick={fetchExchangeRate}
-                            disabled={isRefreshingRate}
-                            className="text-xs text-primary hover:underline disabled:opacity-50 flex items-center gap-1"
-                            title="Actualizar tipo de cambio"
-                          >
-                            <RefreshCw className={`h-3 w-3 ${isRefreshingRate ? 'animate-spin' : ''}`} />
-                            {isRefreshingRate ? 'Actualizando...' : 'Actualizar'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                      </Card>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Button 
-                      variant="outline" 
-                      className="border-primary/50 hover:bg-primary/10"
-                      onClick={() => setSavingsWizardOpen(true)}
-                    >
-                      <PiggyBank className="mr-2 h-4 w-4" />
-                      Ahorrar
-                    </Button>
-                    <TransactionActionsDropdown
-                      onAddManual={() => setAddTransactionDialogOpen(true)}
-                      onVoiceRecord={voiceTransaction.isRecording ? voiceTransaction.stopRecording : voiceTransaction.startRecording}
-                      onImportStatement={() => setImportDialogOpen(true)}
-                      isRecording={voiceTransaction.isRecording}
-                      isProcessing={voiceTransaction.isProcessing}
-                      showImport={creditCards.length > 0}
+
+                  <InsightsCard insights={insightsData?.insights || []} loading={insightsLoading} onRefresh={refetchInsights} />
+
+                  <div className="space-y-6 animate-slide-up pb-8">
+                    <SpendingChart data={spendingByCategory} />
+                    <TransactionsList 
+                      transactions={transactions.slice(0, 5)} 
+                      onEdit={(t) => { setEditingTransaction(t); setEditDialogOpen(true); }}
+                      showViewAll={transactions.length > 5}
+                      onViewAll={() => navigate("/transactions")}
                     />
                   </div>
+                </main>
+              </div>
+            </PullToRefresh>
+          </>
+        ) : (
+          /* Desktop View */
+          <div className="flex-1 overflow-y-auto">
+            <header className="border-b border-border bg-background sticky top-0 z-10">
+              <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-muted-foreground">Bienvenido, {user?.user_metadata?.full_name || user?.email}</p>
+                  {lastUpdated && <p className="text-xs text-muted-foreground">USD/ARS: {exchangeRate.toFixed(2)}</p>}
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setImportDialogOpen(true)}>Importar</Button>
+                  <Button onClick={() => setAddTransactionDialogOpen(true)}>Nueva Transacción</Button>
                 </div>
               </div>
             </header>
 
-            {/* Desktop: Main Content */}
-            <main className="container mx-auto px-6 py-8">
-              {/* Month Selector */}
-              <div className="flex items-center justify-center gap-4 mb-6">
-                <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <button
-                  onClick={goToCurrentMonth}
-                  className="text-xl font-semibold capitalize min-w-[200px] text-center hover:text-primary transition-colors"
-                >
-                  {format(activeMonth, "MMMM yyyy", { locale: es })}
-                </button>
-                <Button variant="ghost" size="icon" onClick={goToNextMonth}>
-                  <ChevronRight className="h-5 w-5" />
-                </Button>
+            <main className="container mx-auto px-6 py-8 space-y-8">
+              <div className="flex items-center justify-center gap-4">
+                <Button variant="ghost" onClick={goToPreviousMonth}>Ant.</Button>
+                <h2 className="text-xl font-bold capitalize">{format(activeMonth, "MMMM yyyy", { locale: es })}</h2>
+                <Button variant="ghost" onClick={goToNextMonth}>Sig.</Button>
               </div>
 
-              {/* Net Balance - Prominent at top */}
-              <div className="mb-8 animate-fade-in">
-                <div className="bg-card rounded-2xl p-6 border border-border shadow-stripe-md text-center max-w-lg mx-auto">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Balance Neto</p>
-                  <p className={`text-4xl font-bold ${globalNetBalanceARS >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {formatCurrency(globalNetBalanceARS, "ARS")}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {formatCurrency(totals.incomeUSD - totals.expensesUSD - totals.savingsTransfersUSD, "USD")} / {formatCurrency(totals.incomeARS - totals.expensesARS - totals.savingsTransfersARS, "ARS")}
-                  </p>
-                </div>
+              <div className="bg-card rounded-2xl p-8 border text-center max-w-lg mx-auto shadow-sm">
+                <p className="text-sm font-medium text-muted-foreground mb-1">Balance Neto</p>
+                <p className={`text-4xl font-bold ${globalNetBalanceARS >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  {formatCurrency(globalNetBalanceARS, "ARS")}
+                </p>
               </div>
 
-              {/* Stats Cards - Similar to mobile layout */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fade-in">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <StatCard title="Ingresos" value={formatCurrency(globalIncomeARS, "ARS")} icon={TrendingUp} variant="success" />
+                <StatCard title="Gastos" value={formatCurrency(globalExpensesARS, "ARS")} icon={TrendingDown} variant="destructive" />
                 <StatCard 
-                  title="Ingresos Totales" 
-                  value={formatCurrency(globalIncomeARS, "ARS")}
-                  secondaryTop={formatCurrency(totals.incomeUSD, "USD")}
-                  secondaryBottom={formatCurrency(totals.incomeARS, "ARS")}
-                  icon={TrendingUp}
-                  variant="success"
-                />
-                <StatCard 
-                  title="Gastos Totales" 
-                  value={formatCurrency(globalExpensesARS, "ARS")}
-                  secondaryTop={formatCurrency(totals.expensesUSD, "USD")}
-                  secondaryBottom={formatCurrency(totals.expensesARS, "ARS")}
-                  icon={TrendingDown}
-                  variant="destructive"
-                />
-                <StatCard 
-                  title="Ahorros e Inversiones" 
+                  title="Ahorros" 
                   value={
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-xl font-bold">{formatCurrency(liquidSavings.usd, "USD")}</span>
-                        <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Líquidos</span>
-                      </div>
-                      {(Number(totalInvested.ars) > 0 || Number(totalInvested.usd) > 0) && (
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-xl font-bold">{formatCurrency(totalInvested.ars, "ARS")}</span>
-                          <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Invertidos</span>
-                        </div>
-                      )}
+                    <div className="flex flex-col">
+                      <span>{formatCurrency(liquidSavings.usd, "USD")}</span>
+                      <span className="text-sm opacity-60">{formatCurrency(totalInvested.ars, "ARS")}</span>
                     </div>
-                  }
-                  icon={PiggyBank}
-                  onClick={() => navigate("/savings")}
+                  } 
+                  icon={PiggyBank} 
+                  onClick={() => navigate("/savings")} 
                 />
               </div>
 
-              {/* Budget Progress */}
-              <div className="animate-fade-in mb-6">
-                {budgetsWithSpending.length > 0 ? (
-                  <BudgetProgress
-                    budgets={budgetsWithSpending}
-                    onManageBudgets={() => navigate("/budgets")}
-                  />
-                ) : (
-                  <Card className="p-6 bg-card border border-border shadow-stripe">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-lg font-semibold">Presupuestos del Mes</h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Configura límites de gasto por categoría para controlar tus finanzas
-                        </p>
-                      </div>
-                      <Button 
-                        onClick={() => navigate("/budgets")}
-                        className="gradient-primary"
-                      >
-                        Crear Presupuesto
-                      </Button>
-                    </div>
-                  </Card>
-                )}
-              </div>
-
-              {/* Insights */}
-              <div className="animate-fade-in mb-6">
-                <InsightsCard
-                  insights={insightsData?.insights || []}
-                  loading={insightsLoading}
-                  onRefresh={refetchInsights}
-                />
-              </div>
-
-              {/* Charts and Transactions */}
-              <div className="space-y-6 animate-slide-up">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <SpendingChart data={spendingByCategory} />
                 <TransactionsList 
-                  transactions={transactions.slice(0, 5)} 
-                  onEdit={handleEditTransaction}
-                  showViewAll={transactions.length > 5}
-                  onViewAll={() => navigate("/transactions")}
+                  transactions={transactions.slice(0, 10)} 
+                  onEdit={(t) => { setEditingTransaction(t); setEditDialogOpen(true); }}
                 />
               </div>
             </main>
-          </>
+          </div>
         )}
 
+        {/* Dialogs & Overlays */}
         <EditTransactionDialog
           transaction={editingTransaction}
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
-          onUpdate={handleUpdateTransaction}
-          onDelete={handleDeleteTransaction}
+          onUpdate={updateTransaction}
+          onDelete={deleteTransaction}
           categories={categories}
         />
 
         <AddTransactionDialog 
-          onAdd={handleAddTransaction} 
+          onAdd={addTransaction} 
           categories={categories} 
           currentUserId={user?.id || ""}
           currentSavings={currentSavings} 
           open={addTransactionDialogOpen}
-          onOpenChange={(open) => {
-            setAddTransactionDialogOpen(open);
-            if (!open) setVoiceInitialData(null);
-          }}
+          onOpenChange={setAddTransactionDialogOpen}
           initialData={voiceInitialData}
         />
 
@@ -669,7 +400,6 @@ const Index = () => {
           onSuccess={refetch}
         />
 
-        {/* Voice Recording Overlay - Immersive experience with live transcription */}
         <VoiceRecordingOverlay
           isOpen={voiceTransaction.isActive && !voiceTransaction.isReady}
           state={voiceTransaction.state}
@@ -682,39 +412,25 @@ const Index = () => {
           error={voiceTransaction.error}
         />
 
-        {/* Voice Confirmation Step - Shows parsed transaction */}
         <VoiceConfirmationStep
           open={voiceConfirmationOpen}
-          onOpenChange={(open) => {
-            setVoiceConfirmationOpen(open);
-            if (!open) voiceTransaction.reset();
-          }}
+          onOpenChange={setVoiceConfirmationOpen}
           transaction={voiceTransaction.parsedTransaction}
           transcribedText={voiceTransaction.transcribedText}
           onConfirmDirect={async () => {
-            // Save transaction directly without opening wizard
             if (voiceTransaction.parsedTransaction && user) {
               const tx = voiceTransaction.parsedTransaction;
-              
-              // Find category ID using fuzzy matching
-              const categoryMatch = categories.find(c => 
-                c.name.toLowerCase() === tx.category.toLowerCase() ||
-                c.name.toLowerCase().includes(tx.category.toLowerCase()) ||
-                tx.category.toLowerCase().includes(c.name.toLowerCase())
-              );
-              
               const newTransaction: Omit<Transaction, "id"> = {
                 user_id: user.id,
                 type: tx.type,
                 amount: tx.amount,
                 currency: tx.currency,
-                category: categoryMatch?.name || tx.category,
+                category: tx.category,
                 description: tx.description || "",
                 date: tx.date || new Date().toISOString().split('T')[0],
                 payment_method: "debit",
                 from_savings: false,
               };
-              
               setIsVoiceTransaction(true);
               setVoiceConfirmationOpen(false);
               await addTransaction(newTransaction);
@@ -723,16 +439,11 @@ const Index = () => {
             }
           }}
           onEdit={() => {
-            // Transfer data to wizard and open it for editing
             if (voiceTransaction.parsedTransaction) {
               const tx = voiceTransaction.parsedTransaction;
               setVoiceInitialData({
-                type: tx.type,
-                amount: tx.amount,
-                currency: tx.currency,
-                category: tx.category,
-                description: tx.description,
-                date: new Date(tx.date),
+                type: tx.type, amount: tx.amount, currency: tx.currency,
+                category: tx.category, description: tx.description, date: new Date(tx.date),
               });
               setIsVoiceTransaction(true);
               setVoiceConfirmationOpen(false);
@@ -740,22 +451,11 @@ const Index = () => {
               voiceTransaction.reset();
             }
           }}
-          onRetry={() => {
-            setVoiceConfirmationOpen(false);
-            voiceTransaction.retry();
-          }}
-          onCancel={() => {
-            setVoiceConfirmationOpen(false);
-            voiceTransaction.reset();
-          }}
+          onRetry={() => { setVoiceConfirmationOpen(false); voiceTransaction.retry(); }}
+          onCancel={() => { setVoiceConfirmationOpen(false); voiceTransaction.reset(); }}
         />
 
-        {/* Voice Success Animation */}
-        <SuccessConfetti
-          show={showVoiceSuccess}
-          onComplete={() => setShowVoiceSuccess(false)}
-          message="¡Transacción guardada!"
-        />
+        <SuccessConfetti show={showVoiceSuccess} onComplete={() => setShowVoiceSuccess(false)} message="¡Transacción guardada!" />
       </div>
     </AppLayout>
   );

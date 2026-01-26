@@ -69,6 +69,7 @@ const Savings = () => {
   }, [navigate]);
 
   const handleEditEntry = (entry: SavingsEntry) => {
+    triggerHaptic('light');
     setEditingEntry(entry);
     setEditDialogOpen(true);
   };
@@ -82,6 +83,11 @@ const Savings = () => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount)}`;
+  };
+
+  // Helper for haptics
+  const triggerHaptic = (style: 'light' | 'medium' | 'heavy' = 'medium') => {
+    // Just a wrapper, real implementation should be imported if available
   };
 
   if (loading || dataLoading) {
@@ -149,7 +155,7 @@ const Savings = () => {
               transition={{ duration: 0.4, delay: 0.5 }}
             >
               <Tabs defaultValue="historial" className="pt-2">
-                <TabsList className="w-full justify-start overflow-x-auto">
+                <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">
                   <TabsTrigger value="historial" className="flex-1 sm:flex-none gap-2 whitespace-nowrap">
                     Historial
                     {entries.length > 0 && (

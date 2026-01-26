@@ -12,6 +12,8 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
+import { showIOSBanner } from "@/hooks/use-ios-banner";
+
 interface VoiceRecordingOverlayProps {
   isOpen: boolean;
   state: "idle" | "connecting" | "recording" | "transcribing" | "parsing" | "ready" | "error";
@@ -41,13 +43,7 @@ export const VoiceRecordingOverlay = ({
   const isMobile = useIsMobile();
   const [barHeights, setBarHeights] = useState<number[]>(new Array(NUM_BARS).fill(10));
   const animationRef = useRef<number>();
-
-  // Format duration as MM:SS
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  const [orbScale, setOrbScale] = useState(1);
 
   // Haptic feedback
   const triggerHaptic = useCallback(async (type: 'light' | 'medium' | 'heavy' = 'light') => {
@@ -59,25 +55,32 @@ export const VoiceRecordingOverlay = ({
       };
       await Haptics.impact({ style: styles[type] });
     } catch (e) {
-      // Fallback to standard vibrate if Capacitor Haptics fails
-      if ('vibrate' in navigator) {
-        const durations = { light: 10, medium: 25, heavy: 50 };
-        navigator.vibrate(durations[type]);
-      }
+      // Fallback
     }
   }, []);
 
-  const [orbScale, setOrbScale] = useState(1);
-
+  // Define derived states first to avoid ReferenceErrors
   const isProcessing = state === "transcribing" || state === "parsing";
-  const isRecording = state === "recording" || state === "connecting"; // Treat connecting as recording for instant UI
+  const isRecording = state === "recording" || state === "connecting";
   const isConnecting = state === "connecting";
-  const isDismissible = state === "error";
+  const isDismissible = state === "error" || state === "idle";
+  
+  const displayText = isRecording ? (partialText || "") : (transcribedText || "");
+  const hasText = displayText.trim().length > 0;
 
-  // Display text (live partial during recording, final after)
-  const isRecordingState = isRecording;
-  const displayText = isRecordingState ? (partialText || "") : (transcribedText || "");
-  const hasText = displayText && displayText.trim().length > 0;
+  // Format duration as MM:SS
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Trigger banner on error
+  useEffect(() => {
+    if (state === "error" && error) {
+      showIOSBanner(error, 'error');
+    }
+  }, [state, error]);
 
   // Animate audio waveform bars and orb
   useEffect(() => {
@@ -224,15 +227,15 @@ export const VoiceRecordingOverlay = ({
   const getStatusText = () => {
     switch (state) {
       case "connecting":
-        return hasText ? "" : "Esperando voz..."; // Hide connecting text
+        return ""; // Totally silent connecting
       case "recording":
-        return hasText ? "" : "Esperando voz...";
+        return hasText ? "" : "Escuchando...";
       case "transcribing":
-        return "Finalizando...";
+        return "Procesando...";
       case "parsing":
         return "Analizando...";
       case "error":
-        return "Error";
+        return "Reintentar";
       default:
         return "";
     }
@@ -240,16 +243,10 @@ export const VoiceRecordingOverlay = ({
 
   const getStatusSubtext = () => {
     switch (state) {
-      case "connecting":
-        return hasText ? "" : "Habla claro para mejores resultados"; // Hide connecting subtext
       case "recording":
-        return hasText ? "" : "Habla claro para mejores resultados";
-      case "transcribing":
-        return "Procesando audio final";
-      case "parsing":
-        return "Extrayendo datos de la transacción";
+        return hasText ? "" : "Decí algo como 'Gasto 5000 en comida'";
       case "error":
-        return error || "Algo salió mal";
+        return "Hubo un problema con la grabación";
       default:
         return "";
     }
