@@ -120,7 +120,7 @@ const Budgets = () => {
                   <Target className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Presupuestado</p>
+                  <p className="text-sm text-muted-foreground">Total presupuestado</p>
                   <p className="text-xl font-bold">
                     ARS {totalBudgeted.toLocaleString()}
                   </p>
@@ -133,7 +133,7 @@ const Budgets = () => {
                   <Target className="h-5 w-5 text-warning" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Gastado</p>
+                  <p className="text-sm text-muted-foreground">Total gastado</p>
                   <p className="text-xl font-bold">
                     ARS {totalSpent.toLocaleString()}
                   </p>
@@ -146,7 +146,7 @@ const Budgets = () => {
                   <Target className={`h-5 w-5 ${budgetsAtRisk > 0 ? 'text-destructive' : 'text-success'}`} />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">En Riesgo</p>
+                  <p className="text-sm text-muted-foreground">En riesgo</p>
                   <p className="text-xl font-bold">
                     {budgetsAtRisk} {budgetsAtRisk === 1 ? 'presupuesto' : 'presupuestos'}
                   </p>
@@ -170,7 +170,7 @@ const Budgets = () => {
 
             <TabsContent value="budgets" className="space-y-4">
               <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold">Presupuestos Activos</h2>
+                <h2 className="text-lg font-semibold">Presupuestos activos</h2>
                 <AddBudgetDialog
                   onAdd={addBudget}
                   categories={categories}

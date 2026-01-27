@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { TrendingUp, TrendingDown, PiggyBank, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { QuickActions } from "@/components/QuickActions";
@@ -259,17 +259,17 @@ const Index = () => {
                       variant="destructive"
                     />
                     <StatCard 
-                      title="Ahorros e Inversiones" 
+                      title="Ahorros e inversiones" 
                       value={
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-baseline gap-1.5">
                             <span className="text-xl font-bold">{formatCurrency(liquidSavings.usd, "USD")}</span>
-                            <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Líquidos</span>
+                            <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider text-muted-foreground">líquidos</span>
                           </div>
                           {(Number(totalInvested.ars) > 0 || Number(totalInvested.usd) > 0) && (
                             <div className="flex items-baseline gap-1.5">
                               <span className="text-xl font-bold">{formatCurrency(totalInvested.ars, "ARS")}</span>
-                              <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">Invertidos</span>
+                              <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider text-muted-foreground">invertidos</span>
                             </div>
                           )}
                         </div>
@@ -293,8 +293,8 @@ const Index = () => {
                     ) : (
                       <Card className="p-6 bg-card border border-border shadow-stripe">
                         <div className="flex flex-col gap-4 text-center">
-                          <h3 className="text-lg font-semibold">Presupuestos del Mes</h3>
-                          <Button onClick={() => navigate("/budgets")} className="gradient-primary w-full">Crear Presupuesto</Button>
+                          <h3 className="text-lg font-semibold">Presupuestos del mes</h3>
+                          <Button onClick={() => navigate("/budgets")} className="gradient-primary w-full">Crear presupuesto</Button>
                         </div>
                       </Card>
                     )}
@@ -326,34 +326,62 @@ const Index = () => {
                 </div>
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={() => setImportDialogOpen(true)}>Importar</Button>
-                  <Button onClick={() => setAddTransactionDialogOpen(true)}>Nueva Transacción</Button>
+                  <Button onClick={() => setAddTransactionDialogOpen(true)}>Nueva transacción</Button>
                 </div>
               </div>
             </header>
 
             <main className="container mx-auto px-6 py-8 space-y-8">
               <div className="flex items-center justify-center gap-4">
-                <Button variant="ghost" onClick={goToPreviousMonth}>Ant.</Button>
-                <h2 className="text-xl font-bold capitalize">{format(activeMonth, "MMMM yyyy", { locale: es })}</h2>
-                <Button variant="ghost" onClick={goToNextMonth}>Sig.</Button>
+                <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <h2 className="text-xl font-bold capitalize min-w-[200px] text-center">
+                  {format(activeMonth, "MMMM yyyy", { locale: es })}
+                </h2>
+                <Button variant="ghost" size="icon" onClick={goToNextMonth}>
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
               </div>
 
               <div className="bg-card rounded-2xl p-8 border text-center max-w-lg mx-auto shadow-sm">
-                <p className="text-sm font-medium text-muted-foreground mb-1">Balance Neto</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Balance neto</p>
                 <p className={`text-4xl font-bold ${globalNetBalanceARS >= 0 ? 'text-success' : 'text-destructive'}`}>
                   {formatCurrency(globalNetBalanceARS, "ARS")}
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard title="Ingresos" value={formatCurrency(globalIncomeARS, "ARS")} icon={TrendingUp} variant="success" />
-                <StatCard title="Gastos" value={formatCurrency(globalExpensesARS, "ARS")} icon={TrendingDown} variant="destructive" />
                 <StatCard 
-                  title="Ahorros" 
+                  title="Ingresos" 
+                  value={formatCurrency(globalIncomeARS, "ARS")} 
+                  secondaryTop={formatCurrency(totals.incomeUSD, "USD")}
+                  secondaryBottom={formatCurrency(totals.incomeARS, "ARS")}
+                  icon={TrendingUp} 
+                  variant="success" 
+                />
+                <StatCard 
+                  title="Gastos" 
+                  value={formatCurrency(globalExpensesARS, "ARS")} 
+                  secondaryTop={formatCurrency(totals.expensesUSD, "USD")}
+                  secondaryBottom={formatCurrency(totals.expensesARS, "ARS")}
+                  icon={TrendingDown} 
+                  variant="destructive" 
+                />
+                <StatCard 
+                  title="Ahorros e inversiones" 
                   value={
-                    <div className="flex flex-col">
-                      <span>{formatCurrency(liquidSavings.usd, "USD")}</span>
-                      <span className="text-sm opacity-60">{formatCurrency(totalInvested.ars, "ARS")}</span>
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-xl font-bold">{formatCurrency(liquidSavings.usd, "USD")}</span>
+                        <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">líquidos</span>
+                      </div>
+                      {(Number(totalInvested.ars) > 0 || Number(totalInvested.usd) > 0) && (
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-xl font-bold">{formatCurrency(totalInvested.ars, "ARS")}</span>
+                          <span className="text-[10px] font-bold opacity-60 uppercase tracking-wider">invertidos</span>
+                        </div>
+                      )}
                     </div>
                   } 
                   icon={PiggyBank} 
@@ -361,7 +389,31 @@ const Index = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="animate-fade-in">
+                <InsightsCard 
+                  insights={insightsData?.insights || []} 
+                  loading={insightsLoading} 
+                  onRefresh={refetchInsights} 
+                />
+              </div>
+
+              <div className="animate-fade-in">
+                {budgetsWithSpending.length > 0 ? (
+                  <BudgetProgress budgets={budgetsWithSpending} onManageBudgets={() => navigate("/budgets")} />
+                ) : (
+                  <Card className="p-6 bg-card border border-border shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold">Presupuestos del mes</h3>
+                        <p className="text-sm text-muted-foreground">Configurá tus límites de gasto</p>
+                      </div>
+                      <Button onClick={() => navigate("/budgets")} variant="outline">Gestionar</Button>
+                    </div>
+                  </Card>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                 <SpendingChart data={spendingByCategory} />
                 <TransactionsList 
                   transactions={transactions.slice(0, 10)} 

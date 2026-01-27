@@ -91,7 +91,7 @@ export default function Settings() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-lg">Tarjetas de Crédito</CardTitle>
+                      <CardTitle className="text-lg">Tarjetas de crédito</CardTitle>
                       <CardDescription>
                         Administra tus tarjetas para importar resúmenes
                       </CardDescription>
@@ -113,7 +113,7 @@ export default function Settings() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-lg">Gastos Recurrentes</CardTitle>
+                      <CardTitle className="text-lg">Gastos recurrentes</CardTitle>
                       <CardDescription>
                         Configura gastos que se repiten todos los meses
                       </CardDescription>

@@ -49,7 +49,7 @@ export const SpendingChart = ({ data }: SpendingChartProps) => {
     >
       <Card className="p-6 bg-card border-border shadow-stripe">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Gastos por Categoría</h3>
+          <h3 className="text-lg font-semibold">Gastos por categoría</h3>
           <div className="flex gap-2">
             <Button
               variant={currency === "USD" ? "default" : "outline"}
@@ -76,8 +76,8 @@ export const SpendingChart = ({ data }: SpendingChartProps) => {
         ) : (
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-center">
             {/* Pie Chart - Larger */}
-            <div className="flex-shrink-0 flex items-center justify-center">
-              <ResponsiveContainer width={320} height={320}>
+            <div className="flex-shrink-0 flex items-center justify-center w-full lg:w-[320px] h-[320px]">
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={filteredData}

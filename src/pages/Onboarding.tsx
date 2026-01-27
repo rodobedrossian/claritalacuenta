@@ -19,7 +19,7 @@ const ONBOARDING_KEY = "clarita_onboarding_seen";
 const DashboardPreview = () => (
   <Card className="w-64 overflow-hidden border-border/40 shadow-xl bg-white rounded-[2.5rem] p-4 space-y-4 pointer-events-none select-none origin-bottom scale-90 sm:scale-100">
     <div className="space-y-1">
-      <div className="text-[10px] uppercase font-bold text-muted-foreground/60 tracking-widest">Balance Neto</div>
+      <div className="text-[10px] uppercase font-bold text-muted-foreground/60 tracking-widest">Balance neto</div>
       <div className="text-3xl font-black text-success tracking-tight">ARS 4.333.140</div>
       <div className="text-[9px] text-muted-foreground font-medium opacity-70">(USD 6.109,62 + ARS -4.929.044,12)</div>
     </div>
@@ -54,7 +54,7 @@ const DashboardPreview = () => (
 const ExpensesPreview = () => (
   <Card className="w-64 overflow-hidden border-border/40 shadow-xl bg-white rounded-[2.5rem] p-4 space-y-4 pointer-events-none select-none origin-bottom scale-90 sm:scale-100">
     <div className="flex items-center justify-between">
-      <div className="text-sm font-bold tracking-tight text-foreground">Análisis de Gastos</div>
+      <div className="text-sm font-bold tracking-tight text-foreground">Análisis de gastos</div>
       <Sparkles className="h-4 w-4 text-primary" />
     </div>
     
@@ -93,7 +93,7 @@ const ExpensesPreview = () => (
 const SavingsPreview = () => (
   <Card className="w-64 overflow-hidden border-border/40 shadow-xl bg-white rounded-[2.5rem] p-4 space-y-4 pointer-events-none select-none origin-bottom scale-90 sm:scale-100">
     <div className="space-y-1">
-      <div className="text-[10px] uppercase font-bold text-muted-foreground/60 tracking-widest text-center">Ahorros Totales</div>
+      <div className="text-[10px] uppercase font-bold text-muted-foreground/60 tracking-widest text-center">Ahorros totales</div>
       <div className="space-y-0.5 text-center">
         <div className="text-xl font-black text-primary tracking-tight">USD 6.586 <span className="text-[9px] font-bold opacity-40 uppercase tracking-wider">líquidos</span></div>
         <div className="text-xl font-black text-primary tracking-tight">ARS 1.401.119 <span className="text-[9px] font-bold opacity-40 uppercase tracking-wider">invertidos</span></div>
