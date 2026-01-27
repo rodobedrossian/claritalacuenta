@@ -85,18 +85,11 @@ export const AnalyticsSection = () => {
           ))}
         </motion.div>
 
-        {/* Mockups Grid */}
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left Column - Monthly Analytics + Insights */}
-          <div className="space-y-8">
-            <MonthlyAnalyticsMockup />
-            <InsightsMockup />
-          </div>
-
-          {/* Right Column - Installment Projection */}
-          <div className="lg:sticky lg:top-8 h-fit">
-            <InstallmentProjectionMockup />
-          </div>
+        {/* Mockups Stack - Full Width */}
+        <div className="space-y-8 max-w-5xl mx-auto">
+          <MonthlyAnalyticsMockup />
+          <InstallmentProjectionMockup />
+          <InsightsMockup />
         </div>
       </div>
     </section>
