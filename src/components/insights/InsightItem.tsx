@@ -1,15 +1,12 @@
-import { useNavigate } from "react-router-dom";
 import { 
   AlertTriangle, 
   TrendingUp, 
   TrendingDown, 
   Repeat, 
-  Lightbulb,
-  ChevronRight
+  Lightbulb
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import type { Insight } from "@/hooks/useInsightsData";
 
 interface InsightItemProps {
@@ -60,7 +57,6 @@ const priorityConfig = {
 };
 
 export function InsightItem({ insight, compact = false }: InsightItemProps) {
-  const navigate = useNavigate();
   const config = typeConfig[insight.type];
   const priority = priorityConfig[insight.priority];
   const Icon = config.icon;
@@ -72,21 +68,13 @@ export function InsightItem({ insight, compact = false }: InsightItemProps) {
 
   const TrendIcon = isNegativeTrend ? TrendingDown : Icon;
 
-  const handleAction = () => {
-    if (insight.action?.route) {
-      navigate(insight.action.route);
-    }
-  };
-
   if (compact) {
     return (
       <div 
         className={cn(
           "flex items-start gap-3 p-3.5 rounded-2xl border border-border/40 transition-all duration-200",
-          "hover:bg-muted/30 cursor-pointer active:scale-[0.98]",
           insight.priority === "high" && "border-destructive/20 bg-destructive/[0.02]"
         )}
-        onClick={handleAction}
       >
         <div className={cn("p-2.5 rounded-xl shrink-0", config.bgClassName)}>
           <TrendIcon className={cn("h-4 w-4", config.className)} />
@@ -97,11 +85,6 @@ export function InsightItem({ insight, compact = false }: InsightItemProps) {
             {insight.description}
           </p>
         </div>
-        {insight.action && (
-          <div className="self-center">
-            <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
-          </div>
-        )}
       </div>
     );
   }
@@ -137,18 +120,6 @@ export function InsightItem({ insight, compact = false }: InsightItemProps) {
           <p className="text-sm text-muted-foreground/90 mt-1.5 leading-relaxed">
             {insight.description}
           </p>
-
-          {insight.action && (
-            <Button
-              variant="link"
-              size="sm"
-              className="px-0 h-auto mt-3 text-primary font-bold text-xs"
-              onClick={handleAction}
-            >
-              {insight.action.label}
-              <ChevronRight className="h-3.5 w-3.5 ml-1" />
-            </Button>
-          )}
         </div>
       </div>
     </div>

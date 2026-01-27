@@ -220,7 +220,7 @@ const Transactions = () => {
 
                     <div className="mt-4 flex justify-end">
                       <Button variant="outline" onClick={resetFilters} size="sm">
-                        Limpiar Filtros
+                        Limpiar filtros
                       </Button>
                     </div>
                   </div>

@@ -119,7 +119,7 @@ const Savings = () => {
         <header className="shrink-0 border-b border-border/50 bg-background/80 backdrop-blur-xl z-40 pt-safe pb-3 transition-all duration-300">
           <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
             <div className="h-10 flex flex-col justify-center">
-              <h1 className="text-xl font-bold tracking-tight">Ahorros e Inversiones</h1>
+              <h1 className="text-xl font-bold tracking-tight">Ahorros e inversiones</h1>
               <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
                 Gestiona tu patrimonio
               </p>
