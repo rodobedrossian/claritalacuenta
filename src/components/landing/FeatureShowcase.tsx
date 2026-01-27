@@ -199,7 +199,7 @@ export const FeatureShowcase = () => {
                 <p className="text-xs text-success">≈ USD 2.456</p>
               </div>
 
-              <div className="text-center text-xs text-muted-foreground">1 USD = $1.159 (dólar MEP)</div>
+              <div className="text-center text-xs text-muted-foreground">1 USD = $1.521 (USDC)</div>
             </div>
           </FeatureCard>
 
