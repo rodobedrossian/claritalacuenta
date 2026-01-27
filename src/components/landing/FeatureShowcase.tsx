@@ -41,7 +41,7 @@ export const FeatureShowcase = () => {
           {/* Feature 1: Manual registration */}
           <FeatureCard
             title="Registrá en segundos"
-            description="Wizard de 3 pasos: monto, categoría y listo. El teclado numérico te hace la vida más fácil."
+            description="3 simples pasos: monto, categoría y listo."
             icon={<Calculator className="w-6 h-6 text-primary-foreground" />}
             index={0}
             gradient="from-blue-500/5 to-cyan-500/5"
