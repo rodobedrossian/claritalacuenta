@@ -5,45 +5,46 @@ import { Button } from "@/components/ui/button";
 import { FloatingOrbs } from "./FloatingOrbs";
 import { DashboardMockup } from "./DashboardMockup";
 import logoImage from "@/assets/logo-clarita.png";
-
 export const HeroSection = () => {
-  return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
+  return <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
       <FloatingOrbs />
       
       <div className="container mx-auto px-4 py-20 lg:py-0">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
           {/* Left side - Text content */}
-          <motion.div 
-            className="text-center lg:text-left z-10"
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-          >
+          <motion.div className="text-center lg:text-left z-10" initial={{
+          opacity: 0,
+          x: -30
+        }} animate={{
+          opacity: 1,
+          x: 0
+        }} transition={{
+          duration: 0.6
+        }}>
             {/* Logo */}
-            <motion.div 
-              className="flex items-center justify-center lg:justify-start gap-3 mb-6"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <img 
-                src={logoImage} 
-                alt="Clarita la cuenta" 
-                className="w-14 h-14 rounded-2xl shadow-stripe-md object-cover"
-              />
+            <motion.div className="flex items-center justify-center lg:justify-start gap-3 mb-6" initial={{
+            opacity: 0
+          }} animate={{
+            opacity: 1
+          }} transition={{
+            delay: 0.2
+          }}>
+              
               <span className="text-2xl font-black tracking-tight text-foreground">
                 Clarita la cuenta
               </span>
             </motion.div>
 
             {/* Headline */}
-            <motion.h1 
-              className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-foreground mb-6 leading-tight"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
+            <motion.h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-foreground mb-6 leading-tight" initial={{
+            opacity: 0,
+            y: 20
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} transition={{
+            delay: 0.4
+          }}>
               Tus finanzas,{" "}
               <span className="bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
                 claras y simples
@@ -51,59 +52,44 @@ export const HeroSection = () => {
             </motion.h1>
 
             {/* Subheadline */}
-            <motion.p 
-              className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-8"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-            >
+            <motion.p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-8" initial={{
+            opacity: 0,
+            y: 20
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} transition={{
+            delay: 0.5
+          }}>
               Registrá ingresos, gastos y ahorros en pesos y dólares. 
               Todo en un solo lugar, sin complicaciones.
             </motion.p>
 
             {/* CTA Buttons */}
-            <motion.div 
-              className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-            >
-              <Button 
-                asChild
-                size="lg" 
-                className="text-lg px-8 py-6 bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 shadow-stripe-md group"
-              >
+            <motion.div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start" initial={{
+            opacity: 0,
+            y: 20
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} transition={{
+            delay: 0.6
+          }}>
+              <Button asChild size="lg" className="text-lg px-8 py-6 bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 shadow-stripe-md group">
                 <Link to="/auth">
                   Empezar gratis
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                className="text-lg px-8 py-6 border-border hover:bg-muted/50"
-                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-              >
+              <Button variant="outline" size="lg" className="text-lg px-8 py-6 border-border hover:bg-muted/50" onClick={() => document.getElementById('features')?.scrollIntoView({
+              behavior: 'smooth'
+            })}>
                 Ver cómo funciona
               </Button>
             </motion.div>
 
             {/* Trust indicators */}
-            <motion.div 
-              className="mt-10 flex items-center justify-center lg:justify-start gap-6 text-sm text-muted-foreground"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.8 }}
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-success" />
-                <span>Sin tarjeta de crédito</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-success" />
-                <span>Datos encriptados</span>
-              </div>
-            </motion.div>
+            
           </motion.div>
 
           {/* Right side - Dashboard mockup */}
@@ -114,20 +100,6 @@ export const HeroSection = () => {
       </div>
 
       {/* Scroll indicator */}
-      <motion.div 
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2, duration: 0.5 }}
-      >
-        <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-          className="w-6 h-10 rounded-full border-2 border-muted-foreground/30 flex justify-center pt-2"
-        >
-          <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" />
-        </motion.div>
-      </motion.div>
-    </section>
-  );
+      
+    </section>;
 };
