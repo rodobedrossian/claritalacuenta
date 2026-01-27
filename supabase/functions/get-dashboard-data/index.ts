@@ -72,7 +72,8 @@ Deno.serve(async (req) => {
       categoriesResult,
       usersResult,
       savingsEntriesResult,
-      creditCardsResult
+      creditCardsResult,
+      investmentsResult
     ] = await Promise.all([
       // Transactions for the month
       supabase
