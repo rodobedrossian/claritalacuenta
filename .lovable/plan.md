@@ -1,283 +1,218 @@
 
-# Plan: Landing Page SUPER COOL para Clarita la cuenta
+# Plan: Mejorar la Sección de Analytics & Insights de la Landing Page
 
-## 🎯 Objetivo
-Crear una landing page impactante, "Instagrameable", que muestre las capacidades de la app de forma visual y atractiva. Dirigida a millennials, Gen Z y adultos tech-savvy.
+## Problema Actual
+La sección actual de Analytics e Insights se ve "plain" y no refleja la riqueza visual de la plataforma real, que incluye:
+- Proyecciones de cuotas con gráficos de barras horizontales
+- Analytics mensuales con donut charts coloridos y totales multi-moneda
+- Insights inteligentes con badges de prioridad, tipos y categorías
 
----
+## Solución Propuesta
 
-## 📐 Estructura de la Landing Page
+Vamos a crear una sección completamente rediseñada que sea visualmente impactante y muestre las 3 capacidades principales de analytics de la app de forma interactiva.
 
-### Sección 1: Hero Principal (Full-screen)
-**Concepto:** Impacto visual inmediato con gradiente Stripe-style y animaciones suaves
+### Estructura Nueva
 
-- **Fondo:** Gradiente decorativo animado (rosa → violeta → azul pastel)
-- **Logo + Nombre:** "Clarita la cuenta" con icono de wallet
-- **Headline principal:** "Tus finanzas, claras y simples"
-- **Subheadline:** "Registrá ingresos, gastos y ahorros en pesos y dólares. Sin complicaciones."
-- **CTA principal:** Botón "Empezar gratis" con gradient-primary
-- **Preview flotante:** Mockup del dashboard con sombras elegantes y animación de entrada
-- **Elementos decorativos:** Orbs de color animados en el fondo
-
-### Sección 2: Features Showcase (Scroll interactivo)
-**Concepto:** Cards flotantes con micro-animaciones mostrando features clave
-
-**Feature 1: Registro Rápido de Transacciones**
-- Mockup del wizard de 3 pasos (Amount → Category → Details)
-- Keypad numérico visual
-- Badge "Manual o por voz"
-
-**Feature 2: Registro por Voz**
-- Mockup de la interfaz de grabación con orb Siri-style
-- Texto animado como si estuviera transcribiendo
-- Visualización de ondas de audio
-
-**Feature 3: Dashboard de Balance**
-- Mockup de stats cards (Ingresos/Gastos/Ahorros)
-- Donut chart de gastos por categoría
-- Balance neto prominente
-
-**Feature 4: Carga de Resúmenes de TC**
-- Mockup del flujo de importar PDF
-- Preview de transacciones parseadas
-- Badge "IA analiza tu resumen"
-
-### Sección 3: Analytics & Insights
-**Concepto:** Visualización de datos con charts interactivos
-
-- Donut chart animado de categorías
-- Insight card con sugerencias AI
-- Proyección de cuotas de tarjeta
-- Budget progress bars
-
-### Sección 4: Multi-moneda
-**Concepto:** Mostrar el soporte USD/ARS
-
-- Toggle visual USD ↔ ARS
-- Cotización en tiempo real
-- Consolidación de patrimonio
-
-### Sección 5: Savings & Investments
-**Concepto:** Metas de ahorro e inversiones
-
-- Progress bars de objetivos
-- Cards de inversiones con rendimiento
-- Patrimonio total consolidado
-
-### Sección 6: Social Proof / Testimonials (Opcional)
-**Concepto:** Frases de usuarios ficticios
-
-- 3 cards con quotes y avatares
-- Rating con estrellas
-
-### Sección 7: Footer CTA
-**Concepto:** Llamada final a la acción
-
-- Headline: "¿Listo para tener claridad financiera?"
-- CTA: "Crear cuenta gratis"
-- Links secundarios: Privacy, Terms
+La sección será dividida en **3 sub-secciones** con mockups más ricos y animados:
 
 ---
 
-## 🎨 Sistema de Diseño
+## Sección 1: Analytics Mensuales (Nuevo Componente)
 
-### Colores
-- **Fondo:** Blanco con gradiente decorativo pastel sutil
-- **Primary:** Índigo (250 84% 54%)
-- **Accents:** Gradientes vibrantes para CTAs
-- **Cards:** Blanco con shadow-stripe
+**Mockup tipo "MonthlyAnalytics"** que incluye:
+- **Stats Row**: 4 cards con totales (ARS, USD, Transacciones, Tarjetas)
+- **Donut Chart Animado**: Con leyenda de categorías y colores vibrantes
+- **Bar Chart por Tarjeta**: Gasto por cada tarjeta de crédito
 
-### Tipografía
-- **Headings:** Font-black, tracking-tight
-- **Body:** Font-medium, text-muted-foreground
+Colores vibrantes: Violeta, Verde, Naranja, Amarillo, Cyan, Rosa
+
+---
+
+## Sección 2: Proyección de Cuotas (Mejorar Actual)
+
+**Mockup tipo "InstallmentProjection"** con:
+- **3 Stat Cards destacados**: 
+  - "Cuotas del próximo mes" - $567K
+  - "En Mar 2026 liberás" - $138K (verde)
+  - "En 6 meses baja" - $505K (-89% badge verde)
+- **Gráfico de Barras Horizontales** animado mostrando la evolución mensual descendente
+
+---
+
+## Sección 3: Insights Inteligentes (Nuevo Componente)
+
+**Mockup tipo "InsightsList"** que replica:
+- Header "Análisis inteligente" con metadata
+- Tabs de filtros (Todos, Anomalías, Patrones, Tendencias, Consejos)
+- **3-4 Insight Cards** con:
+  - Icono tipo/color
+  - Badges de prioridad (ALTA en rojo, MEDIA en naranja)
+  - Badge de tipo (ANOMALÍA, PATRÓN)
+  - Badge de categoría (AUTO, SUPERMERCADO)
+  - Título + descripción
+
+---
+
+## Diseño Visual
+
+### Paleta de Colores para Charts
+```text
+- Violeta: hsl(250, 84%, 54%)
+- Verde: hsl(142, 71%, 45%)
+- Naranja: hsl(24, 95%, 53%)
+- Amarillo: hsl(45, 93%, 47%)
+- Cyan: hsl(188, 94%, 43%)
+- Rosa: hsl(340, 82%, 52%)
+- Azul: hsl(217, 91%, 60%)
+```
 
 ### Animaciones
-- **Entrada:** fade-in + slide-up con framer-motion
-- **Scroll:** Parallax suave en elementos decorativos
-- **Hover:** scale-up + shadow-increase en cards
-- **Interactivas:** Orbs pulsantes, charts animados
+- Barras que crecen al scroll (whileInView)
+- Donut que se dibuja con rotación
+- Cards con fade-in staggered
+- Badges con scale-in
+- Números con contador animado (opcional)
 
 ---
 
-## 🔧 Implementación Técnica
+## Archivos a Modificar/Crear
 
-### Nuevo archivo: `src/pages/Landing.tsx`
-Página completamente nueva, sin autenticación requerida
+### 1. `src/components/landing/AnalyticsSection.tsx`
+Rehacer completamente para ser un showcase más grande con las 3 sub-secciones
 
-### Componentes a crear:
+### 2. `src/components/landing/AnalyticsMockup.tsx`
+Reemplazar con versión más rica:
+- Donut chart SVG animado con framer-motion
+- Stats cards estilo Stripe
+- Lista de categorías con colores
 
-1. **`src/components/landing/HeroSection.tsx`**
-   - Background con gradient animado
-   - Headline + CTA
-   - Mockup del dashboard flotante
+### 3. `src/components/landing/InstallmentProjectionMockup.tsx` (NUEVO)
+- 3 stat cards con proyecciones
+- Gráfico de barras horizontales animadas
+- Badge de % de reducción
 
-2. **`src/components/landing/FeatureShowcase.tsx`**
-   - Grid responsive de feature cards
-   - Mockups interactivos
-
-3. **`src/components/landing/VoiceFeatureDemo.tsx`**
-   - Orb Siri-style animado
-   - Texto que aparece letra por letra
-   - Waveform visual
-
-4. **`src/components/landing/DashboardPreview.tsx`**
-   - Stat cards miniatura
-   - Chart donut animado
-   - Balance display
-
-5. **`src/components/landing/TransactionWizardDemo.tsx`**
-   - Keypad visual
-   - Grid de categorías
-   - Preview de transacción
-
-6. **`src/components/landing/StatementImportDemo.tsx`**
-   - Upload zone visual
-   - Lista de transacciones parseadas
-   - Badge de IA
-
-7. **`src/components/landing/AnalyticsPreview.tsx`**
-   - Charts con datos de ejemplo
-   - Insight cards
-   - Progress bars
-
-8. **`src/components/landing/Footer.tsx`**
-   - CTA final
-   - Links legales
-
-### Actualización de rutas: `src/App.tsx`
-- Agregar ruta pública `/landing`
-- Opcionalmente hacer que `/` redirija a `/landing` si no está autenticado
+### 4. `src/components/landing/InsightsMockup.tsx` (NUEVO)
+- Header con contador de insights
+- Tabs ficticios de filtros
+- 3-4 Insight cards con badges y descripciones
 
 ---
 
-## 📱 Responsive Design
-
-### Mobile (< 768px)
-- Hero: Mockup debajo del texto
-- Features: Stack vertical, cards full-width
-- CTAs: Full-width buttons
-
-### Tablet (768px - 1024px)
-- Hero: Lado a lado con mockup más pequeño
-- Features: Grid 2 columnas
-
-### Desktop (> 1024px)
-- Hero: Layout dividido 50/50
-- Features: Grid 3-4 columnas
-- Animaciones parallax más prominentes
-
----
-
-## ✨ Elementos "Instagrameables"
-
-1. **Orbs de color animados** flotando en el background
-2. **Glassmorphism** en cards sobre gradientes
-3. **Gradientes vibrantes** en CTAs y elementos destacados
-4. **Animaciones suaves** en scroll (IntersectionObserver)
-5. **Mockups realistas** con sombras elegantes
-6. **Tipografía grande y bold** para headlines
-7. **Micro-interacciones** en hover
-8. **Transiciones smooth** entre secciones
-
----
-
-## 📁 Archivos a Crear/Modificar
-
-### Nuevos archivos:
-1. `src/pages/Landing.tsx` - Página principal
-2. `src/components/landing/HeroSection.tsx`
-3. `src/components/landing/FeatureCard.tsx`
-4. `src/components/landing/VoiceDemo.tsx`
-5. `src/components/landing/DashboardMockup.tsx`
-6. `src/components/landing/WizardMockup.tsx`
-7. `src/components/landing/AnalyticsMockup.tsx`
-8. `src/components/landing/FooterCTA.tsx`
-9. `src/components/landing/FloatingOrbs.tsx`
-
-### Archivos a modificar:
-1. `src/App.tsx` - Agregar ruta `/landing`
-
----
-
-## 🔄 Flujo de Usuario
+## Estructura de la Sección Rediseñada
 
 ```text
-Usuario visita /landing
-       ↓
-   Hero con CTA
-       ↓
-   Scroll → Features animadas
-       ↓
-   Scroll → Analytics preview
-       ↓
-   Scroll → Multi-moneda + Savings
-       ↓
-   Footer CTA → "Crear cuenta"
-       ↓
-   Redirect a /auth
+┌──────────────────────────────────────────────────────────────┐
+│  [Badge] Analytics e Insights                                │
+│                                                              │
+│  "Datos que te ayudan a tomar mejores decisiones"           │
+│                                                              │
+│  [Descripción]                                               │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │  [Enero 2026]           ARS 5.4M  USD 133  160 txns    ││
+│  │                                                         ││
+│  │    ┌─────────┐    Vacaciones    $1.57M                 ││
+│  │    │ Donut   │    Compras       $813K                  ││
+│  │    │ Chart   │    Salidas       $746K                  ││
+│  │    └─────────┘    Supermercado  $578K                  ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                              │
+├──────────────────────────────────────────────────────────────┤
+│  [Proyección de Cuotas]                                      │
+│                                                              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────┐              │
+│  │$567K     │  │$138K     │  │$505K  [-89%] │              │
+│  │Próx.mes  │  │Liberás   │  │En 6 meses    │              │
+│  └──────────┘  └──────────┘  └──────────────┘              │
+│                                                              │
+│  Ene 2026 ████████████████████████████████                  │
+│  Feb 2026 ██████████████████████████████████████           │
+│  Mar 2026 ████████████████████████                          │
+│  Abr 2026 ████████████████                                  │
+│  May 2026 ██████████                                        │
+│                                                              │
+├──────────────────────────────────────────────────────────────┤
+│  [Insights Inteligentes]                                     │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ ⚠️ [ALTA] [ANOMALÍA] [AUTO]                            ││
+│  │ Auto: gasto inusual                                     ││
+│  │ Más compras (+50%) y más caras (+93%)                  ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                              │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ 🔄 [ALTA] [PATRÓN]                                      ││
+│  │ Desglose de consumos TC: $3.28M                        ││
+│  │ Supermercado 26%, Compras 23%, Auto 18%                ││
+│  └─────────────────────────────────────────────────────────┘│
+│                                                              │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ 🔄 [MEDIA] [PATRÓN] [SUPERMERCADO]                     ││
+│  │ Jumbo Martinez es recurrente                           ││
+│  │ 8 veces, promedio $147K cada vez                       ││
+│  └─────────────────────────────────────────────────────────┘│
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📝 Textos Clave
+## Detalles Técnicos
 
-**Hero:**
-- H1: "Tus finanzas, claras y simples"
-- Subtitle: "Registrá ingresos, gastos y ahorros en pesos y dólares. Todo en un solo lugar, sin complicaciones."
-
-**Features:**
-- "Registrá en segundos" - Manual o por voz, siempre rápido
-- "Hablale a Clarita" - Dictá tus gastos y listo
-- "Importá tus resúmenes" - La IA analiza tu PDF de tarjeta
-- "Entendé tus gastos" - Charts claros y presupuestos automáticos
-- "Ahorrá en pesos y dólares" - Metas, inversiones, patrimonio
-
-**Footer:**
-- H2: "¿Listo para tener claridad financiera?"
-- CTA: "Empezar gratis"
-
----
-
-## ⏱️ Tiempo Estimado de Implementación
-
-1. HeroSection + FloatingOrbs: ~30%
-2. FeatureCards + Mockups: ~35%
-3. AnalyticsMockup + VoiceDemo: ~20%
-4. Footer + Responsive + Polish: ~15%
-
----
-
-## 🎬 Detalles de Animaciones
-
-**FloatingOrbs:**
+### Donut Chart SVG Animado
 ```tsx
-<motion.div
-  animate={{
-    x: [0, 50, 0],
-    y: [0, -30, 0],
-    scale: [1, 1.1, 1],
-  }}
-  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+// Círculo con stroke-dasharray animado
+<motion.circle
+  cx="50" cy="50" r="40"
+  stroke={color}
+  strokeWidth="20"
+  fill="transparent"
+  strokeDasharray={`${percentage * 2.51} 251`}
+  initial={{ strokeDasharray: "0 251" }}
+  whileInView={{ strokeDasharray: `${percentage * 2.51} 251` }}
+  transition={{ duration: 1, ease: "easeOut" }}
 />
 ```
 
-**Feature Cards on Scroll:**
+### Barra Horizontal Animada
 ```tsx
 <motion.div
-  initial={{ opacity: 0, y: 50 }}
-  whileInView={{ opacity: 1, y: 0 }}
-  viewport={{ once: true, margin: "-100px" }}
-  transition={{ duration: 0.6, ease: "easeOut" }}
+  className="h-6 bg-primary rounded-r-lg"
+  initial={{ width: 0 }}
+  whileInView={{ width: `${percentage}%` }}
+  transition={{ duration: 0.8, delay: index * 0.1 }}
 />
 ```
 
-**Voice Typewriter Effect:**
+### Badge de Prioridad
 ```tsx
-{text.split('').map((char, i) => (
-  <motion.span
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ delay: i * 0.05 }}
-  />
-))}
+<Badge 
+  className="bg-destructive/10 text-destructive text-[10px] uppercase font-bold"
+>
+  Alta
+</Badge>
 ```
+
+---
+
+## Layout Responsivo
+
+### Desktop (lg+)
+- Grid de 2 columnas para cada sub-sección
+- Texto a la izquierda, mockup a la derecha (alternando)
+
+### Mobile
+- Stack vertical
+- Mockups a ancho completo
+- Cards más compactas
+
+---
+
+## Resultado Esperado
+
+Una sección que:
+1. Muestre datos financieros reales y reconocibles
+2. Use animaciones suaves que capturen la atención
+3. Demuestre las 3 capacidades clave: Analytics, Proyecciones e Insights
+4. Se sienta premium y "Instagrameable"
+5. Refleje la experiencia real de usar la plataforma
