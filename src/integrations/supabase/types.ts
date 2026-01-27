@@ -180,51 +180,6 @@ export type Database = {
         }
         Relationships: []
       }
-      email_parsers: {
-        Row: {
-          amount_regex: string
-          category: string
-          created_at: string | null
-          currency: string | null
-          date_regex: string | null
-          id: string
-          is_active: boolean | null
-          name: string
-          sender_email: string
-          subject_pattern: string | null
-          transaction_type: string | null
-          user_id: string
-        }
-        Insert: {
-          amount_regex: string
-          category: string
-          created_at?: string | null
-          currency?: string | null
-          date_regex?: string | null
-          id?: string
-          is_active?: boolean | null
-          name: string
-          sender_email: string
-          subject_pattern?: string | null
-          transaction_type?: string | null
-          user_id: string
-        }
-        Update: {
-          amount_regex?: string
-          category?: string
-          created_at?: string | null
-          currency?: string | null
-          date_regex?: string | null
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          sender_email?: string
-          subject_pattern?: string | null
-          transaction_type?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       exchange_rates: {
         Row: {
           id: string
@@ -243,45 +198,6 @@ export type Database = {
           rate?: number
           source?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      gmail_connections: {
-        Row: {
-          access_token: string
-          created_at: string | null
-          email: string
-          history_id: string | null
-          id: string
-          refresh_token: string
-          token_expires_at: string
-          updated_at: string | null
-          user_id: string
-          watch_expiration: string | null
-        }
-        Insert: {
-          access_token: string
-          created_at?: string | null
-          email: string
-          history_id?: string | null
-          id?: string
-          refresh_token: string
-          token_expires_at: string
-          updated_at?: string | null
-          user_id: string
-          watch_expiration?: string | null
-        }
-        Update: {
-          access_token?: string
-          created_at?: string | null
-          email?: string
-          history_id?: string | null
-          id?: string
-          refresh_token?: string
-          token_expires_at?: string
-          updated_at?: string | null
-          user_id?: string
-          watch_expiration?: string | null
         }
         Relationships: []
       }
@@ -419,57 +335,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      processed_emails: {
-        Row: {
-          gmail_connection_id: string | null
-          id: string
-          message_id: string
-          processed_at: string | null
-          raw_snippet: string | null
-          raw_subject: string | null
-          status: string | null
-          transaction_id: string | null
-          user_id: string
-        }
-        Insert: {
-          gmail_connection_id?: string | null
-          id?: string
-          message_id: string
-          processed_at?: string | null
-          raw_snippet?: string | null
-          raw_subject?: string | null
-          status?: string | null
-          transaction_id?: string | null
-          user_id: string
-        }
-        Update: {
-          gmail_connection_id?: string | null
-          id?: string
-          message_id?: string
-          processed_at?: string | null
-          raw_snippet?: string | null
-          raw_subject?: string | null
-          status?: string | null
-          transaction_id?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "processed_emails_gmail_connection_id_fkey"
-            columns: ["gmail_connection_id"]
-            isOneToOne: false
-            referencedRelation: "gmail_connections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "processed_emails_transaction_id_fkey"
-            columns: ["transaction_id"]
-            isOneToOne: false
-            referencedRelation: "transactions"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       profiles: {
         Row: {

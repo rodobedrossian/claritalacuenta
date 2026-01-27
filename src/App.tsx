@@ -12,6 +12,7 @@ import { useOfflineDetection } from "@/hooks/use-offline-detection";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Landing from "./pages/Landing";
 import Transactions from "./pages/Transactions";
 import PendingTransactions from "./pages/PendingTransactions";
 import Settings from "./pages/Settings";
@@ -70,6 +71,7 @@ const App = () => {
               <Route path="*" element={<Onboarding />} />
             ) : (
               <>
+                <Route path="/landing" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                 <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
