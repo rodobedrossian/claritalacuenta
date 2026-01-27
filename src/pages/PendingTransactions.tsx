@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Check, Loader2, Mail, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";

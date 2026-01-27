@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { CreditCard, Repeat, Bell, Plus } from "lucide-react";
 import { useCreditCardsData } from "@/hooks/useCreditCardsData";
 import { useRecurringExpensesData } from "@/hooks/useRecurringExpensesData";
+import { useCategoriesData } from "@/hooks/useCategoriesData";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { AddCreditCardDialog } from "@/components/credit-cards/AddCreditCardDialog";
 import { CreditCardsList } from "@/components/credit-cards/CreditCardsList";
@@ -25,10 +26,14 @@ export default function Settings() {
   // Credit cards hook
   const { creditCards, addCreditCard, deleteCreditCard } = useCreditCardsData(userId);
   
+  // Categories hook
+  const { categories } = useCategoriesData();
+  
   // Recurring expenses hook
   const { 
     recurringExpenses, 
     addRecurringExpense, 
+    updateRecurringExpense,
     deleteRecurringExpense, 
     generateTransaction 
   } = useRecurringExpensesData(userId);
@@ -118,24 +123,16 @@ export default function Settings() {
                         Configura gastos que se repiten todos los meses
                       </CardDescription>
                     </div>
-                    <AddRecurringExpenseDialog onAdd={addRecurringExpense} />
+                    <AddRecurringExpenseDialog categories={categories} onAdd={addRecurringExpense} />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex justify-end">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => generateTransaction()}
-                      className="gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Generar este mes
-                    </Button>
-                  </div>
                   <RecurringExpensesList 
                     expenses={recurringExpenses} 
+                    categories={categories}
                     onDelete={deleteRecurringExpense}
+                    onUpdate={updateRecurringExpense}
+                    onGenerate={generateTransaction}
                   />
                 </CardContent>
               </Card>
