@@ -1,12 +1,12 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, Wallet, Shield, Zap, Heart } from "lucide-react";
+import { ArrowRight, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logoImage from "@/assets/logo-clarita.png";
 
 const features = [
   { icon: Shield, text: "Datos encriptados" },
   { icon: Zap, text: "Registro instantáneo" },
-  { icon: Heart, text: "Gratis para siempre" },
 ];
 
 export const FooterCTA = () => {
@@ -23,15 +23,19 @@ export const FooterCTA = () => {
           transition={{ duration: 0.6 }}
           className="max-w-3xl mx-auto text-center"
         >
-          {/* Icon */}
+          {/* Logo */}
           <motion.div
             initial={{ scale: 0 }}
             whileInView={{ scale: 1 }}
             viewport={{ once: true }}
             transition={{ type: "spring", delay: 0.2 }}
-            className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center mx-auto mb-8 shadow-stripe-lg"
+            className="mx-auto mb-8"
           >
-            <Wallet className="w-10 h-10 text-primary-foreground" />
+            <img 
+              src={logoImage} 
+              alt="Clarita la cuenta" 
+              className="w-20 h-20 rounded-3xl shadow-stripe-lg object-cover"
+            />
           </motion.div>
 
           {/* Headline */}
@@ -113,9 +117,11 @@ export const FooterCTA = () => {
         >
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center">
-                <Wallet className="w-4 h-4 text-primary-foreground" />
-              </div>
+              <img 
+                src={logoImage} 
+                alt="Clarita la cuenta" 
+                className="w-8 h-8 rounded-lg object-cover"
+              />
               <span className="font-bold text-foreground">Clarita la cuenta</span>
             </div>
             
