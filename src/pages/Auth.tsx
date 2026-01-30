@@ -10,6 +10,9 @@ import type { Session } from "@supabase/supabase-js";
 import {
   isBiometricAvailable,
   isBiometricSupported,
+  isBiometricEnabled,
+  hasStoredCredentials,
+  getStoredSession,
   storeSession,
   setBiometricEnabled,
   hasBiometricPromptBeenShown,
@@ -49,6 +52,7 @@ const Auth = () => {
 
   const lastUser = getLastUser();
   const showReturningUser = !isSignUp && lastUser && !showFullForm;
+  const [checkingBiometric, setCheckingBiometric] = useState(true);
 
   // Check if already logged in
   useEffect(() => {
@@ -58,6 +62,45 @@ const Auth = () => {
       }
     });
   }, [navigate]);
+
+  // When showing returning user, try Face ID first if biometric is configured
+  useEffect(() => {
+    if (!showReturningUser) {
+      setCheckingBiometric(false);
+      return;
+    }
+    let mounted = true;
+    (async () => {
+      const supported = isBiometricSupported();
+      const enabled = isBiometricEnabled();
+      if (!supported || !enabled) {
+        if (mounted) setCheckingBiometric(false);
+        return;
+      }
+      const stored = await hasStoredCredentials();
+      if (!mounted) return;
+      if (!stored) {
+        setCheckingBiometric(false);
+        return;
+      }
+      try {
+        const session = await getStoredSession();
+        if (!mounted) return;
+        if (session) {
+          await supabase.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          });
+          navigate("/", { replace: true });
+          return;
+        }
+      } catch {
+        // User cancelled or failed - show password form
+      }
+      if (mounted) setCheckingBiometric(false);
+    })();
+    return () => { mounted = false; };
+  }, [showReturningUser, navigate]);
 
   const saveLastUserAndMaybeShowBiometric = (
     userEmail: string,
@@ -192,6 +235,14 @@ const Auth = () => {
 
   const renderForm = () => {
     if (showReturningUser) {
+      if (checkingBiometric) {
+        return (
+          <div className="flex flex-col items-center justify-center py-12 space-y-4">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Verificando identidad...</p>
+          </div>
+        );
+      }
       return (
         <form onSubmit={handleSignIn} className="space-y-5">
           <div className="mb-6">
