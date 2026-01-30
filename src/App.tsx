@@ -23,6 +23,7 @@ import Categories from "./pages/Categories";
 import Recurrentes from "./pages/Recurrentes";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
+import Privacy from "./pages/Privacy";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,6 +74,7 @@ const App = () => {
             ) : (
               <>
                 <Route path="/landing" element={<Landing />} />
+                <Route path="/privacy" element={<Privacy />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                 <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
