@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Wallet, TrendingUp, PiggyBank, BarChart3, Check, Loader2 } from "lucide-react";
+import { TrendingUp, PiggyBank, BarChart3, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
 import {
@@ -390,7 +390,7 @@ const Auth = () => {
         <div className="relative z-10 flex flex-col justify-center p-12 text-foreground">
           <div className="flex items-center gap-3 mb-12">
             <div className="p-3 rounded-2xl gradient-primary shadow-stripe-lg">
-              <Wallet className="h-10 w-10 text-primary-foreground" />
+              <PiggyBank className="h-10 w-10 text-primary-foreground" />
             </div>
             <h1 className="text-4xl font-bold">Clarita la cuenta</h1>
           </div>
@@ -423,7 +423,7 @@ const Auth = () => {
         <div className="w-full max-w-md">
           <div className="flex lg:hidden items-center justify-center gap-3 mb-8">
             <div className="p-2 rounded-xl gradient-primary shadow-stripe">
-              <Wallet className="h-8 w-8 text-primary-foreground" />
+              <PiggyBank className="h-8 w-8 text-primary-foreground" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">Clarita la cuenta</h1>
           </div>

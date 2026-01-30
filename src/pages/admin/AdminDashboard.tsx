@@ -34,7 +34,6 @@ import {
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import logoImage from "@/assets/logo-clarita-transparent.png";
 
 interface UserMetrics {
   id: string;
@@ -150,11 +149,9 @@ const AdminDashboard = () => {
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img 
-              src={logoImage} 
-              alt="Clarita" 
-              className="h-8 w-auto"
-            />
+            <div className="p-2 rounded-xl gradient-primary">
+              <PiggyBank className="h-5 w-5 text-primary-foreground" />
+            </div>
             <div className="h-6 w-px bg-border" />
             <h1 className="text-xl font-semibold">Backoffice</h1>
           </div>
