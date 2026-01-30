@@ -33,15 +33,10 @@ export function BiometricGate({ children }: BiometricGateProps) {
       }
       const stored = await hasStoredCredentials();
       if (!mounted) return;
-      // No credentials in Keychain: if user has valid Supabase session (e.g. just
-      // logged in with password), let them through. Otherwise redirect to auth.
+      // Sin credenciales en Keychain → redirigir a auth. La sesión se guarda en
+      // Auth al hacer login si Face ID está habilitado.
       if (!stored) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          if (mounted) setStatus("unlocked");
-        } else {
-          navigate("/auth", { replace: true });
-        }
+        navigate("/auth", { replace: true });
         return;
       }
       setStatus("gate");

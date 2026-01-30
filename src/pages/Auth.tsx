@@ -102,12 +102,22 @@ const Auth = () => {
     return () => { mounted = false; };
   }, [showReturningUser, navigate]);
 
-  const saveLastUserAndMaybeShowBiometric = (
+  const saveLastUserAndMaybeShowBiometric = async (
     userEmail: string,
     userName: string,
     session: Session
   ) => {
     setLastUser({ email: userEmail, full_name: userName });
+
+    // Si Face ID ya está habilitado, guardar sesión para que BiometricGate pueda pedir Face ID
+    if (isBiometricSupported() && isBiometricEnabled()) {
+      try {
+        await storeSession(session);
+      } catch (err) {
+        console.warn("[Auth] storeSession on login:", err);
+      }
+    }
+
     const canShowBiometric =
       isBiometricSupported() &&
       !hasBiometricPromptBeenShown();
