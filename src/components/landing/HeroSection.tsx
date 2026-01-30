@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FloatingOrbs } from "./FloatingOrbs";
 import { DashboardMockup } from "./DashboardMockup";
-import logoImage from "@/assets/logo-clarita-transparent.png";
+import logoImage from "@/assets/logo-clarita.png";
 export const HeroSection = () => {
   return <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
       <FloatingOrbs />
