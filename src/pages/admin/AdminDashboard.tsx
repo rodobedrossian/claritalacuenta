@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import logoImage from "@/assets/logo-clarita.png";
+import logoImage from "@/assets/logo-clarita-transparent.png";
 
 interface UserMetrics {
   id: string;
