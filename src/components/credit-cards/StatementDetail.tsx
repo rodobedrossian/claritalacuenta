@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, Search, Check, Sparkles, Loader2, TrendingDown } from "lucide-react";
+import { ArrowLeft, Search, Check, Sparkles, Loader2 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -74,6 +75,7 @@ export const StatementDetail = ({
   userId,
   onBack,
 }: StatementDetailProps) => {
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -433,8 +435,8 @@ export const StatementDetail = ({
         <StatementSpendingChart items={chartItems} itemCategories={itemCategories} categories={categories} />
 
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground shrink-0" />
             <Input
               placeholder="Buscar por descripción..."
               value={searchQuery}
@@ -442,13 +444,14 @@ export const StatementDetail = ({
               className="pl-10"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mb-1 md:overflow-visible md:pb-0 md:mb-0">
             {(["all", "consumo", "cuota", "impuesto"] as FilterType[]).map((type) => (
               <Button
                 key={type}
                 variant={filterType === type ? "default" : "outline"}
                 size="sm"
                 onClick={() => setFilterType(type)}
+                className="shrink-0"
               >
                 {type === "all" ? "Todos" : type.charAt(0).toUpperCase() + type.slice(1)}
               </Button>
@@ -458,27 +461,62 @@ export const StatementDetail = ({
 
         {selectedIds.size > 0 && (
           <Card className="p-4 bg-primary/5 border-primary/20">
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-medium">{selectedIds.size} seleccionados</span>
-              <Select value={bulkCategory} onValueChange={setBulkCategory}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Asignar categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categoryOptions.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button size="sm" onClick={handleBulkUpdate} disabled={!bulkCategory}>
-                <Check className="h-4 w-4 mr-1" /> Aplicar
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>Cancelar</Button>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <span className="text-sm font-medium shrink-0">{selectedIds.size} seleccionados</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={bulkCategory} onValueChange={setBulkCategory}>
+                  <SelectTrigger className="w-full sm:w-[200px] min-w-0">
+                    <SelectValue placeholder="Asignar categoría" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" onClick={handleBulkUpdate} disabled={!bulkCategory} className="shrink-0">
+                  <Check className="h-4 w-4 mr-1" /> Aplicar
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} className="shrink-0">Cancelar</Button>
+              </div>
             </div>
           </Card>
         )}
 
-        <div className="rounded-lg border border-border/50 overflow-x-auto">
+        {isMobile ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between py-2 border-b border-border/50">
+              <button
+                type="button"
+                onClick={() => handleSelectAll(selectedIds.size === filteredItems.length)}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                {selectedIds.size === filteredItems.length && filteredItems.length > 0
+                  ? "Deseleccionar todo"
+                  : "Seleccionar todo"}
+              </button>
+              <span className="text-xs text-muted-foreground">
+                {selectedIds.size} de {filteredItems.length}
+              </span>
+            </div>
+            <div className="space-y-2">
+            {filteredItems.map((item) => (
+              <TransactionCard
+                key={item.id}
+                item={item}
+                isSelected={selectedIds.has(item.id)}
+                onToggleSelect={(checked) => handleSelectOne(item.id, checked)}
+                onTypeChange={(v) => handleTransactionTypeChange(item.id, v as TransactionType)}
+                onCategoryChange={(v) => handleCategoryChange(item.id, v)}
+                getCategoryName={getCategoryName}
+                formatCurrency={formatCurrency}
+                categoryOptions={categoryOptions}
+              />
+            ))}
+            </div>
+          </div>
+        ) : (
+        <div className="rounded-lg border border-border/50 overflow-x-auto no-scrollbar">
           <Table>
             <TableHeader>
               <TableRow>
@@ -543,6 +581,7 @@ export const StatementDetail = ({
             </TableBody>
           </Table>
         </div>
+        )}
 
         {/* Spacer to clear bottom nav */}
         <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden" />
@@ -550,3 +589,75 @@ export const StatementDetail = ({
     </div>
   );
 };
+
+interface TransactionCardProps {
+  item: CreditCardTransaction;
+  isSelected: boolean;
+  onToggleSelect: (checked: boolean) => void;
+  onTypeChange: (value: string) => void;
+  onCategoryChange: (value: string) => void;
+  getCategoryName: (id: string | null | undefined) => string;
+  formatCurrency: (amount: number, currency: string) => string;
+  categoryOptions: { id: string; name: string }[];
+}
+
+function TransactionCard({
+  item,
+  isSelected,
+  onToggleSelect,
+  onTypeChange,
+  onCategoryChange,
+  getCategoryName,
+  formatCurrency,
+  categoryOptions,
+}: TransactionCardProps) {
+  return (
+    <Card className="p-4 border-border/50">
+      <div className="flex gap-3">
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={onToggleSelect}
+          className="mt-0.5 shrink-0"
+        />
+        <div className="flex-1 min-w-0 space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <p className="font-medium text-sm leading-tight line-clamp-2">{item.description}</p>
+            <span className={`text-sm font-semibold shrink-0 ${item.amount < 0 ? "text-green-600 dark:text-green-500" : ""}`}>
+              {formatCurrency(item.amount, item.currency)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{item.date || "-"}</span>
+            {item.installment_current && item.installment_total && (
+              <span>({item.installment_current}/{item.installment_total})</span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+          <Select value={item.transaction_type} onValueChange={onTypeChange}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="consumo">consumo</SelectItem>
+              <SelectItem value="cuota">cuota</SelectItem>
+              <SelectItem value="impuesto">impuesto</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={item.category_id || ""} onValueChange={onCategoryChange}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Sin categoría">
+                {getCategoryName(item.category_id) || "Sin categoría"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {categoryOptions.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}

@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Clock, Target, Sparkles, Settings, LogOut, Tag } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { performLogout } from "@/lib/biometricAuth";
 
 interface MobileHeaderProps {
   userName: string;
@@ -19,7 +19,7 @@ export const MobileHeader = ({ userName }: MobileHeaderProps) => {
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await performLogout();
     navigate("/auth");
   };
 
