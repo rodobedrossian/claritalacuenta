@@ -44,7 +44,7 @@ export const VoiceDemo = () => {
   }, []);
 
   return (
-    <div className="relative bg-muted/30 rounded-xl p-4 min-h-[180px]">
+    <div className="relative bg-muted/30 rounded-xl p-4 h-[260px] flex flex-col">
       {/* Siri-style orb */}
       <div className="flex justify-center mb-4">
         <motion.div
@@ -84,8 +84,8 @@ export const VoiceDemo = () => {
         </motion.div>
       </div>
 
-      {/* Transcription area */}
-      <div className="text-center min-h-[40px] mb-3">
+      {/* Transcription area - fixed height */}
+      <div className="text-center h-[40px] mb-3 flex items-center justify-center">
         <AnimatePresence mode="wait">
           {isRecording && (
             <motion.p
@@ -106,31 +106,33 @@ export const VoiceDemo = () => {
         </AnimatePresence>
       </div>
 
-      {/* Result card */}
-      <AnimatePresence>
-        {showResult && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-card rounded-lg p-3 border border-border/50 shadow-sm"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🛒</span>
-                <div>
-                  <p className="text-xs text-muted-foreground">Supermercado</p>
-                  <p className="text-sm font-semibold text-foreground">Gasto registrado</p>
+      {/* Result card area - fixed height to prevent layout shift */}
+      <div className="h-[72px] mb-3">
+        <AnimatePresence>
+          {showResult && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-card rounded-lg p-3 border border-border/50 shadow-sm h-full"
+            >
+              <div className="flex items-center justify-between h-full">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🛒</span>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Supermercado</p>
+                    <p className="text-sm font-semibold text-foreground">Gasto registrado</p>
+                  </div>
                 </div>
+                <span className="text-sm font-bold text-destructive">-$40.000</span>
               </div>
-              <span className="text-sm font-bold text-destructive">-$40.000</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
-      {/* Status text */}
-      <p className="text-center text-xs text-muted-foreground mt-3">
+      {/* Status text - fixed at bottom */}
+      <p className="text-center text-xs text-muted-foreground mt-auto">
         {isRecording ? "Escuchando..." : showResult ? "✓ Listo" : "Iniciando..."}
       </p>
     </div>
