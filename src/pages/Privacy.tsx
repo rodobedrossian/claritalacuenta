@@ -1,7 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, PiggyBank } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logoImage from "@/assets/logo-clarita-transparent.png";
 
 const Privacy = () => {
   const navigate = useNavigate();
@@ -11,7 +10,9 @@ const Privacy = () => {
       <header className="border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/landing" className="flex items-center gap-2">
-            <img src={logoImage} alt="Clarita la cuenta" className="w-8 h-8 rounded-lg object-cover" />
+            <div className="p-1.5 rounded-xl gradient-primary">
+              <PiggyBank className="h-5 w-5 text-primary-foreground" />
+            </div>
             <span className="font-bold text-foreground">Clarita la cuenta</span>
           </Link>
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
