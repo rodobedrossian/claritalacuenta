@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -125,7 +124,6 @@ const SavingsPreview = () => (
 
 const Onboarding = () => {
   const [step, setStep] = useState(0);
-  const navigate = useNavigate();
 
   const steps = [
     {
@@ -166,7 +164,9 @@ const Onboarding = () => {
 
   const finishOnboarding = () => {
     localStorage.setItem(ONBOARDING_KEY, "true");
-    navigate("/auth");
+    // Full reload needed: App reads hasSeenOnboarding once at mount.
+    // navigate("/auth") would still match path="*" (Onboarding) and not advance.
+    window.location.replace("/auth");
   };
 
   return (

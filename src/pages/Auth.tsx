@@ -25,9 +25,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+} from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -386,25 +396,52 @@ const Auth = () => {
         </div>
       </div>
 
-      {/* Biometric setup modal - one-time after login */}
-      <AlertDialog open={biometricModalOpen} onOpenChange={setBiometricModalOpen}>
-        <AlertDialogContent className="max-w-sm mx-4 rounded-2xl dialog-safe-ios overflow-y-auto">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Desbloquear con Face ID</AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Querés desbloquear la app con Face ID o código del teléfono la próxima vez? Podés cambiarlo después en Configuración.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel onClick={handleBiometricNo} className="w-full sm:flex-1">
-              Ahora no
-            </AlertDialogCancel>
-            <Button onClick={handleBiometricYes} className="w-full sm:flex-1 gradient-primary">
-              Sí, configurar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Biometric setup - Drawer on mobile (iOS-native feel), AlertDialog on desktop */}
+      {isMobile ? (
+        <Drawer
+          open={biometricModalOpen}
+          onOpenChange={(open) => {
+            if (!open) handleBiometricNo();
+            setBiometricModalOpen(open);
+          }}
+        >
+          <DrawerContent className="px-6 pb-safe">
+            <DrawerHeader className="text-left px-0">
+              <DrawerTitle>Desbloquear con Face ID</DrawerTitle>
+              <DrawerDescription className="text-left">
+                ¿Querés desbloquear la app con Face ID o código del teléfono la próxima vez? Podés cambiarlo después en Configuración.
+              </DrawerDescription>
+            </DrawerHeader>
+            <DrawerFooter className="flex-col gap-2 px-0 pb-0">
+              <Button onClick={handleBiometricYes} className="w-full h-12 gradient-primary">
+                Sí, configurar
+              </Button>
+              <Button variant="outline" onClick={handleBiometricNo} className="w-full h-12">
+                Ahora no
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <AlertDialog open={biometricModalOpen} onOpenChange={setBiometricModalOpen}>
+          <AlertDialogContent className="max-w-sm mx-4 rounded-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Desbloquear con Face ID</AlertDialogTitle>
+              <AlertDialogDescription>
+                ¿Querés desbloquear la app con Face ID o código del teléfono la próxima vez? Podés cambiarlo después en Configuración.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+              <AlertDialogCancel onClick={handleBiometricNo} className="w-full sm:flex-1">
+                Ahora no
+              </AlertDialogCancel>
+              <Button onClick={handleBiometricYes} className="w-full sm:flex-1 gradient-primary">
+                Sí, configurar
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 };
