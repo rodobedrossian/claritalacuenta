@@ -186,7 +186,7 @@ const Auth = () => {
         <form onSubmit={handleSignIn} className="space-y-5">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-foreground mb-1">
-              Bienvenido nuevamente, {lastUser!.full_name || lastUser!.email.split("@")[0]}!
+              Hola, {lastUser!.full_name || lastUser!.email.split("@")[0]}!
             </h2>
             <p className="text-sm text-muted-foreground">
               Ingresá tu contraseña para continuar
@@ -342,7 +342,7 @@ const Auth = () => {
       </div>
 
       {/* Right Panel - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 bg-background">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 pb-[max(2rem,env(safe-area-inset-bottom,0px))] lg:pb-12 bg-background">
         <div className="w-full max-w-md">
           <div className="flex lg:hidden items-center justify-center gap-3 mb-8">
             <div className="p-2 rounded-xl gradient-primary shadow-stripe">
@@ -388,7 +388,7 @@ const Auth = () => {
 
       {/* Biometric setup modal - one-time after login */}
       <AlertDialog open={biometricModalOpen} onOpenChange={setBiometricModalOpen}>
-        <AlertDialogContent className="max-w-sm mx-4 rounded-2xl">
+        <AlertDialogContent className="max-w-sm mx-4 rounded-2xl dialog-safe-ios overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle>Desbloquear con Face ID</AlertDialogTitle>
             <AlertDialogDescription>

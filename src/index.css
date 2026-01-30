@@ -182,6 +182,14 @@
     padding-bottom: calc(84px + env(safe-area-inset-bottom, 0));
   }
 
+  /* Modal/Dialog safe area for iOS - avoids cutoff near home indicator */
+  .dialog-safe-ios {
+    max-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 2rem);
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+    margin-left: max(1rem, env(safe-area-inset-left, 0px));
+    margin-right: max(1rem, env(safe-area-inset-right, 0px));
+  }
+
   @keyframes fade-in {
     from {
       opacity: 0;
