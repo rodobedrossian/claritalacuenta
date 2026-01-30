@@ -7,6 +7,13 @@ import { Label } from "@/components/ui/label";
 import { PiggyBank, Loader2, Check, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
+const getWeakPasswordMessage = (error: { code?: string; weak_password?: { reasons?: string[] } }) => {
+  if (error.code === "weak_password" && error.weak_password?.reasons?.includes("pwned")) {
+    return "Esta contraseña fue expuesta en filtraciones de datos. Elegí una contraseña más segura y única.";
+  }
+  return "La contraseña es muy débil o fácil de adivinar. Usá al menos 8 caracteres, números y símbolos.";
+};
+
 const ResetPassword = () => {
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
@@ -16,6 +23,7 @@ const ResetPassword = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if user has a valid recovery session
@@ -50,6 +58,7 @@ const ResetPassword = () => {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPasswordError(null);
 
     if (password !== confirmPassword) {
       toast.error("Las contraseñas no coinciden");
@@ -67,7 +76,11 @@ const ResetPassword = () => {
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
-        if (error.message.includes("same as")) {
+        if (error.code === "weak_password") {
+          const msg = getWeakPasswordMessage(error);
+          setPasswordError(msg);
+          toast.error(msg);
+        } else if (error.message.includes("same as")) {
           toast.error("La nueva contraseña debe ser diferente a la anterior");
         } else {
           toast.error(error.message);
@@ -166,10 +179,15 @@ const ResetPassword = () => {
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (passwordError) setPasswordError(null);
+                }}
                 required
                 minLength={6}
-                className="h-12 bg-background border-border focus:border-primary focus:ring-primary/20 pr-12"
+                className={`h-12 bg-background border-border focus:border-primary focus:ring-primary/20 pr-12 ${
+                  passwordError ? "border-destructive focus:border-destructive" : ""
+                }`}
               />
               <button
                 type="button"
@@ -179,7 +197,12 @@ const ResetPassword = () => {
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
-            <p className="text-xs text-muted-foreground">Mínimo 6 caracteres</p>
+            {passwordError && (
+              <p className="text-sm text-destructive font-medium" role="alert">
+                {passwordError}
+              </p>
+            )}
+            {!passwordError && <p className="text-xs text-muted-foreground">Mínimo 6 caracteres. Evitá contraseñas comunes o usadas en otras cuentas.</p>}
           </div>
 
           <div className="space-y-2">

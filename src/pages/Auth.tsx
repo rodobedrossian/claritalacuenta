@@ -51,6 +51,7 @@ const Auth = () => {
   const [biometricModalOpen, setBiometricModalOpen] = useState(false);
   const [pendingSession, setPendingSession] = useState<Session | null>(null);
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const lastUser = getLastUser();
   const showReturningUser = !isSignUp && lastUser && !showFullForm;
@@ -167,8 +168,23 @@ const Auth = () => {
     navigate("/");
   };
 
+  const getAuthErrorMessage = (error: { code?: string; message?: string; weak_password?: { reasons?: string[] } }) => {
+    if (error.code === "weak_password") {
+      const reasons = error.weak_password?.reasons || [];
+      if (reasons.includes("pwned")) {
+        return "Esta contraseña fue expuesta en filtraciones de datos. Elegí una contraseña más segura y única.";
+      }
+      return "La contraseña es muy débil o fácil de adivinar. Usá al menos 8 caracteres, números y símbolos.";
+    }
+    if (error.message?.includes("already registered")) {
+      return "Este email ya está registrado. Iniciá sesión.";
+    }
+    return error.message || "Ocurrió un error. Intentá de nuevo.";
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPasswordError(null);
     setLoading(true);
     try {
       const redirectUrl = `${window.location.origin}/`;
@@ -181,11 +197,9 @@ const Auth = () => {
         },
       });
       if (error) {
-        if (error.message.includes("already registered")) {
-          toast.error("Este email ya está registrado. Iniciá sesión.");
-        } else {
-          toast.error(error.message);
-        }
+        const msg = getAuthErrorMessage(error);
+        setPasswordError(error.code === "weak_password" ? msg : null);
+        toast.error(msg);
         return;
       }
       if (data.session) {
@@ -357,12 +371,26 @@ const Auth = () => {
             type="password"
             placeholder="••••••••"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (passwordError) setPasswordError(null);
+            }}
             required
             minLength={6}
-            className="h-12 bg-background border-border focus:border-primary focus:ring-primary/20"
+            className={`h-12 bg-background border-border focus:border-primary focus:ring-primary/20 ${
+              passwordError ? "border-destructive focus:border-destructive" : ""
+            }`}
           />
-          {isSignUp && <p className="text-xs text-muted-foreground">Mínimo 6 caracteres</p>}
+          {passwordError && (
+            <p className="text-sm text-destructive font-medium" role="alert">
+              {passwordError}
+            </p>
+          )}
+          {isSignUp && !passwordError && (
+            <p className="text-xs text-muted-foreground">
+              Mínimo 6 caracteres. Evitá contraseñas comunes o usadas en otras cuentas.
+            </p>
+          )}
           {!isSignUp && (
             <button
               type="button"
@@ -472,6 +500,7 @@ const Auth = () => {
                     setEmail("");
                     setPassword("");
                     setFullName("");
+                    setPasswordError(null);
                   }}
                   className="text-primary font-medium hover:underline focus:outline-none focus:underline"
                 >
