@@ -75,7 +75,6 @@ export async function storeSession(session: Session): Promise<void> {
       expires_at: session.expires_at,
       expires_in: session.expires_in,
       token_type: session.token_type,
-      user: session.user,
     });
     await NativeBiometric.setCredentials({
       username: KEYCHAIN_USERNAME,

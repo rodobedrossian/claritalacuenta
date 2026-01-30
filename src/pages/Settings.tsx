@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { SettingsSkeleton } from "@/components/skeletons/DashboardSkeleton";
-import { toast } from "sonner";
 import { CreditCard, Repeat, Bell, Plus, Fingerprint } from "lucide-react";
 import {
   isBiometricSupported,
@@ -16,6 +15,7 @@ import {
   storeSession,
   clearStoredSession,
 } from "@/lib/biometricAuth";
+import { showIOSBanner } from "@/hooks/use-ios-banner";
 import { useCreditCardsData } from "@/hooks/useCreditCardsData";
 import { useRecurringExpensesData } from "@/hooks/useRecurringExpensesData";
 import { useCategoriesData } from "@/hooks/useCategoriesData";
@@ -111,22 +111,22 @@ export default function Settings() {
                         if (checked) {
                           const { data: { session } } = await supabase.auth.getSession();
                           if (!session) {
-                            toast.error("Tenés que estar conectado para activar Face ID.");
+                            showIOSBanner("Tenés que estar conectado para activar Face ID.", "error");
                             return;
                           }
                           await storeSession(session);
                           setBiometricEnabled(true);
                           setBiometricOn(true);
-                          toast.success("Face ID o código activado");
+                          showIOSBanner("Face ID o código activado", "success");
                         } else {
                           await clearStoredSession();
                           setBiometricEnabled(false);
                           setBiometricOn(false);
-                          toast.success("Face ID o código desactivado");
+                          showIOSBanner("Face ID o código desactivado", "success");
                         }
                       } catch (e) {
                         console.warn("[Settings] biometric toggle:", e);
-                        toast.error("No se pudo cambiar la configuración.");
+                        showIOSBanner("No se pudo activar. ¿Tenés Face ID o código configurado?", "error");
                       } finally {
                         setBiometricToggling(false);
                       }
