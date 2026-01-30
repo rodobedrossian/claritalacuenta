@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import logoClarita from "@/assets/logo-clarita.png";
 
 export const AppleNav = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -20,20 +21,23 @@ export const AppleNav = () => {
       transition={{ duration: 0.5 }}
       className={`fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-6 md:px-12 transition-all duration-300 ${
         scrolled 
-          ? "bg-white/80 backdrop-blur-xl border-b border-[#1D1D1F]/5" 
+          ? "bg-background/80 backdrop-blur-xl border-b border-border" 
           : "bg-transparent"
       }`}
     >
       <Link 
         to="/landing-apple" 
-        className="text-[#1D1D1F] text-xl font-semibold tracking-tight"
+        className="flex items-center gap-2"
       >
-        Clarita
+        <img src={logoClarita} alt="Clarita" className="h-7 w-7" />
+        <span className="text-foreground text-xl font-semibold tracking-tight">
+          Clarita
+        </span>
       </Link>
       
       <Link
         to="/auth"
-        className="text-sm font-medium text-[#0071E3] hover:text-[#0071E3]/80 transition-colors"
+        className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
       >
         Empezar
       </Link>
