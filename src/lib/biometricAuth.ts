@@ -4,6 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 const BIOMETRIC_ENABLED_KEY = "clarita_biometric_enabled";
+const BIOMETRIC_PROMPT_SHOWN_KEY = "clarita_biometric_prompt_shown";
 const KEYCHAIN_USERNAME = "session";
 
 function getServer(): string {
@@ -35,6 +36,23 @@ export function setBiometricEnabled(enabled: boolean): void {
     } else {
       localStorage.removeItem(BIOMETRIC_ENABLED_KEY);
     }
+  } catch {
+    // ignore
+  }
+}
+
+/** Whether we've already asked the user about Face ID (one-time prompt). */
+export function hasBiometricPromptBeenShown(): boolean {
+  try {
+    return localStorage.getItem(BIOMETRIC_PROMPT_SHOWN_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function setBiometricPromptShown(): void {
+  try {
+    localStorage.setItem(BIOMETRIC_PROMPT_SHOWN_KEY, "true");
   } catch {
     // ignore
   }

@@ -4,14 +4,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Wallet, TrendingUp, PiggyBank, BarChart3, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import type { Session } from "@supabase/supabase-js";
 import {
   isBiometricAvailable,
+  isBiometricSupported,
   storeSession,
   setBiometricEnabled,
+  hasBiometricPromptBeenShown,
+  setBiometricPromptShown,
 } from "@/lib/biometricAuth";
+import { getLastUser, setLastUser } from "@/lib/authStorage";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -20,12 +33,12 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  const [useBiometric, setUseBiometric] = useState(false);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [showFullForm, setShowFullForm] = useState(false);
+  const [biometricModalOpen, setBiometricModalOpen] = useState(false);
+  const [pendingSession, setPendingSession] = useState<Session | null>(null);
 
-  useEffect(() => {
-    isBiometricAvailable().then(setBiometricAvailable).catch(() => setBiometricAvailable(false));
-  }, []);
+  const lastUser = getLastUser();
+  const showReturningUser = !isSignUp && lastUser && !showFullForm;
 
   // Check if already logged in
   useEffect(() => {
@@ -36,18 +49,69 @@ const Auth = () => {
     });
   }, [navigate]);
 
+  const saveLastUserAndMaybeShowBiometric = (
+    userEmail: string,
+    userName: string,
+    session: Session
+  ) => {
+    setLastUser({ email: userEmail, full_name: userName });
+    const canShowBiometric =
+      isBiometricSupported() &&
+      !hasBiometricPromptBeenShown();
+
+    if (canShowBiometric) {
+      isBiometricAvailable().then((available) => {
+        if (available) {
+          setPendingSession(session);
+          setBiometricModalOpen(true);
+          return;
+        }
+        navigate("/");
+      }).catch(() => navigate("/"));
+    } else {
+      navigate("/");
+    }
+  };
+
+  const handleBiometricYes = async () => {
+    if (!pendingSession) {
+      setBiometricModalOpen(false);
+      navigate("/");
+      return;
+    }
+    try {
+      await storeSession(pendingSession);
+      setBiometricEnabled(true);
+      setBiometricPromptShown();
+      setPendingSession(null);
+      setBiometricModalOpen(false);
+      navigate("/");
+    } catch (err) {
+      console.warn("[Auth] storeSession:", err);
+      setBiometricPromptShown();
+      setPendingSession(null);
+      setBiometricModalOpen(false);
+      navigate("/");
+    }
+  };
+
+  const handleBiometricNo = () => {
+    setBiometricPromptShown();
+    setPendingSession(null);
+    setBiometricModalOpen(false);
+    navigate("/");
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       const redirectUrl = `${window.location.origin}/`;
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: {
-            full_name: fullName,
-          },
+          data: { full_name: fullName },
           emailRedirectTo: redirectUrl,
         },
       });
@@ -59,8 +123,16 @@ const Auth = () => {
         }
         return;
       }
-      toast.success("¡Cuenta creada! Redirigiendo...");
-      navigate("/");
+      if (data.session) {
+        saveLastUserAndMaybeShowBiometric(
+          email,
+          fullName || email.split("@")[0],
+          data.session
+        );
+      } else {
+        toast.success("¡Cuenta creada! Revisá tu email para confirmar.");
+        navigate("/");
+      }
     } catch (error: any) {
       toast.error(error.message);
     } finally {
@@ -70,10 +142,11 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    const signInEmail = showReturningUser ? lastUser!.email : email;
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: signInEmail,
         password,
       });
       if (error) {
@@ -84,17 +157,16 @@ const Auth = () => {
         }
         return;
       }
-      if (useBiometric && data.session) {
-        try {
-          await storeSession(data.session);
-          setBiometricEnabled(true);
-        } catch (err) {
-          console.warn("[Auth] storeSession:", err);
-          toast.error("No se pudo activar Face ID. Podés hacerlo después en Configuración.");
-        }
-      }
-      toast.success("¡Bienvenido!");
-      navigate("/");
+      if (!data.session) return;
+      const userName =
+        data.user.user_metadata?.full_name ||
+        data.user.email?.split("@")[0] ||
+        "Usuario";
+      saveLastUserAndMaybeShowBiometric(
+        data.user.email!,
+        userName,
+        data.session
+      );
     } catch (error: any) {
       toast.error(error.message);
     } finally {
@@ -108,17 +180,128 @@ const Auth = () => {
     { icon: BarChart3, text: "Visualizá tendencias y presupuestos" },
   ];
 
+  const renderForm = () => {
+    if (showReturningUser) {
+      return (
+        <form onSubmit={handleSignIn} className="space-y-5">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-foreground mb-1">
+              Bienvenido nuevamente, {lastUser!.full_name || lastUser!.email.split("@")[0]}!
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Ingresá tu contraseña para continuar
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Contraseña</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="h-12 bg-background border-border focus:border-primary focus:ring-primary/20"
+            />
+          </div>
+          <Button
+            type="submit"
+            className="w-full h-12 gradient-primary hover:opacity-90 text-base font-medium"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Iniciando sesión...
+              </>
+            ) : (
+              "Iniciar sesión"
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full text-muted-foreground"
+            onClick={() => {
+              setShowFullForm(true);
+              setPassword("");
+            }}
+          >
+            Iniciar con otra cuenta
+          </Button>
+        </form>
+      );
+    }
+
+    return (
+      <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-5">
+        {isSignUp && (
+          <div className="space-y-2">
+            <Label htmlFor="fullName">Nombre completo</Label>
+            <Input
+              id="fullName"
+              type="text"
+              placeholder="Juan Pérez"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              className="h-12 bg-background border-border focus:border-primary focus:ring-primary/20"
+            />
+          </div>
+        )}
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="tu@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="h-12 bg-background border-border focus:border-primary focus:ring-primary/20"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Contraseña</Label>
+          <Input
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+            className="h-12 bg-background border-border focus:border-primary focus:ring-primary/20"
+          />
+          {isSignUp && <p className="text-xs text-muted-foreground">Mínimo 6 caracteres</p>}
+        </div>
+        <Button
+          type="submit"
+          className="w-full h-12 gradient-primary hover:opacity-90 text-base font-medium"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {isSignUp ? "Creando cuenta..." : "Iniciando sesión..."}
+            </>
+          ) : isSignUp ? (
+            "Crear cuenta"
+          ) : (
+            "Iniciar sesión"
+          )}
+        </Button>
+      </form>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Left Panel - Branding with Stripe-style gradient */}
+      {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        {/* Stripe-style Gradient Background */}
         <div className="absolute inset-0 stripe-gradient-bg" />
-        
-        {/* Gradient overlay for depth */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-primary-glow/20" />
-
-        {/* Pattern Overlay */}
         <div className="absolute inset-0 opacity-30">
           <div
             className="absolute inset-0"
@@ -127,25 +310,18 @@ const Auth = () => {
             }}
           />
         </div>
-
-        {/* Content */}
         <div className="relative z-10 flex flex-col justify-center p-12 text-foreground">
-          {/* Logo */}
           <div className="flex items-center gap-3 mb-12">
             <div className="p-3 rounded-2xl gradient-primary shadow-stripe-lg">
               <Wallet className="h-10 w-10 text-primary-foreground" />
             </div>
             <h1 className="text-4xl font-bold">Clarita la cuenta</h1>
           </div>
-
-          {/* Tagline */}
           <h2 className="text-2xl font-medium mb-8 leading-relaxed text-foreground/80">
             Tomá el control de tus finanzas
             <br />
             personales de forma simple
           </h2>
-
-          {/* Features */}
           <div className="space-y-4">
             {features.map((feature, index) => (
               <div key={index} className="flex items-center gap-4 p-4 rounded-xl bg-card/80 backdrop-blur-sm shadow-stripe border border-border">
@@ -156,8 +332,6 @@ const Auth = () => {
               </div>
             ))}
           </div>
-
-          {/* Bottom decoration */}
           <div className="absolute bottom-8 left-12 right-12">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Check className="h-4 w-4 text-success" />
@@ -170,7 +344,6 @@ const Auth = () => {
       {/* Right Panel - Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 bg-background">
         <div className="w-full max-w-md">
-          {/* Mobile Logo */}
           <div className="flex lg:hidden items-center justify-center gap-3 mb-8">
             <div className="p-2 rounded-xl gradient-primary shadow-stripe">
               <Wallet className="h-8 w-8 text-primary-foreground" />
@@ -178,119 +351,60 @@ const Auth = () => {
             <h1 className="text-2xl font-bold text-foreground">Clarita la cuenta</h1>
           </div>
 
-          {/* Form Header */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-foreground mb-2">{isSignUp ? "Crear cuenta" : "Iniciar sesión"}</h2>
-            <p className="text-muted-foreground">
-              {isSignUp ? "Completá tus datos para empezar" : "Ingresá tus credenciales para continuar"}
-            </p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-5">
-            {isSignUp && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName" className="text-sm font-medium text-foreground">
-                  Nombre completo
-                </Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="Juan Pérez"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  className="h-12 bg-background border-border focus:border-primary focus:ring-primary/20 transition-all"
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium text-foreground">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="tu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="h-12 bg-background border-border focus:border-primary focus:ring-primary/20 transition-all"
-              />
+          {!showReturningUser && (
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-foreground mb-2">
+                {isSignUp ? "Crear cuenta" : "Iniciar sesión"}
+              </h2>
+              <p className="text-muted-foreground">
+                {isSignUp ? "Completá tus datos para empezar" : "Ingresá tus credenciales para continuar"}
+              </p>
             </div>
+          )}
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-foreground">
-                Contraseña
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                className="h-12 bg-background border-border focus:border-primary focus:ring-primary/20 transition-all"
-              />
-              {isSignUp && <p className="text-xs text-muted-foreground">Mínimo 6 caracteres</p>}
-            </div>
+          {renderForm()}
 
-            {!isSignUp && biometricAvailable && (
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="useBiometric"
-                  checked={useBiometric}
-                  onCheckedChange={(v) => setUseBiometric(v === true)}
-                />
-                <Label
-                  htmlFor="useBiometric"
-                  className="text-sm text-muted-foreground font-normal cursor-pointer"
+          {!showReturningUser && (
+            <div className="mt-8 text-center">
+              <p className="text-muted-foreground">
+                {isSignUp ? "¿Ya tenés cuenta?" : "¿No tenés cuenta?"}{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setEmail("");
+                    setPassword("");
+                    setFullName("");
+                  }}
+                  className="text-primary font-medium hover:underline focus:outline-none focus:underline"
                 >
-                  Desbloquear con Face ID o código del teléfono la próxima vez
-                </Label>
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full h-12 gradient-primary hover:opacity-90 text-base font-medium transition-opacity shadow-stripe"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isSignUp ? "Creando cuenta..." : "Iniciando sesión..."}
-                </>
-              ) : isSignUp ? (
-                "Crear cuenta"
-              ) : (
-                "Iniciar sesión"
-              )}
-            </Button>
-          </form>
-
-          {/* Toggle */}
-          <div className="mt-8 text-center">
-            <p className="text-muted-foreground">
-              {isSignUp ? "¿Ya tenés cuenta?" : "¿No tenés cuenta?"}{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setEmail("");
-                  setPassword("");
-                  setFullName("");
-                }}
-                className="text-primary font-medium hover:underline focus:outline-none focus:underline"
-              >
-                {isSignUp ? "Iniciá sesión" : "Registrate"}
-              </button>
-            </p>
-          </div>
+                  {isSignUp ? "Iniciá sesión" : "Registrate"}
+                </button>
+              </p>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Biometric setup modal - one-time after login */}
+      <AlertDialog open={biometricModalOpen} onOpenChange={setBiometricModalOpen}>
+        <AlertDialogContent className="max-w-sm mx-4 rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desbloquear con Face ID</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Querés desbloquear la app con Face ID o código del teléfono la próxima vez? Podés cambiarlo después en Configuración.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={handleBiometricNo} className="w-full sm:flex-1">
+              Ahora no
+            </AlertDialogCancel>
+            <Button onClick={handleBiometricYes} className="w-full sm:flex-1 gradient-primary">
+              Sí, configurar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
