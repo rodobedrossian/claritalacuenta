@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import logoClarita from "@/assets/logo-clarita.png";
+import appStoreBadge from "@/assets/app-store-badge.svg";
 
 export const AppleFooter = () => {
   return (
@@ -28,16 +29,33 @@ export const AppleFooter = () => {
             Tomá el control de tu plata. Sin complicaciones.
           </p>
           
-          <Link
-            to="/auth"
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-full gradient-primary text-primary-foreground font-semibold text-lg shadow-stripe-lg hover:shadow-stripe-lg hover:scale-[1.02] transition-all"
-          >
-            Crear cuenta
-            <ArrowRight className="w-5 h-5" />
-          </Link>
+          {/* Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              to="/auth"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-full gradient-primary text-primary-foreground font-semibold text-lg shadow-stripe-lg hover:shadow-stripe-lg hover:scale-[1.02] transition-all"
+            >
+              Crear cuenta web
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+            
+            {/* App Store Badge */}
+            <a
+              href="#"
+              onClick={(e) => e.preventDefault()}
+              className="transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              aria-label="Descargar en App Store"
+            >
+              <img 
+                src={appStoreBadge} 
+                alt="Descargar en el App Store" 
+                className="h-[52px]"
+              />
+            </a>
+          </div>
           
           <p className="text-sm text-muted-foreground">
-            Disponible para iPhone y web.
+            Próximamente en App Store
           </p>
         </motion.div>
         
