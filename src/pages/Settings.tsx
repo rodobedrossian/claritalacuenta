@@ -5,9 +5,17 @@ import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { SettingsSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { toast } from "sonner";
-import { CreditCard, Repeat, Bell, Plus } from "lucide-react";
+import { CreditCard, Repeat, Bell, Plus, Fingerprint } from "lucide-react";
+import {
+  isBiometricSupported,
+  isBiometricEnabled,
+  setBiometricEnabled,
+  storeSession,
+  clearStoredSession,
+} from "@/lib/biometricAuth";
 import { useCreditCardsData } from "@/hooks/useCreditCardsData";
 import { useRecurringExpensesData } from "@/hooks/useRecurringExpensesData";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -21,6 +29,13 @@ export default function Settings() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [biometricOn, setBiometricOn] = useState(false);
+  const [biometricToggling, setBiometricToggling] = useState(false);
+  const showBiometric = isBiometricSupported();
+
+  useEffect(() => {
+    if (showBiometric) setBiometricOn(isBiometricEnabled());
+  }, [showBiometric]);
   
   // Credit cards hook
   const { creditCards, addCreditCard, deleteCreditCard } = useCreditCardsData(userId);
@@ -67,6 +82,56 @@ export default function Settings() {
         </header>
         
         <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
+          {showBiometric && (
+            <Card className="mb-6 gradient-card border-border/50">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Fingerprint className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Desbloquear con Face ID o código</CardTitle>
+                      <CardDescription>
+                        La próxima vez que abras la app, usá Face ID o el código del teléfono en lugar de la contraseña.
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={biometricOn}
+                    disabled={biometricToggling}
+                    onCheckedChange={async (checked) => {
+                      setBiometricToggling(true);
+                      try {
+                        if (checked) {
+                          const { data: { session } } = await supabase.auth.getSession();
+                          if (!session) {
+                            toast.error("Tenés que estar conectado para activar Face ID.");
+                            return;
+                          }
+                          await storeSession(session);
+                          setBiometricEnabled(true);
+                          setBiometricOn(true);
+                          toast.success("Face ID o código activado");
+                        } else {
+                          await clearStoredSession();
+                          setBiometricEnabled(false);
+                          setBiometricOn(false);
+                          toast.success("Face ID o código desactivado");
+                        }
+                      } catch (e) {
+                        console.warn("[Settings] biometric toggle:", e);
+                        toast.error("No se pudo cambiar la configuración.");
+                      } finally {
+                        setBiometricToggling(false);
+                      }
+                    }}
+                  />
+                </div>
+              </CardHeader>
+            </Card>
+          )}
+
           <Tabs defaultValue="cards" className="space-y-6">
             <TabsList className="grid w-full max-w-md grid-cols-3">
               <TabsTrigger value="cards" className="gap-2">
@@ -135,7 +200,10 @@ export default function Settings() {
                   </div>
                   <RecurringExpensesList 
                     expenses={recurringExpenses} 
+                    categories={categories}
                     onDelete={deleteRecurringExpense}
+                    onUpdate={updateRecurringExpense}
+                    onGenerate={generateTransaction}
                   />
                 </CardContent>
               </Card>

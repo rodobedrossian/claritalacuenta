@@ -20,7 +20,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { performLogout } from "@/lib/biometricAuth";
 
 interface BottomNavigationProps {
   onAddClick: () => void;
@@ -51,7 +51,7 @@ export const BottomNavigation = ({ onAddClick }: BottomNavigationProps) => {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await performLogout();
     navigate("/auth");
   };
 

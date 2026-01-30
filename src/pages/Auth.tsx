@@ -4,8 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Wallet, TrendingUp, PiggyBank, BarChart3, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  isBiometricAvailable,
+  storeSession,
+  setBiometricEnabled,
+} from "@/lib/biometricAuth";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -14,6 +20,12 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [useBiometric, setUseBiometric] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+
+  useEffect(() => {
+    isBiometricAvailable().then(setBiometricAvailable);
+  }, []);
 
   // Check if already logged in
   useEffect(() => {
@@ -60,7 +72,7 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -71,6 +83,15 @@ const Auth = () => {
           toast.error(error.message);
         }
         return;
+      }
+      if (useBiometric && data.session) {
+        try {
+          await storeSession(data.session);
+          setBiometricEnabled(true);
+        } catch (err) {
+          console.warn("[Auth] storeSession:", err);
+          toast.error("No se pudo activar Face ID. Podés hacerlo después en Configuración.");
+        }
       }
       toast.success("¡Bienvenido!");
       navigate("/");
@@ -215,6 +236,22 @@ const Auth = () => {
               />
               {isSignUp && <p className="text-xs text-muted-foreground">Mínimo 6 caracteres</p>}
             </div>
+
+            {!isSignUp && biometricAvailable && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="useBiometric"
+                  checked={useBiometric}
+                  onCheckedChange={(v) => setUseBiometric(v === true)}
+                />
+                <Label
+                  htmlFor="useBiometric"
+                  className="text-sm text-muted-foreground font-normal cursor-pointer"
+                >
+                  Desbloquear con Face ID o código del teléfono la próxima vez
+                </Label>
+              </div>
+            )}
 
             <Button
               type="submit"

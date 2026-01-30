@@ -16,7 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { performLogout } from "@/lib/biometricAuth";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -52,7 +52,7 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
   }, [location.pathname, isMobile]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await performLogout();
     navigate("/auth");
   };
 

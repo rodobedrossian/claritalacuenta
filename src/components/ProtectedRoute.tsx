@@ -1,8 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Loader2 } from "lucide-react";
+import {
+  isBiometricSupported,
+  isBiometricEnabled,
+  hasStoredCredentials,
+} from "@/lib/biometricAuth";
+import { BiometricGate } from "@/components/BiometricGate";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,29 +17,48 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [useBiometricGate, setUseBiometricGate] = useState(false);
   const navigate = useNavigate();
+  const unsubRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-      if (!session) {
+    let mounted = true;
+
+    (async () => {
+      const supported = isBiometricSupported();
+      const enabled = isBiometricEnabled();
+      const stored = supported && enabled ? await hasStoredCredentials() : false;
+
+      if (!mounted) return;
+      if (supported && enabled && stored) {
+        setUseBiometricGate(true);
+        setLoading(false);
+        return;
+      }
+
+      const { data: { session: s } } = await supabase.auth.getSession();
+      if (!mounted) return;
+      setSession(s);
+      if (!s) {
         navigate("/auth", { replace: true });
+        setLoading(false);
+        return;
       }
-    });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        if (!session) {
-          navigate("/auth", { replace: true });
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (_event, s) => {
+          setSession(s);
+          if (!s) navigate("/auth", { replace: true });
         }
-      }
-    );
+      );
+      unsubRef.current = () => subscription.unsubscribe();
+      setLoading(false);
+    })();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      unsubRef.current?.();
+      unsubRef.current = null;
+    };
   }, [navigate]);
 
   if (loading) {
@@ -47,9 +72,11 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  if (!session) {
-    return null;
+  if (useBiometricGate) {
+    return <BiometricGate>{children}</BiometricGate>;
   }
+
+  if (!session) return null;
 
   return <>{children}</>;
 };
