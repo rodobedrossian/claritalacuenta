@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 const BIOMETRIC_ENABLED_KEY = "clarita_biometric_enabled";
 const BIOMETRIC_PROMPT_SHOWN_KEY = "clarita_biometric_prompt_shown";
+/** Session-scoped: cleared on logout so Face ID is required again. */
+export const BIOMETRIC_SESSION_UNLOCKED_KEY = "clarita_biometric_session_unlocked";
 const KEYCHAIN_USERNAME = "session";
 
 function getServer(): string {
@@ -153,5 +155,10 @@ export async function clearStoredSession(): Promise<void> {
 /** Sign out and clear any stored biometric credentials. Use for logout. */
 export async function performLogout(): Promise<void> {
   await clearStoredSession();
+  try {
+    sessionStorage.removeItem(BIOMETRIC_SESSION_UNLOCKED_KEY);
+  } catch {
+    /* ignore */
+  }
   await supabase.auth.signOut();
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import {
   getStoredSession,
   isBiometricSupported,
   isBiometricEnabled,
+  BIOMETRIC_SESSION_UNLOCKED_KEY,
 } from "@/lib/biometricAuth";
 import { Fingerprint, Loader2 } from "lucide-react";
 
@@ -15,15 +16,24 @@ interface BiometricGateProps {
 }
 
 /**
- * When biometric unlock is enabled (iOS), requires Face ID / passcode before
- * showing protected content. Otherwise renders children immediately.
+ * When biometric unlock is enabled (iOS), requires Face ID / passcode once per
+ * app session. Once unlocked, stays unlocked until the app is closed or logout.
  */
 export function BiometricGate({ children }: BiometricGateProps) {
   const navigate = useNavigate();
-  const [status, setStatus] = useState<"checking" | "gate" | "unlocked">("checking");
+  const [status, setStatus] = useState<"checking" | "gate" | "unlocked">(() =>
+    typeof sessionStorage !== "undefined" && sessionStorage.getItem(BIOMETRIC_SESSION_UNLOCKED_KEY) === "1"
+      ? "unlocked"
+      : "checking"
+  );
   const [loading, setLoading] = useState(false);
+  const hasCheckedRef = useRef(false);
 
   useEffect(() => {
+    if (status === "unlocked") return;
+    if (hasCheckedRef.current) return;
+    hasCheckedRef.current = true;
+
     let mounted = true;
 
     const run = async () => {
@@ -33,8 +43,6 @@ export function BiometricGate({ children }: BiometricGateProps) {
       }
       const stored = await hasStoredCredentials();
       if (!mounted) return;
-      // Sin credenciales en Keychain → redirigir a auth. La sesión se guarda en
-      // Auth al hacer login si Face ID está habilitado.
       if (!stored) {
         navigate("/auth", { replace: true });
         return;
@@ -46,9 +54,8 @@ export function BiometricGate({ children }: BiometricGateProps) {
     return () => {
       mounted = false;
     };
-  }, [navigate]);
+  }, [status, navigate]);
 
-  // Auto-prompt Face ID / passcode when gate is shown
   useEffect(() => {
     if (status !== "gate") return;
     let mounted = true;
@@ -65,12 +72,19 @@ export function BiometricGate({ children }: BiometricGateProps) {
           access_token: session.access_token,
           refresh_token: session.refresh_token,
         });
+        try {
+          sessionStorage.setItem(BIOMETRIC_SESSION_UNLOCKED_KEY, "1");
+        } catch {
+          /* ignore */
+        }
         if (mounted) setStatus("unlocked");
       } catch {
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [status]);
 
   const handleUnlock = async () => {
@@ -85,6 +99,11 @@ export function BiometricGate({ children }: BiometricGateProps) {
         access_token: session.access_token,
         refresh_token: session.refresh_token,
       });
+      try {
+        sessionStorage.setItem(BIOMETRIC_SESSION_UNLOCKED_KEY, "1");
+      } catch {
+        /* ignore */
+      }
       setStatus("unlocked");
     } catch {
       navigate("/auth", { replace: true });
