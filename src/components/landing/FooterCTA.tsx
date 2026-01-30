@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logoImage from "@/assets/logo-clarita.png";
+import logoImage from "@/assets/logo-clarita-transparent.png";
 const features = [{
   icon: Shield,
   text: "Datos encriptados"

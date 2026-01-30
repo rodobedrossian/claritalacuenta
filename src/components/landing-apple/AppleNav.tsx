@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import logoClarita from "@/assets/logo-clarita.png";
+import logoClarita from "@/assets/logo-clarita-transparent.png";
 
 export const AppleNav = () => {
   const [scrolled, setScrolled] = useState(false);
