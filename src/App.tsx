@@ -9,7 +9,7 @@ import { Capacitor } from "@capacitor/core";
 import { IOSSystemBanner } from "@/components/ui/ios-system-banner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOfflineDetection } from "@/hooks/use-offline-detection";
-import ProtectedRoute from "@/components/ProtectedRoute";
+import ProtectedLayout from "@/components/ProtectedLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Landing from "./pages/Landing";
@@ -76,15 +76,17 @@ const App = () => {
                 <Route path="/landing" element={<Landing />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/auth" element={<Auth />} />
-                <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-                <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                <Route path="/savings" element={<ProtectedRoute><Savings /></ProtectedRoute>} />
-                <Route path="/budgets" element={<ProtectedRoute><Budgets /></ProtectedRoute>} />
-                <Route path="/credit-cards" element={<ProtectedRoute><CreditCards /></ProtectedRoute>} />
-                <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
-                <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
-                <Route path="/recurrentes" element={<ProtectedRoute><Recurrentes /></ProtectedRoute>} />
+                <Route element={<ProtectedLayout />}>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/transactions" element={<Transactions />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/savings" element={<Savings />} />
+                  <Route path="/budgets" element={<Budgets />} />
+                  <Route path="/credit-cards" element={<CreditCards />} />
+                  <Route path="/insights" element={<Insights />} />
+                  <Route path="/categories" element={<Categories />} />
+                  <Route path="/recurrentes" element={<Recurrentes />} />
+                </Route>
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </>
