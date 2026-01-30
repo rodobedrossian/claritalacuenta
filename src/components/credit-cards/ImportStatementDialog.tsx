@@ -347,9 +347,9 @@ export function ImportStatementDialog({
       )}
 
       {step === "preview" && (
-        <div className="flex-1 flex flex-col min-h-0 py-4">
+        <div className="flex-1 flex flex-col min-h-0 py-4 overflow-hidden">
           {/* Summary - responsive stack */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 p-4 bg-muted/50 rounded-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 p-4 bg-muted/50 rounded-xl shrink-0">
             <div className="flex items-center gap-2">
               <Checkbox
                 checked={selectedCount === extractedItems.length}
@@ -374,11 +374,11 @@ export function ImportStatementDialog({
           </div>
 
           {/* Tip */}
-          <div className="mb-4 p-3 bg-primary/5 border border-primary/10 rounded-xl text-sm text-foreground">
+          <div className="mb-4 p-3 bg-primary/5 border border-primary/10 rounded-xl text-sm text-foreground shrink-0">
             <span className="font-medium">Las categorías se asignarán automáticamente</span> después de importar, basándose en tu historial.
           </div>
 
-          {/* Items list - native scroll, no visible scrollbar */}
+          {/* Items list - only this scrolls; buttons stay fixed below */}
           <div
             className="flex-1 min-h-[180px] overflow-y-auto overflow-x-hidden no-scrollbar -mx-1 px-1 -webkit-overflow-scrolling-touch"
           >
@@ -393,7 +393,7 @@ export function ImportStatementDialog({
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Actions - always visible at bottom */}
           <div className="flex gap-3 mt-4 pt-4 border-t shrink-0">
             <Button variant="outline" onClick={() => setStep("upload")} className="flex-1">
               Volver
@@ -429,6 +429,7 @@ export function ImportStatementDialog({
   );
 
   if (isMobile) {
+    const isPreviewStep = step === "preview";
     return (
       <Drawer open={open} onOpenChange={handleClose}>
         <DrawerContent className="max-h-[92vh] flex flex-col pb-safe">
@@ -441,7 +442,11 @@ export function ImportStatementDialog({
                 </Button>
               </DrawerClose>
             </DrawerHeader>
-            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+            <div
+              className={`flex-1 min-h-0 flex flex-col ${
+                isPreviewStep ? "overflow-hidden" : "overflow-y-auto no-scrollbar"
+              }`}
+            >
               {Content}
             </div>
           </div>
@@ -452,11 +457,13 @@ export function ImportStatementDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex flex-col text-left">{Header}</DialogTitle>
         </DialogHeader>
-        {Content}
+        <div className={step === "preview" ? "flex-1 min-h-0 flex flex-col overflow-hidden" : "overflow-y-auto"}>
+          {Content}
+        </div>
       </DialogContent>
     </Dialog>
   );
