@@ -41,13 +41,8 @@ export default function Settings() {
   // Credit cards hook
   const { creditCards, addCreditCard, deleteCreditCard } = useCreditCardsData(userId);
   
-<<<<<<< HEAD
-  // Categories hook
-  const { categories } = useCategoriesData();
-=======
   // Categories hook (recurring expenses)
   const { categories, loading: categoriesLoading } = useCategoriesData(userId);
->>>>>>> develop
   
   // Recurring expenses hook
   const { 
@@ -55,7 +50,6 @@ export default function Settings() {
     addRecurringExpense, 
     updateRecurringExpense,
     deleteRecurringExpense, 
-    updateRecurringExpense,
     generateTransaction 
   } = useRecurringExpensesData(userId);
   
