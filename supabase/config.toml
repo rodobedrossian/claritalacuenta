@@ -34,6 +34,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.delete-user]
+verify_jwt = false
 
 [functions.monthly-recurring-reminder]
 verify_jwt = false
@@ -59,5 +60,5 @@ verify_jwt = false
 [functions.elevenlabs-scribe-token]
 verify_jwt = false
 
-[functions.delete-user]
+[functions.get-admin-users]
 verify_jwt = false
