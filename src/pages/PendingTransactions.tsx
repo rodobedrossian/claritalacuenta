@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { PendingTransactionsContentSkeleton } from "@/components/skeletons/DashboardSkeleton";
+import { TransactionsListSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -171,7 +171,7 @@ const PendingTransactions = () => {
 
         <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
           {isLoading ? (
-            <PendingTransactionsContentSkeleton />
+            <TransactionsListSkeleton count={3} />
           ) : transactions.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
