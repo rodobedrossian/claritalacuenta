@@ -9,6 +9,7 @@ import {
   Lightbulb,
   ChevronDown
 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,6 +53,7 @@ const priorityFilters = [
 ];
 
 export function InsightsPanel({ insights, loading, metadata, onRefresh }: InsightsPanelProps) {
+  const isMobile = useIsMobile();
   const [typeFilter, setTypeFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
 
@@ -94,44 +96,68 @@ export function InsightsPanel({ insights, loading, metadata, onRefresh }: Insigh
   }
 
   const currentPriorityLabel = priorityFilters.find(f => f.value === priorityFilter)?.label;
+  const totalTransactions = metadata ? metadata.totalTransactions + (metadata.totalStatementTransactions || 0) : 0;
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Header - Minimal iOS Style */}
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col">
+    <div className={cn("space-y-6 pb-12", !isMobile && "space-y-8")}>
+      {/* Header - Desktop: hero-style / Mobile: minimal */}
+      <div className={cn(
+        "flex items-center justify-between",
+        !isMobile && "flex-row gap-6"
+      )}>
+        <div className={cn(
+          "flex flex-col",
+          !isMobile && "gap-1"
+        )}>
           {metadata && (
-            <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">
-              {metadata.analyzedMonths} meses • {metadata.totalTransactions + (metadata.totalStatementTransactions || 0)} transacciones
+            <span className={cn(
+              "font-medium text-muted-foreground uppercase tracking-wider",
+              isMobile ? "text-[10px]" : "text-xs"
+            )}>
+              {metadata.analyzedMonths} meses • {totalTransactions} transacciones analizadas
             </span>
           )}
         </div>
         <Button 
           onClick={onRefresh} 
           disabled={loading} 
-          variant="ghost" 
-          size="icon"
-          className="h-9 w-9 rounded-full bg-muted/30 hover:bg-muted/50"
+          variant={isMobile ? "ghost" : "outline"}
+          size={isMobile ? "icon" : "sm"}
+          className={cn(
+            isMobile ? "h-9 w-9 rounded-full bg-muted/30 hover:bg-muted/50" : "gap-2"
+          )}
         >
           <RefreshCw className={cn("h-4 w-4 text-muted-foreground", loading && "animate-spin")} />
+          {!isMobile && "Actualizar"}
         </Button>
       </div>
 
-      {/* Filters Row - Compact */}
-      <div className="flex flex-col gap-4">
-        {/* Type Filter - Segmented Control Style */}
-        <div className="w-full overflow-x-auto no-scrollbar -mx-4 px-4">
+      {/* Filters Row - Desktop: single bar / Mobile: stacked */}
+      <div className={cn(
+        "flex gap-4",
+        isMobile ? "flex-col" : "flex-row items-center justify-between"
+      )}>
+        <div className={cn(
+          "w-full overflow-x-auto no-scrollbar",
+          isMobile ? "-mx-4 px-4" : "flex-1"
+        )}>
           <Tabs value={typeFilter} onValueChange={setTypeFilter} className="w-full">
-            <TabsList className="bg-muted/40 p-1 h-10 w-full justify-start sm:justify-center">
+            <TabsList className={cn(
+              "bg-muted/40 p-1 h-10",
+              isMobile ? "w-full justify-start sm:justify-center" : "inline-flex"
+            )}>
               {typeFilters.map((filter) => (
                 <TabsTrigger 
                   key={filter.value} 
                   value={filter.value}
-                  className="px-4 py-1.5 text-xs font-medium rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+                  className={cn(
+                    "px-4 py-1.5 font-medium rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all",
+                    isMobile ? "text-xs" : "text-sm"
+                  )}
                 >
                   {filter.label}
                   {countByType[filter.value] > 0 && (
-                    <span className="ml-1.5 opacity-40 font-bold">{countByType[filter.value]}</span>
+                    <span className="ml-1.5 opacity-60 font-bold">{countByType[filter.value]}</span>
                   )}
                 </TabsTrigger>
               ))}
@@ -139,32 +165,36 @@ export function InsightsPanel({ insights, loading, metadata, onRefresh }: Insigh
           </Tabs>
         </div>
 
-        {/* Priority Filter - Minimal Dropdown */}
-        <div className="flex items-center justify-between">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 px-2 text-xs font-medium text-muted-foreground hover:text-foreground gap-1">
-                <Filter className="h-3 w-3" />
-                {currentPriorityLabel}
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              {priorityFilters.map((filter) => (
-                <DropdownMenuItem 
-                  key={filter.value} 
-                  onClick={() => setPriorityFilter(filter.value)}
-                  className={cn("text-xs", priorityFilter === filter.value && "bg-muted font-medium")}
-                >
-                  {filter.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={cn(
+                "font-medium text-muted-foreground hover:text-foreground gap-1",
+                isMobile ? "h-8 px-2 text-xs justify-start" : "shrink-0"
+              )}
+            >
+              <Filter className="h-3 w-3" />
+              {currentPriorityLabel}
+              <ChevronDown className="h-3 w-3 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align={isMobile ? "start" : "end"} className="w-48">
+            {priorityFilters.map((filter) => (
+              <DropdownMenuItem 
+                key={filter.value} 
+                onClick={() => setPriorityFilter(filter.value)}
+                className={cn("text-xs", priorityFilter === filter.value && "bg-muted font-medium")}
+              >
+                {filter.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Insights list */}
+      {/* Insights grid - Desktop: 2-3 columns / Mobile: single column */}
       {filteredInsights.length === 0 ? (
         <motion.div 
           initial={{ opacity: 0 }}
@@ -182,15 +212,18 @@ export function InsightsPanel({ insights, loading, metadata, onRefresh }: Insigh
           </p>
         </motion.div>
       ) : (
-        <div className="grid gap-4">
+        <div className={cn(
+          "grid gap-4",
+          isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+        )}>
           {filteredInsights.map((insight, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
+              transition={{ delay: index * 0.03 }}
             >
-              <InsightItem insight={insight} />
+              <InsightItem insight={insight} compact={!isMobile} />
             </motion.div>
           ))}
         </div>

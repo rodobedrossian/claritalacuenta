@@ -4,10 +4,13 @@ import { AppLayout } from "@/components/AppLayout";
 import { InsightsPanel } from "@/components/insights/InsightsPanel";
 import { InsightsSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useInsightsData } from "@/hooks/useInsightsData";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 const Insights = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -58,7 +61,7 @@ const Insights = () => {
           </div>
         </header>
 
-        <main className="p-4 md:p-6 max-w-4xl mx-auto">
+        <main className={cn("p-4 md:p-6 mx-auto", isMobile ? "max-w-4xl" : "max-w-7xl")}>
           <InsightsPanel
             insights={data?.insights || []}
             loading={insightsLoading}

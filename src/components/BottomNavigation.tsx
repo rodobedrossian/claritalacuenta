@@ -8,7 +8,6 @@ import {
   Settings,
   Target,
   Sparkles,
-  Clock,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -35,7 +34,6 @@ const mainNavItems = [
 ];
 
 const secondaryNavItems = [
-  { title: "Pendientes", path: "/pending", icon: Clock },
   { title: "Presupuestos", path: "/budgets", icon: Target },
   { title: "Insights", path: "/insights", icon: Sparkles },
   { title: "Configuración", path: "/settings", icon: Settings },

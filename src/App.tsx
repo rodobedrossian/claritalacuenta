@@ -13,7 +13,6 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Transactions from "./pages/Transactions";
-import PendingTransactions from "./pages/PendingTransactions";
 import Settings from "./pages/Settings";
 import Savings from "./pages/Savings";
 import Budgets from "./pages/Budgets";
@@ -74,7 +73,6 @@ const App = () => {
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                 <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
-                <Route path="/pending" element={<ProtectedRoute><PendingTransactions /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/savings" element={<ProtectedRoute><Savings /></ProtectedRoute>} />
                 <Route path="/budgets" element={<ProtectedRoute><Budgets /></ProtectedRoute>} />

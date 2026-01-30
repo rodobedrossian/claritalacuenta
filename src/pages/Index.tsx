@@ -419,13 +419,11 @@ const Index = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                <SpendingChart data={spendingByCategory} />
-                <TransactionsList 
-                  transactions={transactions.slice(0, 10)} 
-                  onEdit={(t) => { setEditingTransaction(t); setEditDialogOpen(true); }}
-                />
-              </div>
+              <SpendingChart data={spendingByCategory} />
+              <TransactionsList 
+                transactions={transactions.slice(0, 10)} 
+                onEdit={(t) => { setEditingTransaction(t); setEditDialogOpen(true); }}
+              />
             </main>
           </div>
         )}
