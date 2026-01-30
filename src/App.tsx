@@ -21,6 +21,8 @@ import CreditCards from "./pages/CreditCards";
 import Insights from "./pages/Insights";
 import Categories from "./pages/Categories";
 import Recurrentes from "./pages/Recurrentes";
+import Mas from "./pages/Mas";
+import Legales from "./pages/Legales";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
 import Privacy from "./pages/Privacy";
@@ -86,6 +88,8 @@ const App = () => {
                   <Route path="/insights" element={<Insights />} />
                   <Route path="/categories" element={<Categories />} />
                   <Route path="/recurrentes" element={<Recurrentes />} />
+                  <Route path="/mas" element={<Mas />} />
+                  <Route path="/legales" element={<Legales />} />
                 </Route>
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

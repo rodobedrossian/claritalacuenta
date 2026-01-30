@@ -15,7 +15,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { SavingsSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { MobileHeader } from "@/components/MobileHeader";
 import { PullToRefresh } from "@/components/PullToRefresh";
-import { useSavingsData, SavingsEntry } from "@/hooks/useSavingsData";
+import { useSavingsData, SavingsEntry, Investment } from "@/hooks/useSavingsData";
 import { useMonthlyBalance } from "@/hooks/useMonthlyBalance";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,14 @@ const Savings = () => {
   const [savingsWizardOpen, setSavingsWizardOpen] = useState(false);
   const [investmentWizardOpen, setInvestmentWizardOpen] = useState(false);
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
+  const [reinvestPrefill, setReinvestPrefill] = useState<{
+    amount: number;
+    currency: "USD" | "ARS";
+    name?: string;
+    institution?: string;
+    investment_type?: Investment["investment_type"];
+  } | null>(null);
+  const [reinvestSourceId, setReinvestSourceId] = useState<string | null>(null);
 
   // Use the consolidated data hook
   const {
@@ -45,6 +53,9 @@ const Savings = () => {
     deleteEntry,
     addInvestment,
     deleteInvestment,
+    liquidateInvestment,
+    markInvestmentInactive,
+    reactivateInvestment,
     addGoal,
     toggleGoalComplete,
     deleteGoal
@@ -72,6 +83,37 @@ const Savings = () => {
     triggerHaptic('light');
     setEditingEntry(entry);
     setEditDialogOpen(true);
+  };
+
+  const handleReinvest = (investment: Investment, amount: number) => {
+    triggerHaptic('light');
+    setReinvestSourceId(investment.id);
+    setReinvestPrefill({
+      amount,
+      currency: investment.currency,
+      name: investment.name,
+      institution: investment.institution || undefined,
+      investment_type: investment.investment_type,
+    });
+    setInvestmentWizardOpen(true);
+  };
+
+  const handleAddInvestment = async (
+    investmentData: Parameters<typeof addInvestment>[0]
+  ) => {
+    await addInvestment(investmentData);
+    if (reinvestSourceId) {
+      await markInvestmentInactive(reinvestSourceId);
+      setReinvestSourceId(null);
+    }
+  };
+
+  const handleInvestmentWizardOpenChange = (open: boolean) => {
+    if (!open) {
+      setReinvestPrefill(null);
+      setReinvestSourceId(null);
+    }
+    setInvestmentWizardOpen(open);
   };
 
   const handlePullToRefresh = useCallback(async () => {
@@ -190,6 +232,9 @@ const Savings = () => {
                   <InvestmentsList 
                     investments={investments} 
                     onDelete={deleteInvestment}
+                    onLiquidate={liquidateInvestment}
+                    onReinvest={handleReinvest}
+                    onReactivate={reactivateInvestment}
                     exchangeRate={exchangeRate}
                   />
                 </TabsContent>
@@ -230,8 +275,9 @@ const Savings = () => {
         {/* Add Investment Wizard */}
         <AddInvestmentWizard 
           open={investmentWizardOpen}
-          onOpenChange={setInvestmentWizardOpen}
-          onAdd={addInvestment} 
+          onOpenChange={handleInvestmentWizardOpenChange}
+          onAdd={handleAddInvestment}
+          initialInvestment={reinvestPrefill}
         />
 
         {/* Add Goal Wizard */}

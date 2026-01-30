@@ -44,24 +44,20 @@ export const SavingsQuickStats = ({
         animate="visible"
         custom={0}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-primary/10">
-              <Wallet className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Ahorros Líquidos</p>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-primary/10 shrink-0">
+            <Wallet className="h-4 w-4 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-muted-foreground">Ahorros Líquidos</p>
+            <div className="space-y-0.5 mt-1">
               <p className="text-lg font-bold text-primary">
                 {formatCurrency(currentSavings.usd, "USD")}
               </p>
-            </div>
-          </div>
-          <div className="text-right">
-            {currentSavings.ars > 0 && (
-              <p className="text-xs text-muted-foreground">
-                + {formatCurrency(currentSavings.ars, "ARS")}
+              <p className="text-lg font-bold text-primary">
+                {formatCurrency(currentSavings.ars, "ARS")}
               </p>
-            )}
+            </div>
           </div>
         </div>
       </motion.div>
@@ -74,24 +70,20 @@ export const SavingsQuickStats = ({
         animate="visible"
         custom={1}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-success/10">
-              <TrendingUp className="h-4 w-4 text-success" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Total Invertido</p>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-success/10 shrink-0">
+            <TrendingUp className="h-4 w-4 text-success" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-muted-foreground">Total Invertido</p>
+            <div className="space-y-0.5 mt-1">
               <p className="text-lg font-bold text-success">
                 {formatCurrency(totalInvested.usd, "USD")}
               </p>
-            </div>
-          </div>
-          <div className="text-right">
-            {totalInvested.ars > 0 && (
-              <p className="text-xs text-muted-foreground">
-                + {formatCurrency(totalInvested.ars, "ARS")}
+              <p className="text-lg font-bold text-success">
+                {formatCurrency(totalInvested.ars, "ARS")}
               </p>
-            )}
+            </div>
           </div>
         </div>
       </motion.div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -301,6 +301,12 @@ const Auth = () => {
           >
             Iniciar con otra cuenta
           </Button>
+          <Link
+            to="/privacy"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors block text-center mt-4"
+          >
+            Política de privacidad
+          </Link>
         </form>
       );
     }
@@ -436,7 +442,7 @@ const Auth = () => {
           {renderForm()}
 
           {!showReturningUser && (
-            <div className="mt-8 text-center">
+            <div className="mt-8 text-center space-y-4">
               <p className="text-muted-foreground">
                 {isSignUp ? "¿Ya tenés cuenta?" : "¿No tenés cuenta?"}{" "}
                 <button
@@ -452,6 +458,12 @@ const Auth = () => {
                   {isSignUp ? "Iniciá sesión" : "Registrate"}
                 </button>
               </p>
+              <Link
+                to="/privacy"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors block"
+              >
+                Política de privacidad
+              </Link>
             </div>
           )}
         </div>
