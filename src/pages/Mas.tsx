@@ -56,8 +56,8 @@ export default function Mas() {
   return (
     <AppLayout>
       <div className="flex-1 flex flex-col min-h-0 md:max-w-2xl md:mx-auto md:w-full">
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 py-6">
-          {/* Profile header */}
+        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] pb-6">
+          {/* Profile header - respeta Dynamic Island */}
           <div className="flex flex-col items-center text-center mb-8">
             <div
               className={cn(
@@ -115,14 +115,12 @@ export default function Mas() {
             <LogOut className="h-5 w-5" strokeWidth={2} />
             <span className="font-medium">Cerrar sesión</span>
           </button>
+
+          {/* Version - al final del scroll */}
+          <p className="text-center text-xs text-muted-foreground py-6 mt-2">
+            versión {APP_VERSION}
+          </p>
         </div>
-
-        {/* Version - fija abajo, siempre visible */}
-        <p className="text-center text-xs text-muted-foreground py-4 shrink-0 border-t border-border/50">
-          versión {APP_VERSION}
-        </p>
-
-        <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden shrink-0" />
       </div>
     </AppLayout>
   );
