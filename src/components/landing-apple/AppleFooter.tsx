@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-import logoClarita from "@/assets/logo-clarita-transparent.png";
+import logoClarita from "@/assets/logo-clarita.png";
 import appStoreBadge from "@/assets/app-store-badge.svg";
 
 export const AppleFooter = () => {
