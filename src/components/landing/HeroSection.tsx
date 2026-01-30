@@ -1,10 +1,10 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, PiggyBank } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FloatingOrbs } from "./FloatingOrbs";
 import { DashboardMockup } from "./DashboardMockup";
-import logoImage from "@/assets/logo-clarita.png";
+
 export const HeroSection = () => {
   return <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-background via-background to-primary/5">
       <FloatingOrbs />
@@ -29,7 +29,9 @@ export const HeroSection = () => {
           }} transition={{
             delay: 0.2
           }}>
-              
+              <div className="p-2 rounded-xl gradient-primary">
+                <PiggyBank className="h-6 w-6 text-primary-foreground" />
+              </div>
               <span className="text-2xl font-black tracking-tight text-foreground">
                 Clarita la cuenta
               </span>

@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, Shield, Zap } from "lucide-react";
+import { ArrowRight, Shield, Zap, PiggyBank } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logoImage from "@/assets/logo-clarita.png";
+
 const features = [{
   icon: Shield,
   text: "Datos encriptados"
@@ -101,7 +101,9 @@ export const FooterCTA = () => {
       }} className="mt-20 pt-8 border-t border-border/50">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <img src={logoImage} alt="Clarita la cuenta" className="w-8 h-8 rounded-lg object-cover" />
+              <div className="p-1.5 rounded-xl gradient-primary">
+                <PiggyBank className="h-5 w-5 text-primary-foreground" />
+              </div>
               <span className="font-bold text-foreground">Clarita la cuenta</span>
             </div>
             

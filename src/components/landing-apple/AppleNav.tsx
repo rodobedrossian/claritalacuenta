@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import logoClarita from "@/assets/logo-clarita.png";
+import { PiggyBank } from "lucide-react";
 
 export const AppleNav = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -29,7 +29,9 @@ export const AppleNav = () => {
         to="/landing-apple" 
         className="flex items-center gap-2"
       >
-        <img src={logoClarita} alt="Clarita" className="h-7 w-7" />
+        <div className="p-1.5 rounded-xl gradient-primary">
+          <PiggyBank className="h-5 w-5 text-primary-foreground" />
+        </div>
         <span className="text-foreground text-xl font-semibold tracking-tight">
           Clarita
         </span>
