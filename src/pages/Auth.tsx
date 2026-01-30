@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TrendingUp, PiggyBank, BarChart3, Check, Loader2 } from "lucide-react";
+import ForgotPasswordDialog from "@/components/auth/ForgotPasswordDialog";
 import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
 import {
@@ -49,6 +50,7 @@ const Auth = () => {
   const [showFullForm, setShowFullForm] = useState(false);
   const [biometricModalOpen, setBiometricModalOpen] = useState(false);
   const [pendingSession, setPendingSession] = useState<Session | null>(null);
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
 
   const lastUser = getLastUser();
   const showReturningUser = !isSignUp && lastUser && !showFullForm;
@@ -290,17 +292,26 @@ const Auth = () => {
               "Iniciar sesión"
             )}
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-full text-muted-foreground"
-            onClick={() => {
-              setShowFullForm(true);
-              setPassword("");
-            }}
-          >
-            Iniciar con otra cuenta
-          </Button>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => setForgotPasswordOpen(true)}
+              className="text-sm text-primary font-medium hover:underline focus:outline-none focus:underline"
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full text-muted-foreground"
+              onClick={() => {
+                setShowFullForm(true);
+                setPassword("");
+              }}
+            >
+              Iniciar con otra cuenta
+            </Button>
+          </div>
           <Link
             to="/privacy"
             className="text-xs text-muted-foreground hover:text-foreground transition-colors block text-center mt-4"
@@ -352,6 +363,15 @@ const Auth = () => {
             className="h-12 bg-background border-border focus:border-primary focus:ring-primary/20"
           />
           {isSignUp && <p className="text-xs text-muted-foreground">Mínimo 6 caracteres</p>}
+          {!isSignUp && (
+            <button
+              type="button"
+              onClick={() => setForgotPasswordOpen(true)}
+              className="text-sm text-primary font-medium hover:underline focus:outline-none focus:underline"
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+          )}
         </div>
         <Button
           type="submit"
@@ -515,6 +535,13 @@ const Auth = () => {
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      {/* Forgot Password Dialog */}
+      <ForgotPasswordDialog
+        open={forgotPasswordOpen}
+        onOpenChange={setForgotPasswordOpen}
+        defaultEmail={showReturningUser ? lastUser?.email : email}
+      />
     </div>
   );
 };
