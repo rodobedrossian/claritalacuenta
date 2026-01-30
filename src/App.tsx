@@ -10,10 +10,13 @@ import { IOSSystemBanner } from "@/components/ui/ios-system-banner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOfflineDetection } from "@/hooks/use-offline-detection";
 import ProtectedLayout from "@/components/ProtectedLayout";
+import AdminLayout from "@/components/admin/AdminLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Landing from "./pages/Landing";
 import LandingApple from "./pages/LandingApple";
+import AdminAuth from "./pages/admin/AdminAuth";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import Transactions from "./pages/Transactions";
 import Settings from "./pages/Settings";
 import Savings from "./pages/Savings";
@@ -80,6 +83,10 @@ const App = () => {
                 <Route path="/landing-apple" element={<LandingApple />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/admin" element={<AdminAuth />} />
+                <Route element={<AdminLayout />}>
+                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                </Route>
                 <Route element={<ProtectedLayout />}>
                   <Route path="/" element={<Index />} />
                   <Route path="/transactions" element={<Transactions />} />
