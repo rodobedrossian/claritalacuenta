@@ -1,9 +1,10 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoImage from "@/assets/logo-clarita.png";
 
 const Privacy = () => {
+  const navigate = useNavigate();
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
@@ -13,11 +14,9 @@ const Privacy = () => {
             <img src={logoImage} alt="Clarita la cuenta" className="w-8 h-8 rounded-lg object-cover" />
             <span className="font-bold text-foreground">Clarita la cuenta</span>
           </Link>
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/landing">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver
-            </Link>
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
           </Button>
         </div>
       </header>
@@ -167,11 +166,9 @@ const Privacy = () => {
 
         {/* Back button */}
         <div className="mt-12 pt-8 border-t border-border/50">
-          <Button variant="outline" asChild>
-            <Link to="/landing">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver a la página principal
-            </Link>
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver
           </Button>
         </div>
       </div>

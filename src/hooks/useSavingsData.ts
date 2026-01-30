@@ -75,6 +75,9 @@ interface UseSavingsDataReturn {
   deleteEntry: (id: string) => Promise<void>;
   addInvestment: (investment: Omit<Investment, "id" | "user_id" | "created_at" | "updated_at">) => Promise<void>;
   deleteInvestment: (id: string) => Promise<void>;
+  liquidateInvestment: (id: string) => Promise<void>;
+  markInvestmentInactive: (id: string) => Promise<void>;
+  reactivateInvestment: (id: string) => Promise<void>;
   addGoal: (goal: Omit<SavingsGoal, "id" | "user_id" | "created_at" | "updated_at" | "is_completed">) => Promise<void>;
   toggleGoalComplete: (id: string, completed: boolean) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
@@ -380,6 +383,144 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
     }
   }, []);
 
+  const liquidateInvestment = useCallback(async (id: string) => {
+    if (!userId || !data) return;
+
+    const investment = data.investments.find(i => i.id === id);
+    if (!investment) return;
+
+    try {
+      // 1. Add savings_entry (deposit - money returns to liquids)
+      const { error: entryError } = await supabase.from("savings_entries").insert([
+        {
+          user_id: userId,
+          amount: investment.current_amount,
+          currency: investment.currency,
+          entry_type: "deposit",
+          savings_type: "bank",
+          notes: `Liquidación: ${investment.name}`,
+        },
+      ]);
+
+      if (entryError) throw entryError;
+
+      // 2. Update savings table
+      const field = investment.currency === "USD" ? "usd_amount" : "ars_amount";
+      const currentAmount = data.currentSavings[investment.currency === "USD" ? "usd" : "ars"];
+      const newAmount = currentAmount + investment.current_amount;
+
+      if (data.currentSavings.recordId) {
+        const { error: updateError } = await supabase
+          .from("savings")
+          .update({ [field]: newAmount })
+          .eq("id", data.currentSavings.recordId);
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase.from("savings").insert([
+          {
+            user_id: userId,
+            usd_amount: investment.currency === "USD" ? newAmount : 0,
+            ars_amount: investment.currency === "ARS" ? newAmount : 0,
+          },
+        ]);
+        if (insertError) throw insertError;
+      }
+
+      // 3. Mark investment as inactive
+      const { error: invError } = await supabase
+        .from("investments")
+        .update({ is_active: false })
+        .eq("id", id);
+
+      if (invError) throw invError;
+
+      setData(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          investments: prev.investments.map(i =>
+            i.id === id ? { ...i, is_active: false } : i
+          ),
+          currentSavings: {
+            ...prev.currentSavings,
+            [investment.currency === "USD" ? "usd" : "ars"]: newAmount,
+          },
+          entries: [
+            {
+              id: crypto.randomUUID(),
+              user_id: userId,
+              amount: investment.current_amount,
+              currency: investment.currency,
+              entry_type: "deposit",
+              savings_type: "bank",
+              notes: `Liquidación: ${investment.name}`,
+              created_at: new Date().toISOString(),
+            },
+            ...prev.entries,
+          ],
+        };
+      });
+
+      toast.success("Sumado a ahorros líquidos");
+    } catch (err: any) {
+      console.error("Error liquidating investment:", err);
+      toast.error("Error al sumar a líquidos");
+      throw err;
+    }
+  }, [userId, data]);
+
+  const markInvestmentInactive = useCallback(async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("investments")
+        .update({ is_active: false })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setData(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          investments: prev.investments.map(i =>
+            i.id === id ? { ...i, is_active: false } : i
+          ),
+        };
+      });
+    } catch (err: any) {
+      console.error("Error marking investment inactive:", err);
+      toast.error("Error al actualizar inversión");
+      throw err;
+    }
+  }, []);
+
+  const reactivateInvestment = useCallback(async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("investments")
+        .update({ is_active: true })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setData(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          investments: prev.investments.map(i =>
+            i.id === id ? { ...i, is_active: true } : i
+          ),
+        };
+      });
+
+      toast.success("Inversión reactivada");
+    } catch (err: any) {
+      console.error("Error reactivating investment:", err);
+      toast.error("Error al reactivar inversión");
+      throw err;
+    }
+  }, []);
+
   const addGoal = useCallback(async (goal: Omit<SavingsGoal, "id" | "user_id" | "created_at" | "updated_at" | "is_completed">) => {
     if (!userId) return;
 
@@ -474,6 +615,9 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
     deleteEntry,
     addInvestment,
     deleteInvestment,
+    liquidateInvestment,
+    markInvestmentInactive,
+    reactivateInvestment,
     addGoal,
     toggleGoalComplete,
     deleteGoal

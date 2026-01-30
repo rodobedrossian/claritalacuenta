@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -15,12 +15,15 @@ interface AddInvestmentWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAdd: (investment: Omit<Investment, "id" | "user_id" | "created_at" | "updated_at">) => Promise<void>;
+  /** Pre-fill for reinvest flow (e.g. from matured investment) */
+  initialInvestment?: { amount: number; currency: "USD" | "ARS"; name?: string; institution?: string; investment_type?: InvestmentType } | null;
 }
 
 export const AddInvestmentWizard = ({ 
   open, 
   onOpenChange, 
-  onAdd 
+  onAdd,
+  initialInvestment,
 }: AddInvestmentWizardProps) => {
   const isMobile = useIsMobile();
   const [step, setStep] = useState<WizardStep>("type");
@@ -51,6 +54,18 @@ export const AddInvestmentWizard = ({
     setEndDate(undefined);
     setNotes("");
   };
+
+  // Pre-fill when opening with initialInvestment (reinvest flow)
+  useEffect(() => {
+    if (open && initialInvestment) {
+      if (initialInvestment.investment_type) setInvestmentType(initialInvestment.investment_type);
+      setCurrency(initialInvestment.currency);
+      setAmount(String(initialInvestment.amount));
+      setName(initialInvestment.name || "");
+      setInstitution(initialInvestment.institution || "");
+      setStep(initialInvestment.investment_type ? "amount" : "type");
+    }
+  }, [open, initialInvestment]);
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {

@@ -3,25 +3,10 @@ import {
   LayoutDashboard,
   Receipt,
   CreditCard,
-  PiggyBank,
   Plus,
-  Settings,
-  Target,
-  Sparkles,
-  LogOut,
-  Repeat,
+  MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
-import { performLogout } from "@/lib/biometricAuth";
-
 interface BottomNavigationProps {
   onAddClick: () => void;
 }
@@ -31,14 +16,7 @@ const mainNavItems = [
   { title: "Movimientos", path: "/transactions", icon: Receipt },
   { title: "add", path: "add", icon: Plus }, // Special add button
   { title: "Tarjetas", path: "/credit-cards", icon: CreditCard },
-  { title: "Ahorros", path: "/savings", icon: PiggyBank },
-];
-
-const secondaryNavItems = [
-  { title: "Presupuestos", path: "/budgets", icon: Target },
-  { title: "Recurrentes", path: "/recurrentes", icon: Repeat },
-  { title: "Insights", path: "/insights", icon: Sparkles },
-  { title: "Configuración", path: "/settings", icon: Settings },
+  { title: "Más", path: "/mas", icon: MoreHorizontal },
 ];
 
 export const BottomNavigation = ({ onAddClick }: BottomNavigationProps) => {
@@ -48,11 +26,6 @@ export const BottomNavigation = ({ onAddClick }: BottomNavigationProps) => {
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
     return location.pathname.startsWith(path);
-  };
-
-  const handleSignOut = async () => {
-    await performLogout();
-    navigate("/auth");
   };
 
   return (
@@ -100,68 +73,5 @@ export const BottomNavigation = ({ onAddClick }: BottomNavigationProps) => {
       </div>
 
     </nav>
-  );
-};
-
-interface MoreDrawerProps {
-  items: typeof secondaryNavItems;
-  currentPath: string;
-  onNavigate: (path: string) => void;
-  onSignOut: () => void;
-}
-
-const MoreDrawer = ({ items, currentPath, onNavigate, onSignOut }: MoreDrawerProps) => {
-  const isActive = (path: string) => currentPath.startsWith(path);
-
-  return (
-    <Drawer>
-      <DrawerTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute -top-10 right-3 text-muted-foreground hover:text-foreground"
-        >
-          <Settings className="h-4 w-4 mr-1" />
-          <span className="text-xs">Más</span>
-        </Button>
-      </DrawerTrigger>
-      <DrawerContent className="bg-card border-border">
-        <DrawerHeader className="text-left">
-          <DrawerTitle>Menú</DrawerTitle>
-        </DrawerHeader>
-        <div className="px-4 pb-8 space-y-2">
-          {items.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.path);
-            
-            return (
-              <button
-                key={item.path}
-                onClick={() => onNavigate(item.path)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
-                  active
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <Icon className="h-5 w-5" />
-                <span className="font-medium">{item.title}</span>
-              </button>
-            );
-          })}
-          
-          <div className="pt-4 border-t border-border mt-4">
-            <button
-              onClick={onSignOut}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
-            >
-              <LogOut className="h-5 w-5" />
-              <span className="font-medium">Cerrar Sesión</span>
-            </button>
-          </div>
-        </div>
-      </DrawerContent>
-    </Drawer>
   );
 };
