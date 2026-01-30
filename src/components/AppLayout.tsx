@@ -14,6 +14,7 @@ import {
   PanelLeft,
   CreditCard,
   Sparkles,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { performLogout } from "@/lib/biometricAuth";
@@ -34,6 +35,7 @@ const navItems = [
   { title: "Ahorros", path: "/savings", icon: PiggyBank },
   { title: "Presupuestos", path: "/budgets", icon: Target },
   { title: "Insights", path: "/insights", icon: Sparkles },
+  { title: "Categorías", path: "/categories", icon: Tag },
   { title: "Configuración", path: "/settings", icon: Settings },
 ];
 
