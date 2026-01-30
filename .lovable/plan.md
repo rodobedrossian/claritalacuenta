@@ -1,206 +1,249 @@
 
-# Plan: Landing Alternativa con Estética Apple
 
-## Filosofía de Diseño Apple
+# Plan: Admin Backoffice para Clarita la cuenta
 
-La estética de Apple se basa en principios claros que aplicaré en esta nueva landing:
+## Resumen
 
-### Principios Clave
-1. **Espacio en blanco generoso** - El aire entre elementos es tan importante como el contenido
-2. **Tipografía como protagonista** - Headlines enormes, weights extremos (thin/bold contrast)
-3. **Animaciones sutiles y naturales** - Scroll-triggered, sin loops infinitos llamativos
-4. **Imágenes/mockups de producto hero** - El producto es el centro visual
-5. **Colores neutros con acentos mínimos** - Negro, blanco, grises con toques de color puntuales
-6. **Secciones de altura completa** - Cada sección respira, ocupa viewport
-7. **Sin gradientes coloridos ni orbs flotantes** - Limpieza visual total
-8. **CTAs minimalistas** - Botones simples, links sutiles
+Implementar un panel de administracion completamente separado de la app principal, con login exclusivo para admins, dashboard con metricas de usuarios y proteccion por rol en `app_metadata`.
 
 ---
 
-## Estructura de la Nueva Landing
+## Arquitectura
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         NAVIGATION                               │
-│  [Logo] Clarita                                        [Empezar] │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│                                                                  │
-│                    Tus finanzas.                                 │
-│                    Claras.                                       │
-│                                                                  │
-│                 [Mockup iPhone centrado]                         │
-│                                                                  │
-│                                                                  │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│     Registrá gastos              Importá resúmenes               │
-│     en segundos.                 automáticamente.                │
-│                                                                  │
-│     [Ilustración]                [Ilustración]                   │
-│                                                                  │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│                      Hablá. Registrá.                            │
-│                                                                  │
-│            "Gasté cuarenta mil en el super"                      │
-│                                                                  │
-│                    [Waveform minimalista]                        │
-│                                                                  │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│                   Entendé tus gastos.                            │
-│                   De un vistazo.                                 │
-│                                                                  │
-│                    [Chart elegante]                              │
-│                                                                  │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│                    Empezá gratis.                                │
-│                                                                  │
-│                      [Botón →]                                   │
-│                                                                  │
-│            Disponible para iPhone y web.                         │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              BACKEND                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│    ┌──────────────────────────────────────────────────────────────────┐     │
+│    │              get-admin-users Edge Function                        │     │
+│    │                                                                   │     │
+│    │  1. Validar JWT del usuario                                       │     │
+│    │  2. Verificar app_metadata.role === 'admin'                       │     │
+│    │  3. Si no es admin -> 403 Forbidden                               │     │
+│    │  4. Usar SERVICE_ROLE_KEY para:                                   │     │
+│    │     - auth.admin.listUsers()                                      │     │
+│    │     - COUNT(*) de transactions, credit_cards, savings_entries     │     │
+│    │                                                                   │     │
+│    └──────────────────────────────────────────────────────────────────┘     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             FRONTEND                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│    /admin                         /admin/dashboard                           │
+│    ┌─────────────────────┐       ┌─────────────────────────────────────┐    │
+│    │   AdminAuth.tsx      │──────▶│   AdminDashboard.tsx                 │    │
+│    │                      │       │                                      │    │
+│    │   - Email + Password │  OK   │   ┌─────────┐ ┌─────────┐ ┌───────┐ │    │
+│    │   - Sin signup       │ admin │   │ Total   │ │ Activos │ │Activos│ │    │
+│    │   - Sin Face ID      │──────▶│   │ Usuarios│ │  7 dias │ │30 dias│ │    │
+│    │                      │       │   └─────────┘ └─────────┘ └───────┘ │    │
+│    └─────────────────────┘       │                                      │    │
+│              │                    │   ┌──────────────────────────────┐  │    │
+│              │ NO admin           │   │  Tabla de Usuarios           │  │    │
+│              ▼                    │   │  - Email, Nombre             │  │    │
+│    ┌─────────────────────┐       │   │  - Fecha alta, Ultimo login  │  │    │
+│    │ "No tenes permisos" │       │   │  - Transacciones, Tarjetas   │  │    │
+│    │   + auto-logout     │       │   └──────────────────────────────┘  │    │
+│    └─────────────────────┘       └─────────────────────────────────────┘    │
+│                                                                              │
+│    AdminLayout.tsx (wrapper)                                                 │
+│    - Verifica session                                                        │
+│    - Verifica app_metadata.role === 'admin'                                  │
+│    - Si no es admin -> redirect a /admin                                     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Archivos a Crear
+## Paso 1: Designar usuario admin en la base de datos
 
-### 1. `src/pages/LandingApple.tsx`
-Página principal que orquesta las secciones:
-- Importa los componentes de sección
-- Fondo blanco puro (sin gradientes)
-- Smooth scroll nativo
+Ejecutar manualmente en el SQL Editor de Cloud (una sola vez):
 
-### 2. `src/components/landing-apple/AppleNav.tsx`
-Navegación sticky minimalista:
-- Logo a la izquierda (solo texto "Clarita")
-- Botón "Empezar" a la derecha
-- Blur backdrop on scroll
-- Altura: 56px
+```sql
+UPDATE auth.users
+SET raw_app_meta_data = raw_app_meta_data || '{"role": "admin"}'::jsonb
+WHERE email = 'TU_EMAIL_ADMIN@ejemplo.com';
+```
 
-### 3. `src/components/landing-apple/AppleHero.tsx`
-Sección hero de altura completa:
-- Headline centrado: "Tus finanzas." / "Claras." (en dos líneas)
-- Subtítulo mínimo en gris
-- iPhone mockup centrado con shadow elegante
-- Animación de fade-in al cargar
-
-### 4. `src/components/landing-apple/ApplePhoneMockup.tsx`
-Mockup de iPhone realista:
-- Frame estilo iPhone 15 (bordes redondeados, notch)
-- Dashboard simplificado adentro
-- Sombra difusa grande
-- Parallax sutil en scroll
-
-### 5. `src/components/landing-apple/AppleFeatureGrid.tsx`
-Grid de 2 features lado a lado:
-- "Registrá gastos en segundos" + mini ilustración
-- "Importá resúmenes automáticamente" + mini ilustración
-- Apareción on scroll
-
-### 6. `src/components/landing-apple/AppleVoiceSection.tsx`
-Sección dedicada a voz:
-- Headline: "Hablá. Registrá."
-- Texto de ejemplo en quotes grandes
-- Waveform estático minimalista (barras grises)
-- Sin animación de loop
-
-### 7. `src/components/landing-apple/AppleAnalyticsSection.tsx`
-Sección de analytics:
-- "Entendé tus gastos. De un vistazo."
-- Chart de barras limpio, colores neutros con un acento
-- Aparece con parallax suave
-
-### 8. `src/components/landing-apple/AppleFooter.tsx`
-Footer minimalista:
-- CTA final: "Empezá gratis." + botón flecha
-- Texto pequeño: "Disponible para iPhone y web."
-- Links: Privacidad
-- Copyright en gris claro
+Esto agrega `{ "role": "admin" }` al `app_metadata` del usuario, que se incluye automaticamente en el JWT.
 
 ---
 
-## Paleta de Colores Apple
+## Paso 2: Edge Function `get-admin-users`
 
-| Elemento | Color |
-|----------|-------|
-| Background | `#FFFFFF` (blanco puro) |
-| Texto primario | `#1D1D1F` (negro Apple) |
-| Texto secundario | `#86868B` (gris medio) |
-| Acento | `#0071E3` (azul Apple) |
-| Bordes/sombras | `rgba(0,0,0,0.04)` |
+**Archivo:** `supabase/functions/get-admin-users/index.ts`
 
----
+**Logica:**
 
-## Tipografía
+1. Validar JWT con `supabase.auth.getUser()`
+2. Verificar `user.app_metadata?.role === 'admin'`
+3. Si no es admin, responder `403 Forbidden`
+4. Crear cliente con `SUPABASE_SERVICE_ROLE_KEY` para:
+   - `supabaseAdmin.auth.admin.listUsers({ page, perPage: 50 })`
+   - Consultas de conteo por usuario (sin RLS)
+5. Devolver array de usuarios con:
+   - `id`, `email`, `full_name`, `created_at`, `last_sign_in_at`
+   - `transactions_count`, `credit_cards_count`, `savings_entries_count`
+6. Calcular metricas agregadas:
+   - Total usuarios
+   - Activos ultimos 7 dias
+   - Activos ultimos 30 dias
 
-- **Headlines**: `font-semibold` o `font-bold`, tracking tight, sizes: 48px-72px
-- **Body**: `font-normal`, 17px-21px
-- **Captions**: `font-normal`, 12px-14px, color gris
+**Config en `supabase/config.toml`:**
 
----
-
-## Animaciones
-
-| Elemento | Animación |
-|----------|-----------|
-| Hero | Fade in + slide up suave (0.8s) |
-| Features | Fade in on scroll (stagger 0.1s) |
-| Phone | Parallax leve (translateY en scroll) |
-| Charts | Grow bars on view |
-| CTA | Hover scale 1.02 |
-
----
-
-## Ruta
-
-Agregar en `src/App.tsx`:
-```tsx
-import LandingApple from "./pages/LandingApple";
-// ...
-<Route path="/landing-apple" element={<LandingApple />} />
+```toml
+[functions.get-admin-users]
+# Sin verify_jwt = false - debe validar JWT en codigo
 ```
 
 ---
 
-## Comparación Visual
+## Paso 3: Estructura de archivos
 
-| Aspecto | Landing Actual | Landing Apple |
-|---------|----------------|---------------|
-| Background | Gradient con orbs | Blanco puro |
-| Colores | Purples, pinks, gradients | Negro, gris, azul acento |
-| Animaciones | Loops infinitos, orbs flotantes | On-scroll, una vez |
-| Densidad | Mucha información | Espaciado extremo |
-| Typography | Bold colorido | Bold neutro |
-| CTAs | Gradient buttons | Solid blue minimal |
-| Mockups | Cards con sombras coloridas | iPhone realista |
+```text
+src/
+├── pages/
+│   └── admin/
+│       ├── AdminAuth.tsx        # Login exclusivo admin
+│       └── AdminDashboard.tsx   # Dashboard con metricas
+├── components/
+│   └── admin/
+│       └── AdminLayout.tsx      # Proteccion por rol admin
+```
 
 ---
 
-## Archivos a Modificar/Crear
+## Paso 4: Componentes Frontend
 
-| Archivo | Acción |
+### 4.1 AdminLayout.tsx
+
+- Wrapper para rutas `/admin/*` (excepto `/admin` login)
+- Verifica sesion con `supabase.auth.getSession()`
+- Verifica `session.user.app_metadata?.role === 'admin'`
+- Si no hay sesion -> redirect a `/admin`
+- Si no es admin -> mostrar mensaje + boton para salir
+- Si es admin -> renderizar `<Outlet />`
+
+### 4.2 AdminAuth.tsx
+
+- Formulario simple: email + password
+- Sin opcion de registro (solo login)
+- Sin Face ID ni biometria
+- Al hacer login:
+  - Verificar `user.app_metadata?.role === 'admin'`
+  - Si no es admin: logout inmediato, mostrar error
+  - Si es admin: navigate a `/admin/dashboard`
+- Estilo desktop, fondo limpio, card centrada
+
+### 4.3 AdminDashboard.tsx
+
+**Header:**
+- Titulo "Backoffice - Clarita la cuenta"
+- Boton "Cerrar sesion"
+
+**Cards de resumen:**
+| Card | Valor |
+|------|-------|
+| Total Usuarios | Conteo total |
+| Activos (7 dias) | Usuarios con `last_sign_in_at` >= hace 7 dias |
+| Activos (30 dias) | Usuarios con `last_sign_in_at` >= hace 30 dias |
+
+**Tabla de usuarios:**
+| Columna | Origen |
 |---------|--------|
-| `src/pages/LandingApple.tsx` | Crear |
-| `src/components/landing-apple/AppleNav.tsx` | Crear |
-| `src/components/landing-apple/AppleHero.tsx` | Crear |
-| `src/components/landing-apple/ApplePhoneMockup.tsx` | Crear |
-| `src/components/landing-apple/AppleFeatureGrid.tsx` | Crear |
-| `src/components/landing-apple/AppleVoiceSection.tsx` | Crear |
-| `src/components/landing-apple/AppleAnalyticsSection.tsx` | Crear |
-| `src/components/landing-apple/AppleFooter.tsx` | Crear |
-| `src/App.tsx` | Agregar ruta `/landing-apple` |
+| Email | `user.email` |
+| Nombre | `user.user_metadata.full_name` |
+| Fecha Alta | `user.created_at` |
+| Ultimo Login | `user.last_sign_in_at` |
+| Transacciones | COUNT de `transactions` |
+| Tarjetas | COUNT de `credit_cards` |
+| Entradas Ahorro | COUNT de `savings_entries` |
+
+**Paginacion:**
+- Mostrar 50 usuarios por pagina
+- Botones Anterior/Siguiente
+
+**Estilo:**
+- Diseño desktop (no optimizado para mobile)
+- Reutilizar componentes existentes: `Card`, `Table`, `Button`, `Badge`
 
 ---
 
-## Resultado
+## Paso 5: Rutas en App.tsx
 
-Podrás comparar ambas versiones:
-- **`/landing`** - Versión actual (Stripe-inspired, colorida)
-- **`/landing-apple`** - Nueva versión (Apple-inspired, minimalista)
+Agregar **fuera** del `ProtectedLayout` (antes del catch-all):
 
-Esto te permitirá evaluar cuál funciona mejor para tu audiencia iOS antes de decidir cuál usar como principal.
+```tsx
+import AdminAuth from "./pages/admin/AdminAuth";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminLayout from "./components/admin/AdminLayout";
+
+// En Routes:
+<Route path="/admin" element={<AdminAuth />} />
+<Route element={<AdminLayout />}>
+  <Route path="/admin/dashboard" element={<AdminDashboard />} />
+</Route>
+```
+
+Las rutas admin quedan completamente separadas del flujo de usuarios normales:
+- No usan `ProtectedLayout` (sin BiometricGate)
+- No aparecen en navegacion de la app
+- Solo accesibles por URL directa
+
+---
+
+## Seguridad
+
+| Capa | Proteccion |
+|------|-----------|
+| Edge Function | Verifica `app_metadata.role === 'admin'` en cada request |
+| AdminLayout | Verifica rol antes de renderizar dashboard |
+| AdminAuth | Hace logout inmediato si el usuario no es admin |
+| Rutas | Separadas del `ProtectedLayout` de usuarios normales |
+| Navegacion | Admin no aparece en la UI de la app |
+
+---
+
+## Metricas a mostrar (Fase 1)
+
+| Metrica | Fuente |
+|---------|--------|
+| Total usuarios | `auth.admin.listUsers()` |
+| Email, nombre | `user.email`, `user.user_metadata.full_name` |
+| Fecha de alta | `user.created_at` |
+| Ultimo login | `user.last_sign_in_at` |
+| Transacciones | `COUNT(*) FROM transactions WHERE user_id = ...` |
+| Tarjetas de credito | `COUNT(*) FROM credit_cards WHERE user_id = ...` |
+| Entradas de ahorro | `COUNT(*) FROM savings_entries WHERE user_id = ...` |
+| Activos 7/30 dias | Usuarios con `last_sign_in_at` en el rango |
+
+---
+
+## Archivos a crear/modificar
+
+| Archivo | Accion |
+|---------|--------|
+| `supabase/functions/get-admin-users/index.ts` | Crear |
+| `supabase/config.toml` | Agregar config de funcion |
+| `src/pages/admin/AdminAuth.tsx` | Crear |
+| `src/pages/admin/AdminDashboard.tsx` | Crear |
+| `src/components/admin/AdminLayout.tsx` | Crear |
+| `src/App.tsx` | Agregar rutas admin |
+
+---
+
+## Consideraciones adicionales
+
+1. **Paginacion**: `listUsers` soporta `page` y `perPage`; para mas de 50 usuarios se implementa paginacion en el dashboard
+
+2. **Escalabilidad**: Los counts por usuario se hacen en la edge function con service role (sin RLS), eficiente para menos de 1000 usuarios
+
+3. **No requiere migraciones**: Solo usa `app_metadata` existente en `auth.users`
+
+4. **Acceso oculto**: La ruta `/admin` no esta linkeada en ninguna parte de la app
+
