@@ -58,8 +58,8 @@ export const StatCard = ({
 
         {/* Center: Title and Main Value */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-muted-foreground mb-0.5">{title}</p>
-          <div className={cn("text-xl font-bold tracking-tight truncate", styles.valueColor)}>
+          <p className="text-[10px] sm:text-xs font-bold text-muted-foreground/60 uppercase tracking-widest mb-1">{title}</p>
+          <div className={cn("text-lg sm:text-xl font-black tracking-tight truncate", styles.valueColor)}>
             {value}
           </div>
         </div>

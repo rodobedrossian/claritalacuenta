@@ -9,26 +9,36 @@ export interface Category {
   icon?: string | null;
   color?: string | null;
   created_at: string;
+  user_id?: string | null;
 }
 
 interface UseCategoriesDataReturn {
   categories: Category[];
   loading: boolean;
   refetch: () => Promise<void>;
-  addCategory: (category: { name: string; type: "income" | "expense" }) => Promise<void>;
+  addCategory: (category: { name: string; type: "income" | "expense"; user_id: string }) => Promise<void>;
   updateCategory: (id: string, category: Partial<Category>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
 }
 
-export const useCategoriesData = (): UseCategoriesDataReturn => {
+export const useCategoriesData = (userId?: string | null): UseCategoriesDataReturn => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchCategories = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      let query = supabase
         .from("categories")
-        .select("*")
+        .select("*");
+      
+      if (userId) {
+        query = query.or(`user_id.is.null,user_id.eq.${userId}`);
+      } else {
+        query = query.is("user_id", null);
+      }
+
+      const { data, error } = await query
         .order("type")
         .order("name");
 
@@ -48,13 +58,13 @@ export const useCategoriesData = (): UseCategoriesDataReturn => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
 
-  const addCategory = async (category: { name: string; type: "income" | "expense" }) => {
+  const addCategory = async (category: { name: string; type: "income" | "expense"; user_id: string }) => {
     try {
       // Check if category already exists
       const exists = categories.some(
