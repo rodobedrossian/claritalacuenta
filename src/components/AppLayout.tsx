@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Receipt,
-  Clock,
   PiggyBank,
   Target,
   Settings,
@@ -30,7 +29,6 @@ interface AppLayoutProps {
 const navItems = [
   { title: "Dashboard", path: "/", icon: LayoutDashboard },
   { title: "Transacciones", path: "/transactions", icon: Receipt },
-  { title: "Pendientes", path: "/pending", icon: Clock },
   { title: "Tarjetas", path: "/credit-cards", icon: CreditCard },
   { title: "Ahorros", path: "/savings", icon: PiggyBank },
   { title: "Presupuestos", path: "/budgets", icon: Target },

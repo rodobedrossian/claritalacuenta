@@ -299,50 +299,6 @@ export const InsightsSkeleton = () => (
   </div>
 );
 
-// Pending Transactions Skeleton - content only version for use inside main
-export const PendingTransactionsContentSkeleton = () => (
-  <div className="space-y-4">
-    {[1, 2, 3].map((i) => (
-      <div key={i} className="bg-card rounded-xl p-4 border border-border/50 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-5 w-16 rounded-full" />
-            <Skeleton className="h-5 w-14 rounded-full" />
-          </div>
-          <Skeleton className="h-4 w-28" />
-        </div>
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-6 w-20 rounded-full" />
-        </div>
-        <Skeleton className="h-4 w-3/4" />
-        <div className="flex justify-end gap-2 pt-2 border-t border-border/50">
-          <Skeleton className="h-8 w-24 rounded-md" />
-          <Skeleton className="h-8 w-20 rounded-md" />
-          <Skeleton className="h-8 w-24 rounded-md" />
-        </div>
-      </div>
-    ))}
-  </div>
-);
-
-// Pending Transactions Skeleton - full page version
-export const PendingTransactionsSkeleton = () => (
-  <div className="min-h-screen">
-    <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40 pt-safe pb-3">
-      <div className="container mx-auto px-4 md:px-6 py-2 pl-14 md:pl-6">
-        <div className="h-10 flex items-center gap-3">
-          <Skeleton className="h-6 w-52" />
-          <Skeleton className="h-5 w-8 rounded-full" />
-        </div>
-      </div>
-    </header>
-    <main className="container mx-auto px-4 md:px-6 py-6">
-      <PendingTransactionsContentSkeleton />
-    </main>
-  </div>
-);
-
 // Settings Page Skeleton
 export const SettingsSkeleton = () => (
   <div className="min-h-screen">
