@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react";
 import {
   isBiometricSupported,
   isBiometricEnabled,
-  hasStoredCredentials,
 } from "@/lib/biometricAuth";
 import { BiometricGate } from "@/components/BiometricGate";
 
@@ -27,10 +26,11 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     (async () => {
       const supported = isBiometricSupported();
       const enabled = isBiometricEnabled();
-      const stored = supported && enabled ? await hasStoredCredentials() : false;
 
+      // When Face ID is enabled, ALWAYS require verification - never use Supabase's
+      // persisted session directly. This ensures Face ID is prompted on every app open.
       if (!mounted) return;
-      if (supported && enabled && stored) {
+      if (supported && enabled) {
         setUseBiometricGate(true);
         setLoading(false);
         return;

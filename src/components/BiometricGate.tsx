@@ -33,8 +33,9 @@ export function BiometricGate({ children }: BiometricGateProps) {
       }
       const stored = await hasStoredCredentials();
       if (!mounted) return;
+      // No credentials in Keychain → user must log in again
       if (!stored) {
-        setStatus("unlocked");
+        navigate("/auth", { replace: true });
         return;
       }
       setStatus("gate");
@@ -44,7 +45,7 @@ export function BiometricGate({ children }: BiometricGateProps) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [navigate]);
 
   // Auto-prompt Face ID / passcode when gate is shown
   useEffect(() => {
