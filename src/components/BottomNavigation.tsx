@@ -9,6 +9,7 @@ import {
   Target,
   Sparkles,
   LogOut,
+  Repeat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -35,6 +36,7 @@ const mainNavItems = [
 
 const secondaryNavItems = [
   { title: "Presupuestos", path: "/budgets", icon: Target },
+  { title: "Recurrentes", path: "/recurrentes", icon: Repeat },
   { title: "Insights", path: "/insights", icon: Sparkles },
   { title: "Configuración", path: "/settings", icon: Settings },
 ];

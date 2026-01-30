@@ -20,6 +20,7 @@ import Budgets from "./pages/Budgets";
 import CreditCards from "./pages/CreditCards";
 import Insights from "./pages/Insights";
 import Categories from "./pages/Categories";
+import Recurrentes from "./pages/Recurrentes";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
 
@@ -81,6 +82,7 @@ const App = () => {
                 <Route path="/credit-cards" element={<ProtectedRoute><CreditCards /></ProtectedRoute>} />
                 <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
                 <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
+                <Route path="/recurrentes" element={<ProtectedRoute><Recurrentes /></ProtectedRoute>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </>

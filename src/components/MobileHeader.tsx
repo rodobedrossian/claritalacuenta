@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Target, Sparkles, Settings, LogOut, Tag } from "lucide-react";
+import { Target, Sparkles, Settings, LogOut, Tag, Repeat } from "lucide-react";
 import { performLogout } from "@/lib/biometricAuth";
 
 interface MobileHeaderProps {
@@ -25,6 +25,7 @@ export const MobileHeader = ({ userName }: MobileHeaderProps) => {
 
   const menuItems = [
     { title: "Presupuestos", path: "/budgets", icon: Target },
+    { title: "Recurrentes", path: "/recurrentes", icon: Repeat },
     { title: "Insights", path: "/insights", icon: Sparkles },
     { title: "Categorías", path: "/categories", icon: Tag },
     { title: "Configuración", path: "/settings", icon: Settings },

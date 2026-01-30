@@ -33,6 +33,8 @@ verify_jwt = false
 [functions.check-budget-alerts]
 verify_jwt = false
 
+[functions.delete-user]
+
 [functions.monthly-recurring-reminder]
 verify_jwt = false
 
