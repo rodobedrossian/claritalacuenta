@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Clock, Target, Sparkles, Settings, LogOut } from "lucide-react";
+import { Clock, Target, Sparkles, Settings, LogOut, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface MobileHeaderProps {
@@ -27,6 +27,7 @@ export const MobileHeader = ({ userName }: MobileHeaderProps) => {
     { title: "Pendientes", path: "/pending", icon: Clock },
     { title: "Presupuestos", path: "/budgets", icon: Target },
     { title: "Insights", path: "/insights", icon: Sparkles },
+    { title: "Categorías", path: "/categories", icon: Tag },
     { title: "Configuración", path: "/settings", icon: Settings },
   ];
 

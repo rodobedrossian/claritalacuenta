@@ -1,15 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Target, FolderOpen } from "lucide-react";
+import { Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BudgetsTable } from "@/components/budgets/BudgetsTable";
-import { CategoriesTable } from "@/components/budgets/CategoriesTable";
 import { AddBudgetDialog } from "@/components/budgets/AddBudgetDialog";
-import { AddCategoryDialog } from "@/components/budgets/AddCategoryDialog";
 import { BudgetsSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useBudgetsData } from "@/hooks/useBudgetsData";
 import { useCategoriesData } from "@/hooks/useCategoriesData";
@@ -63,13 +59,7 @@ const Budgets = () => {
     deleteBudget,
   } = useBudgetsData(user?.id, activeMonth, transactions);
 
-  const {
-    categories,
-    loading: categoriesLoading,
-    addCategory,
-    updateCategory,
-    deleteCategory,
-  } = useCategoriesData();
+  const { categories, loading: categoriesLoading } = useCategoriesData(user?.id);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -155,43 +145,22 @@ const Budgets = () => {
             </Card>
           </div>
 
-          {/* Tabs */}
-          <Tabs defaultValue="budgets" className="space-y-6">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="budgets" className="gap-2">
-                <Target className="h-4 w-4" />
-                Presupuestos
-              </TabsTrigger>
-              <TabsTrigger value="categories" className="gap-2">
-                <FolderOpen className="h-4 w-4" />
-                Categorías
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="budgets" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold">Presupuestos activos</h2>
-                <AddBudgetDialog
-                  onAdd={addBudget}
-                  categories={categories}
-                  existingBudgets={budgets.map(b => ({ category: b.category, currency: b.currency }))}
-                />
-              </div>
-              <BudgetsTable
-                budgets={budgetsWithSpending}
-                onUpdate={updateBudget}
-                onDelete={deleteBudget}
+          {/* Presupuestos activos */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Presupuestos activos</h2>
+              <AddBudgetDialog
+                onAdd={addBudget}
+                categories={categories}
+                existingBudgets={budgets.map(b => ({ category: b.category, currency: b.currency }))}
               />
-            </TabsContent>
-
-            <TabsContent value="categories" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold">Categorías</h2>
-                <AddCategoryDialog onAdd={addCategory} />
-              </div>
-              <CategoriesTable categories={categories} />
-            </TabsContent>
-          </Tabs>
+            </div>
+            <BudgetsTable
+              budgets={budgetsWithSpending}
+              onUpdate={updateBudget}
+              onDelete={deleteBudget}
+            />
+          </div>
         </main>
         
         {/* Spacer to clear bottom nav */}

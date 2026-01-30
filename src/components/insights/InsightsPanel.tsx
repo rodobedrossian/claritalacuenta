@@ -100,7 +100,6 @@ export function InsightsPanel({ insights, loading, metadata, onRefresh }: Insigh
       {/* Header - Minimal iOS Style */}
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
-          <h2 className="text-lg font-bold tracking-tight">Análisis inteligente</h2>
           {metadata && (
             <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">
               {metadata.analyzedMonths} meses • {metadata.totalTransactions + (metadata.totalStatementTransactions || 0)} transacciones
