@@ -13,6 +13,7 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Landing from "./pages/Landing";
+import LandingApple from "./pages/LandingApple";
 import Transactions from "./pages/Transactions";
 import Settings from "./pages/Settings";
 import Savings from "./pages/Savings";
@@ -74,6 +75,7 @@ const App = () => {
             ) : (
               <>
                 <Route path="/landing" element={<Landing />} />
+                <Route path="/landing-apple" element={<LandingApple />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route element={<ProtectedLayout />}>
