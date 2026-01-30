@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
-import logoClarita from "@/assets/logo-clarita.png";
+import { ArrowRight, PiggyBank } from "lucide-react";
 import appStoreBadge from "@/assets/app-store-badge.svg";
 
 export const AppleFooter = () => {
@@ -17,7 +16,9 @@ export const AppleFooter = () => {
         >
           {/* Logo */}
           <div className="flex justify-center">
-            <img src={logoClarita} alt="Clarita" className="h-16 w-16" />
+            <div className="p-4 rounded-2xl gradient-primary">
+              <PiggyBank className="h-10 w-10 text-primary-foreground" />
+            </div>
           </div>
           
           {/* CTA */}
