@@ -24,7 +24,7 @@ const Auth = () => {
   const [biometricAvailable, setBiometricAvailable] = useState(false);
 
   useEffect(() => {
-    isBiometricAvailable().then(setBiometricAvailable);
+    isBiometricAvailable().then(setBiometricAvailable).catch(() => setBiometricAvailable(false));
   }, []);
 
   // Check if already logged in

@@ -18,6 +18,7 @@ import {
 } from "@/lib/biometricAuth";
 import { useCreditCardsData } from "@/hooks/useCreditCardsData";
 import { useRecurringExpensesData } from "@/hooks/useRecurringExpensesData";
+import { useCategoriesData } from "@/hooks/useCategoriesData";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { AddCreditCardDialog } from "@/components/credit-cards/AddCreditCardDialog";
 import { CreditCardsList } from "@/components/credit-cards/CreditCardsList";
@@ -40,11 +41,15 @@ export default function Settings() {
   // Credit cards hook
   const { creditCards, addCreditCard, deleteCreditCard } = useCreditCardsData(userId);
   
+  // Categories hook (recurring expenses)
+  const { categories, loading: categoriesLoading } = useCategoriesData(userId);
+  
   // Recurring expenses hook
   const { 
     recurringExpenses, 
     addRecurringExpense, 
     deleteRecurringExpense, 
+    updateRecurringExpense,
     generateTransaction 
   } = useRecurringExpensesData(userId);
   
@@ -62,7 +67,7 @@ export default function Settings() {
     });
   }, [navigate]);
 
-  if (loading || pushNotifications.loading) {
+  if (loading || categoriesLoading || pushNotifications.loading) {
     return (
       <AppLayout>
         <SettingsSkeleton />
@@ -183,7 +188,7 @@ export default function Settings() {
                         Configura gastos que se repiten todos los meses
                       </CardDescription>
                     </div>
-                    <AddRecurringExpenseDialog onAdd={addRecurringExpense} />
+                    <AddRecurringExpenseDialog categories={categories} onAdd={addRecurringExpense} />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">

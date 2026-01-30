@@ -46,6 +46,31 @@ export function BiometricGate({ children }: BiometricGateProps) {
     };
   }, []);
 
+  // Auto-prompt Face ID / passcode when gate is shown
+  useEffect(() => {
+    if (status !== "gate") return;
+    let mounted = true;
+    setLoading(true);
+    (async () => {
+      try {
+        const session = await getStoredSession();
+        if (!mounted) return;
+        if (!session) {
+          setLoading(false);
+          return;
+        }
+        await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        });
+        if (mounted) setStatus("unlocked");
+      } catch {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [status]);
+
   const handleUnlock = async () => {
     setLoading(true);
     try {
