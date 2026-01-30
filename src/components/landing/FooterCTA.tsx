@@ -105,7 +105,12 @@ export const FooterCTA = () => {
               <span className="font-bold text-foreground">Clarita la cuenta</span>
             </div>
             
-            
+            <Link 
+              to="/privacy" 
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Política de privacidad
+            </Link>
 
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Clarita la cuenta
