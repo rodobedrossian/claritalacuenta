@@ -88,16 +88,35 @@ export async function storeSession(session: Session): Promise<void> {
 }
 
 /**
- * Retrieve stored session after biometric auth.
- * Triggers Face ID / Touch ID / passcode prompt.
+ * Retrieve stored session. Does NOT force Face ID - Keychain may return
+ * without prompt if device was recently unlocked.
  */
-export async function getStoredSession(): Promise<Session | null> {
+async function getCredentialsFromKeychain(): Promise<Session | null> {
   if (!isBiometricSupported()) return null;
   try {
     const creds = await NativeBiometric.getCredentials({ server: getServer() });
     const data = JSON.parse(creds.password) as Partial<Session>;
     if (!data.access_token || !data.refresh_token) return null;
     return data as Session;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Retrieve stored session AFTER forcing Face ID / passcode prompt.
+ * Call verifyIdentity() first so the user must authenticate every time.
+ */
+export async function getStoredSession(): Promise<Session | null> {
+  if (!isBiometricSupported()) return null;
+  try {
+    await NativeBiometric.verifyIdentity({
+      reason: "Desbloquear la app",
+      title: "Desbloquear",
+      subtitle: "Usá Face ID o el código del teléfono",
+      useFallback: true,
+    });
+    return await getCredentialsFromKeychain();
   } catch {
     return null;
   }
