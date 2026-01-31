@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
+
+/** Web URL para OAuth redirect en iOS Capacitor (capacitor://localhost no es válido en Lovable/Google) */
+const WEB_APP_URL = import.meta.env.VITE_APP_URL || "https://claritalacuenta.lovable.app";
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
@@ -35,8 +39,15 @@ export default function GoogleSignInButton({ onSuccess }: GoogleSignInButtonProp
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
+      // En iOS Capacitor, window.location.origin es capacitor://localhost y Lovable/Google
+      // no lo aceptan como redirect. Usamos la URL web configurada en Lovable.
+      const redirectUri =
+        Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios"
+          ? WEB_APP_URL
+          : window.location.origin;
+
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: redirectUri,
       });
 
       if (result.redirected) {
