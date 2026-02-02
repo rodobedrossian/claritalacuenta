@@ -36,6 +36,9 @@ import { useBudgetsData } from "@/hooks/useBudgetsData";
 import { AddSavingsWizard } from "@/components/savings-wizard/AddSavingsWizard";
 import { useSavingsData } from "@/hooks/useSavingsData";
 import { useMonthlyBalance } from "@/hooks/useMonthlyBalance";
+import { usePreviousMonthSurplus } from "@/hooks/usePreviousMonthSurplus";
+import { PreviousMonthSurplusBanner } from "@/components/PreviousMonthSurplusBanner";
+import { TransferSurplusModal } from "@/components/TransferSurplusModal";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -51,6 +54,8 @@ const Index = () => {
   const [addTransactionDialogOpen, setAddTransactionDialogOpen] = useState(false);
   const [voiceInitialData, setVoiceInitialData] = useState<TransactionInitialData | null>(null);
   const [savingsWizardOpen, setSavingsWizardOpen] = useState(false);
+  const [transferSurplusModalOpen, setTransferSurplusModalOpen] = useState(false);
+  const [isTransferringSurplus, setIsTransferringSurplus] = useState(false);
   const [showVoiceSuccess, setShowVoiceSuccess] = useState(false);
   const [isVoiceTransaction, setIsVoiceTransaction] = useState(false);
 
@@ -104,8 +109,76 @@ const Index = () => {
   } = useBudgetsData(user?.id, activeMonth, transactionsForBudgets);
 
   // Savings wizard (for "Ahorrar" quick action)
-  const { addEntry: addSavingsEntry } = useSavingsData(user?.id);
+  const { addEntry: addSavingsEntry, refetch: refetchSavings } = useSavingsData(user?.id);
   const { balance: monthlyBalance } = useMonthlyBalance(user?.id);
+
+  // Previous month surplus (show banner when current month and pending surplus)
+  const {
+    record: previousMonthSurplus,
+    monthLabel: previousMonthLabel,
+    shouldShowBanner: shouldShowSurplusBanner,
+    acknowledgeAsSaved,
+    acknowledgeAsIgnored,
+    refetch: refetchSurplus,
+  } = usePreviousMonthSurplus(user?.id);
+
+  const isViewingCurrentMonth =
+    format(activeMonth, "yyyy-MM") === format(new Date(), "yyyy-MM");
+
+  const handleTransferSurplusConfirm = async (
+    allocation: { allARS: true } | { allARS: false; arsAmount: number; usdAmount: number }
+  ) => {
+    if (!previousMonthSurplus || !user) return;
+    setIsTransferringSurplus(true);
+    try {
+      const note = `Excedente de ${previousMonthLabel}`;
+      if (allocation.allARS) {
+        await addSavingsEntry({
+          amount: surplusTotalARS,
+          currency: "ARS",
+          entry_type: "deposit",
+          savings_type: "bank",
+          notes: note,
+        });
+      } else {
+        if (allocation.arsAmount > 0) {
+          await addSavingsEntry({
+            amount: allocation.arsAmount,
+            currency: "ARS",
+            entry_type: "deposit",
+            savings_type: "bank",
+            notes: note,
+          });
+        }
+        if (allocation.usdAmount > 0) {
+          await addSavingsEntry({
+            amount: allocation.usdAmount,
+            currency: "USD",
+            entry_type: "deposit",
+            savings_type: "bank",
+            notes: note,
+          });
+        }
+      }
+      await acknowledgeAsSaved();
+      await Promise.all([refetch(), refetchSavings(), refetchSurplus()]);
+      toast.success("Excedente agregado a ahorros");
+      setTransferSurplusModalOpen(false);
+    } catch (err) {
+      console.error("Error transferring surplus:", err);
+      toast.error("Error al transferir el excedente");
+    } finally {
+      setIsTransferringSurplus(false);
+    }
+  };
+
+  const handleSurplusDismiss = async () => {
+    try {
+      await acknowledgeAsIgnored();
+    } catch (err) {
+      toast.error("Error al cerrar");
+    }
+  };
 
   // Push notifications hook
   const pushNotifications = usePushNotifications(user?.id);
@@ -181,6 +254,8 @@ const Index = () => {
     ars: (Number(liquidSavings.ars) || 0) + (Number(totalInvested.ars) || 0)
   };
   const exchangeRate = dashboardData?.exchangeRate.rate || 1300;
+  const surplusTotalARS =
+    (previousMonthSurplus?.surplus_usd ?? 0) * exchangeRate + (previousMonthSurplus?.surplus_ars ?? 0);
   const lastUpdated = dashboardData?.exchangeRate.updatedAt;
   const transactions = dashboardData?.transactions || [];
   const categories = dashboardData?.categories || [];
@@ -247,6 +322,15 @@ const Index = () => {
                     onSubscribe={pushNotifications.subscribe}
                     subscribing={pushNotifications.subscribing}
                   />
+
+                  {isViewingCurrentMonth && shouldShowSurplusBanner && previousMonthSurplus && (
+                    <PreviousMonthSurplusBanner
+                      surplusTotalARS={surplusTotalARS}
+                      monthLabel={previousMonthLabel}
+                      onAddToSavings={() => setTransferSurplusModalOpen(true)}
+                      onDismiss={handleSurplusDismiss}
+                    />
+                  )}
 
                   <div className="grid grid-cols-1 gap-3 animate-fade-in">
                     <StatCard 
@@ -360,6 +444,17 @@ const Index = () => {
                   {formatCurrency(globalNetBalanceARS, "ARS")}
                 </p>
               </div>
+
+              {isViewingCurrentMonth && shouldShowSurplusBanner && previousMonthSurplus && (
+                <div className="max-w-lg mx-auto">
+                  <PreviousMonthSurplusBanner
+                    surplusTotalARS={surplusTotalARS}
+                    monthLabel={previousMonthLabel}
+                    onAddToSavings={() => setTransferSurplusModalOpen(true)}
+                    onDismiss={handleSurplusDismiss}
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard 
@@ -529,6 +624,16 @@ const Index = () => {
           }}
           availableBalanceUSD={monthlyBalance.availableUSD}
           availableBalanceARS={monthlyBalance.availableARS}
+        />
+
+        <TransferSurplusModal
+          open={transferSurplusModalOpen}
+          onOpenChange={setTransferSurplusModalOpen}
+          surplusTotalARS={surplusTotalARS}
+          exchangeRate={exchangeRate}
+          monthLabel={previousMonthLabel}
+          onConfirm={handleTransferSurplusConfirm}
+          isSubmitting={isTransferringSurplus}
         />
       </div>
     </AppLayout>

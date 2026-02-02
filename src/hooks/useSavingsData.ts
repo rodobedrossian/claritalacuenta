@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -84,9 +85,14 @@ interface UseSavingsDataReturn {
 }
 
 export function useSavingsData(userId: string | null): UseSavingsDataReturn {
+  const queryClient = useQueryClient();
   const [data, setData] = useState<SavingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const invalidateDashboard = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
+  }, [queryClient]);
 
   const fetchData = useCallback(async () => {
     if (!userId) return;
@@ -205,13 +211,14 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
         };
       });
 
+      invalidateDashboard();
       toast.success("Movimiento registrado");
     } catch (err: any) {
       console.error("Error adding entry:", err);
       toast.error("Error al registrar movimiento");
       throw err;
     }
-  }, [userId, data]);
+  }, [userId, data, invalidateDashboard]);
 
   const updateEntry = useCallback(async (id: string, updatedData: Omit<SavingsEntry, "id" | "user_id" | "created_at">) => {
     if (!data) return;
@@ -266,13 +273,14 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
         });
       }
 
+      invalidateDashboard();
       toast.success("Movimiento actualizado");
     } catch (err: any) {
       console.error("Error updating entry:", err);
       toast.error("Error al actualizar movimiento");
       throw err;
     }
-  }, [data]);
+  }, [data, invalidateDashboard]);
 
   const deleteEntry = useCallback(async (id: string) => {
     if (!data) return;
@@ -312,13 +320,14 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
         });
       }
 
+      invalidateDashboard();
       toast.success("Movimiento eliminado");
     } catch (err: any) {
       console.error("Error deleting entry:", err);
       toast.error("Error al eliminar movimiento");
       throw err;
     }
-  }, [data]);
+  }, [data, invalidateDashboard]);
 
   const addInvestment = useCallback(async (investment: Omit<Investment, "id" | "user_id" | "created_at" | "updated_at">) => {
     if (!userId) return;
@@ -461,13 +470,14 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
         };
       });
 
+      invalidateDashboard();
       toast.success("Sumado a ahorros líquidos");
     } catch (err: any) {
       console.error("Error liquidating investment:", err);
       toast.error("Error al sumar a líquidos");
       throw err;
     }
-  }, [userId, data]);
+  }, [userId, data, invalidateDashboard]);
 
   const markInvestmentInactive = useCallback(async (id: string) => {
     try {

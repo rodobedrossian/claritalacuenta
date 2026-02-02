@@ -258,6 +258,45 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_surpluses: {
+        Row: {
+          id: string
+          user_id: string
+          month: string
+          surplus_usd: number
+          surplus_ars: number
+          status: string
+          saved_at: string | null
+          ignored_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          month: string
+          surplus_usd?: number
+          surplus_ars?: number
+          status?: string
+          saved_at?: string | null
+          ignored_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          month?: string
+          surplus_usd?: number
+          surplus_ars?: number
+          status?: string
+          saved_at?: string | null
+          ignored_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_history: {
         Row: {
           body: string
