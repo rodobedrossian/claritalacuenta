@@ -33,6 +33,9 @@ import { format, addMonths, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { useDashboardData, Transaction } from "@/hooks/useDashboardData";
 import { useBudgetsData } from "@/hooks/useBudgetsData";
+import { AddSavingsWizard } from "@/components/savings-wizard/AddSavingsWizard";
+import { useSavingsData } from "@/hooks/useSavingsData";
+import { useMonthlyBalance } from "@/hooks/useMonthlyBalance";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -99,6 +102,10 @@ const Index = () => {
   const {
     budgetsWithSpending,
   } = useBudgetsData(user?.id, activeMonth, transactionsForBudgets);
+
+  // Savings wizard (for "Ahorrar" quick action)
+  const { addEntry: addSavingsEntry } = useSavingsData(user?.id);
+  const { balance: monthlyBalance } = useMonthlyBalance(user?.id);
 
   // Push notifications hook
   const pushNotifications = usePushNotifications(user?.id);
@@ -512,6 +519,17 @@ const Index = () => {
         />
 
         <SuccessConfetti show={showVoiceSuccess} onComplete={() => setShowVoiceSuccess(false)} message="¡Transacción guardada!" />
+
+        <AddSavingsWizard
+          open={savingsWizardOpen}
+          onOpenChange={setSavingsWizardOpen}
+          onAdd={async (entry) => {
+            await addSavingsEntry(entry);
+            refetch();
+          }}
+          availableBalanceUSD={monthlyBalance.availableUSD}
+          availableBalanceARS={monthlyBalance.availableARS}
+        />
       </div>
     </AppLayout>
   );
