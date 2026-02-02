@@ -88,7 +88,7 @@ export const AddGoalWizard = ({
   };
 
   const content = (
-    <div className="h-full flex flex-col">
+    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
       {step === "amount" && (
         <GoalAmountStep
           currency={currency}
@@ -126,7 +126,7 @@ export const AddGoalWizard = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md h-[550px] p-0 overflow-hidden">
+      <DialogContent className="max-w-md max-h-[85vh] min-h-[520px] h-auto p-0 overflow-hidden flex flex-col">
         {content}
       </DialogContent>
     </Dialog>
