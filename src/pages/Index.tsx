@@ -305,10 +305,6 @@ const Index = () => {
                   onNextMonth={goToNextMonth}
                   onCurrentMonth={goToCurrentMonth}
                   netBalance={globalNetBalanceARS}
-                  netBalanceBreakdown={{
-                    usd: totals.incomeUSD - totals.expensesUSD - totals.savingsTransfersUSD,
-                    ars: totals.incomeARS - totals.expensesARS - totals.savingsTransfersARS
-                  }}
                   formatCurrency={formatCurrency}
                 />
 
