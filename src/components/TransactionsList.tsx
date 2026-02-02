@@ -77,22 +77,41 @@ const getDateGroup = (dateString: string): string => {
   return date.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
 };
 
+const GROUP_DISPLAY_ORDER: Record<string, number> = {
+  Hoy: 0,
+  Ayer: 1,
+  "Esta semana": 2,
+  "Este mes": 3,
+};
+
 const groupTransactionsByDate = (transactions: Transaction[]): DateGroup[] => {
   const groups: Map<string, Transaction[]> = new Map();
-  const groupOrder: string[] = [];
 
   for (const transaction of transactions) {
     const groupLabel = getDateGroup(transaction.date);
 
     if (!groups.has(groupLabel)) {
       groups.set(groupLabel, []);
-      groupOrder.push(groupLabel);
     }
 
     groups.get(groupLabel)!.push(transaction);
   }
 
-  return groupOrder.map((label) => {
+  const labels = Array.from(groups.keys());
+  const sortedLabels = labels.sort((a, b) => {
+    const orderA = GROUP_DISPLAY_ORDER[a];
+    const orderB = GROUP_DISPLAY_ORDER[b];
+    if (orderA != null && orderB != null) {
+      return orderA - orderB;
+    }
+    if (orderA != null) return -1;
+    if (orderB != null) return 1;
+    const maxDateA = Math.max(...groups.get(a)!.map((t) => new Date(t.date).getTime()));
+    const maxDateB = Math.max(...groups.get(b)!.map((t) => new Date(t.date).getTime()));
+    return maxDateB - maxDateA;
+  });
+
+  return sortedLabels.map((label) => {
     const groupTransactions = groups.get(label)!;
     const totals = groupTransactions.reduce(
       (acc, t) => {

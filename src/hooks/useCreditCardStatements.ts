@@ -79,7 +79,7 @@ interface UseCreditCardStatementsReturn {
   getStatementTransactions: (statementImportId: string) => Promise<CreditCardTransaction[]>;
   updateTransactionCategory: (transactionId: string, categoryId: string) => Promise<boolean>;
   bulkUpdateCategories: (transactionIds: string[], categoryId: string) => Promise<boolean>;
-  deleteStatement: (statementId: string) => Promise<boolean>;
+  deleteStatement: (statementId: string, filePath?: string | null) => Promise<boolean>;
   getMonthlyTransactions: (month: string) => Promise<CreditCardTransaction[]>;
   getMonthlyTotals: () => Promise<MonthlyTotals[]>;
   getStatementTotals: () => Promise<StatementTotals[]>;
@@ -173,9 +173,20 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
     return true;
   }, []);
 
-  const deleteStatement = useCallback(async (statementId: string): Promise<boolean> => {
+  const deleteStatement = useCallback(async (statementId: string, filePath?: string | null): Promise<boolean> => {
     try {
-      // First delete associated credit card transactions
+      // Fetch file_path if not provided (for storage cleanup)
+      let pathToDelete = filePath;
+      if (pathToDelete == null) {
+        const { data: stmt } = await supabase
+          .from("statement_imports")
+          .select("file_path")
+          .eq("id", statementId)
+          .single();
+        pathToDelete = stmt?.file_path;
+      }
+
+      // 1. Delete associated credit card transactions (consumos, cuotas, impuestos)
       const { error: ccTxError } = await supabase
         .from("credit_card_transactions")
         .delete()
@@ -186,7 +197,7 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
         return false;
       }
 
-      // Then delete payment transactions from transactions table
+      // 2. Delete payment transactions from main transactions table (pagos de tarjeta)
       const { error: txError } = await supabase
         .from("transactions")
         .delete()
@@ -197,7 +208,12 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
         return false;
       }
 
-      // Then delete the statement itself
+      // 3. Delete PDF file from storage if it exists
+      if (pathToDelete && typeof pathToDelete === "string") {
+        await supabase.storage.from("credit-card-statements").remove([pathToDelete]);
+      }
+
+      // 4. Delete the statement import record
       const { error: stmtError } = await supabase
         .from("statement_imports")
         .delete()

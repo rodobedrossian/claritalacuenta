@@ -139,6 +139,7 @@ export const StatementsList = ({
           creditCards={creditCards}
           onViewAnalytics={onViewMonthlyAnalytics}
           onSelectStatement={onSelectStatement}
+          onDeleteStatement={onDeleteStatement}
           statementTotals={statementTotals}
         />
       ))}

@@ -1,6 +1,7 @@
 import { useInstallmentProjection } from "@/hooks/useInstallmentProjection";
 import { InstallmentProjectionChart } from "./InstallmentProjectionChart";
 import { EndingInstallmentsList } from "./EndingInstallmentsList";
+import { ProjectionEmptyState } from "./ProjectionEmptyState";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingDown, Wallet, Calendar, CreditCard, Loader2 } from "lucide-react";
@@ -8,9 +9,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface InstallmentProjectionPanelProps {
   userId: string;
+  creditCardsCount?: number;
+  statementsCount?: number;
+  onAddCard?: () => void;
+  onImportStatement?: () => void;
 }
 
-export const InstallmentProjectionPanel = ({ userId }: InstallmentProjectionPanelProps) => {
+export const InstallmentProjectionPanel = ({
+  userId,
+  creditCardsCount = 0,
+  statementsCount = 0,
+  onAddCard,
+  onImportStatement,
+}: InstallmentProjectionPanelProps) => {
   const { projections, summary, activeInstallments, loading, error } = useInstallmentProjection(userId);
 
   if (loading) {
@@ -37,8 +48,18 @@ export const InstallmentProjectionPanel = ({ userId }: InstallmentProjectionPane
     );
   }
 
-  // Don't show panel if no active installments
+  // Empty state when no active installments
   if (activeInstallments.length === 0) {
+    if (onAddCard && onImportStatement) {
+      return (
+        <ProjectionEmptyState
+          hasCreditCards={creditCardsCount > 0}
+          hasStatements={statementsCount > 0}
+          onAddCard={onAddCard}
+          onImportStatement={onImportStatement}
+        />
+      );
+    }
     return null;
   }
 

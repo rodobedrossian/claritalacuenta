@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, Search, Check, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Search, Check, Sparkles, Loader2, Trash2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { StatementImport, CreditCardTransaction } from "@/hooks/useCreditCardStatements";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +59,7 @@ interface StatementDetailProps {
   categories: Category[];
   userId: string;
   onBack: () => void;
+  onDeleteStatement?: (statementId: string, filePath?: string | null) => Promise<boolean>;
   onStatementUpdated?: (updatedStatement: StatementImport) => void;
 }
 
@@ -74,6 +86,7 @@ export const StatementDetail = ({
   categories,
   userId,
   onBack,
+  onDeleteStatement,
 }: StatementDetailProps) => {
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
@@ -84,6 +97,7 @@ export const StatementDetail = ({
   const [loading, setLoading] = useState(true);
   const [learnedCategories, setLearnedCategories] = useState<Record<string, string>>({});
   const [autoAssignedCount, setAutoAssignedCount] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const loadTransactions = async () => {
@@ -380,18 +394,60 @@ export const StatementDetail = ({
     <div className="space-y-6">
       {/* Header - Fixed sticky with safe area */}
       <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/50 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-safe pb-3 transition-all duration-300">
-        <div className="flex items-center gap-4 h-10">
-          <Button variant="ghost" size="icon" onClick={onBack} className="h-9 w-9">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex flex-col">
-            <h2 className="text-xl font-bold tracking-tight">
-              {format(parseISO(statement.statement_month), "MMMM yyyy", { locale: es })}
-            </h2>
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider truncate max-w-[200px] sm:max-w-none">
-              {statement.file_name}
-            </p>
+        <div className="flex items-center justify-between gap-4 h-10">
+          <div className="flex items-center gap-4 min-w-0">
+            <Button variant="ghost" size="icon" onClick={onBack} className="h-9 w-9 shrink-0">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex flex-col min-w-0">
+              <h2 className="text-xl font-bold tracking-tight">
+                {format(parseISO(statement.statement_month), "MMMM yyyy", { locale: es })}
+              </h2>
+              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider truncate max-w-[200px] sm:max-w-none">
+                {statement.file_name}
+              </p>
+            </div>
           </div>
+          {onDeleteStatement && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10">
+                  <Trash2 className="h-5 w-5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="bg-card border-border">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Eliminar resumen?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Se eliminarán todas las transacciones asociadas (consumos y pagos de tarjeta). Esta acción no se puede deshacer.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      setIsDeleting(true);
+                      try {
+                        const ok = await onDeleteStatement(statement.id, statement.file_path);
+                        if (ok) {
+                          toast.success("Resumen eliminado");
+                          onBack();
+                        } else {
+                          toast.error("Error al eliminar el resumen");
+                        }
+                      } finally {
+                        setIsDeleting(false);
+                      }
+                    }}
+                    disabled={isDeleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeleting ? "Eliminando..." : "Eliminar"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </div>
 

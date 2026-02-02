@@ -33,6 +33,7 @@ const CreditCards = () => {
   const [monthlyTransactions, setMonthlyTransactions] = useState<CreditCardTransaction[]>([]);
   const [loadingMonthly, setLoadingMonthly] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("proyeccion");
 
   const { statements, loading, refetch, deleteStatement, getMonthlyTransactions, getMonthlyTotals, getStatementTotals } = useCreditCardStatements(userId);
   const { creditCards, addCreditCard, deleteCreditCard } = useCreditCardsData(userId);
@@ -116,13 +117,14 @@ const CreditCards = () => {
           categories={categories}
           userId={userId}
           onBack={() => setSelectedStatement(null)}
+          onDeleteStatement={deleteStatement}
         />
       );
     }
 
     // Main tabbed view
     return (
-      <Tabs defaultValue="proyeccion" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="proyeccion" className="gap-2">
             <TrendingDown className="h-4 w-4" />
@@ -139,7 +141,16 @@ const CreditCards = () => {
         </TabsList>
 
         <TabsContent value="proyeccion">
-          <InstallmentProjectionPanel userId={userId} />
+          <InstallmentProjectionPanel
+            userId={userId}
+            creditCardsCount={creditCards.length}
+            statementsCount={statements.length}
+            onAddCard={() => setActiveTab("tarjetas")}
+            onImportStatement={() => {
+              setActiveTab("resumenes");
+              setImportDialogOpen(true);
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="resumenes">

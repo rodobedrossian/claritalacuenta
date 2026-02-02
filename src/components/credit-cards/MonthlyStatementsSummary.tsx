@@ -1,9 +1,21 @@
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { CreditCard, ChevronDown, ChevronUp, BarChart3 } from "lucide-react";
+import { CreditCard, ChevronDown, ChevronUp, BarChart3, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { StatementImport, StatementTotals } from "@/hooks/useCreditCardStatements";
 import { useState } from "react";
 
@@ -27,6 +39,7 @@ interface MonthlyStatementsSummaryProps {
   creditCards: CreditCardType[];
   onViewAnalytics: (month: string) => void;
   onSelectStatement: (statement: StatementImport) => void;
+  onDeleteStatement?: (statementId: string, filePath?: string | null) => Promise<boolean>;
   statementTotals: StatementTotals[];
   children?: React.ReactNode;
 }
@@ -36,6 +49,7 @@ export const MonthlyStatementsSummary = ({
   creditCards,
   onViewAnalytics,
   onSelectStatement,
+  onDeleteStatement,
   statementTotals,
   children,
 }: MonthlyStatementsSummaryProps) => {
@@ -149,7 +163,7 @@ export const MonthlyStatementsSummary = ({
               return (
                 <div
                   key={statement.id}
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors group/item"
                   onClick={() => onSelectStatement(statement)}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -161,7 +175,7 @@ export const MonthlyStatementsSummary = ({
                       {txCount} trans.
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm pl-7 sm:pl-0">
+                  <div className="flex items-center gap-2 sm:gap-3 text-sm pl-7 sm:pl-0">
                     {totalArs > 0 && (
                       <span className="text-warning font-medium whitespace-nowrap">
                         {formatCurrency(totalArs, "ARS")}
@@ -171,6 +185,42 @@ export const MonthlyStatementsSummary = ({
                       <span className="text-warning font-medium whitespace-nowrap">
                         {formatCurrency(totalUsd, "USD")}
                       </span>
+                    )}
+                    {onDeleteStatement && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover/item:opacity-100 sm:opacity-100"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-card border-border" onClick={(e) => e.stopPropagation()}>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>¿Eliminar resumen?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Se eliminarán todas las transacciones asociadas (consumos y pagos de tarjeta). Esta acción no se puede deshacer.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const ok = await onDeleteStatement(statement.id, statement.file_path);
+                                if (ok) toast.success("Resumen eliminado");
+                                else toast.error("Error al eliminar el resumen");
+                              }}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Eliminar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     )}
                   </div>
                 </div>
