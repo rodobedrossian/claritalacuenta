@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect") ? decodeURIComponent(searchParams.get("redirect")!) : "/";
   const isMobile = useIsMobile();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -62,10 +64,10 @@ const Auth = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/", { replace: true });
+        navigate(redirectTo, { replace: true });
       }
     });
-  }, [navigate]);
+  }, [navigate, redirectTo]);
 
   // When showing returning user, try Face ID first if biometric is configured
   useEffect(() => {
@@ -95,7 +97,7 @@ const Auth = () => {
             access_token: session.access_token,
             refresh_token: session.refresh_token,
           });
-          navigate("/", { replace: true });
+          navigate(redirectTo, { replace: true });
           return;
         }
       } catch {
@@ -133,17 +135,17 @@ const Auth = () => {
           setBiometricModalOpen(true);
           return;
         }
-        navigate("/");
-      }).catch(() => navigate("/"));
+        navigate(redirectTo);
+      }).catch(() => navigate(redirectTo));
     } else {
-      navigate("/");
+      navigate(redirectTo);
     }
   };
 
   const handleBiometricYes = async () => {
     if (!pendingSession) {
       setBiometricModalOpen(false);
-      navigate("/");
+      navigate(redirectTo);
       return;
     }
     try {
@@ -152,13 +154,13 @@ const Auth = () => {
       setBiometricPromptShown();
       setPendingSession(null);
       setBiometricModalOpen(false);
-      navigate("/");
+      navigate(redirectTo);
     } catch (err) {
       console.warn("[Auth] storeSession:", err);
       setBiometricPromptShown();
       setPendingSession(null);
       setBiometricModalOpen(false);
-      navigate("/");
+      navigate(redirectTo);
     }
   };
 
@@ -166,7 +168,7 @@ const Auth = () => {
     setBiometricPromptShown();
     setPendingSession(null);
     setBiometricModalOpen(false);
-    navigate("/");
+    navigate(redirectTo);
   };
 
   const getAuthErrorMessage = (error: { code?: string; message?: string; weak_password?: { reasons?: string[] } }) => {
@@ -211,7 +213,7 @@ const Auth = () => {
         );
       } else {
         toast.success("¡Cuenta creada! Revisá tu email para confirmar.");
-        navigate("/");
+        navigate(redirectTo);
       }
     } catch (error: any) {
       toast.error(error.message);

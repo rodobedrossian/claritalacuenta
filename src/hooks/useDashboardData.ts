@@ -70,7 +70,7 @@ interface UseDashboardDataReturn {
   updateSavingsTransfers: (currency: "USD" | "ARS", amount: number) => void;
 }
 
-export function useDashboardData(activeMonth: Date, userId: string | null): UseDashboardDataReturn {
+export function useDashboardData(activeMonth: Date, userId: string | null, workspaceId: string | null): UseDashboardDataReturn {
   const queryClient = useQueryClient();
   const monthStr = format(activeMonth, "yyyy-MM");
 
@@ -81,7 +81,7 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
     error: queryError,
     refetch: queryRefetch 
   } = useQuery({
-    queryKey: ["dashboard-data", monthStr, userId],
+    queryKey: ["dashboard-data", monthStr, userId, workspaceId],
     queryFn: async () => {
       if (!userId) return null;
 
@@ -129,7 +129,7 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
         creditCards: responseData.creditCards || []
       } as DashboardData;
     },
-    enabled: !!userId,
+    enabled: !!userId && !!workspaceId,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 
@@ -186,6 +186,7 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
   }, [queryClient]);
 
   const addTransaction = useCallback(async (transaction: Omit<Transaction, "id">) => {
+    if (!workspaceId) throw new Error("No workspace");
     try {
       const { data: newTransaction, error } = await supabase
         .from("transactions")
@@ -197,6 +198,7 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
           description: transaction.description,
           date: transaction.date,
           user_id: transaction.user_id,
+          workspace_id: workspaceId,
           from_savings: transaction.from_savings || false,
           savings_source: transaction.savings_source || null,
           payment_method: transaction.payment_method || "cash"
@@ -209,11 +211,12 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
       // If expense is from savings, handle savings deduction
       if (transaction.type === "expense" && transaction.from_savings && transaction.savings_source) {
         const { data: session } = await supabase.auth.getSession();
-        const userId = session?.session?.user?.id;
+        const uid = session?.session?.user?.id;
         
-        if (userId) {
+        if (uid && workspaceId) {
           await supabase.from("savings_entries").insert([{
-            user_id: userId,
+            user_id: uid,
+            workspace_id: workspaceId,
             amount: transaction.amount,
             currency: transaction.currency,
             entry_type: "withdrawal",
@@ -249,7 +252,7 @@ export function useDashboardData(activeMonth: Date, userId: string | null): UseD
       toast.error("Error al registrar transacción");
       throw err;
     }
-  }, [queryClient]);
+  }, [queryClient, workspaceId]);
 
   const updateCurrentSavings = useCallback((savings: { usd: number; ars: number }) => {
     // This could also be a mutation or just invalidation

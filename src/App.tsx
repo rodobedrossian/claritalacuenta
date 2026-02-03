@@ -31,6 +31,7 @@ import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
 import Privacy from "./pages/Privacy";
 import ResetPassword from "./pages/ResetPassword";
+import AcceptInvite from "./pages/AcceptInvite";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -84,6 +85,7 @@ const App = () => {
                 <Route path="/landing-apple" element={<LandingApple />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/accept-invite" element={<AcceptInvite />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/admin" element={<AdminAuth />} />
                 <Route element={<AdminLayout />}>

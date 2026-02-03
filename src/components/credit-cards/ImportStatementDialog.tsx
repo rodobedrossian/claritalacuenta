@@ -36,6 +36,7 @@ interface ImportStatementDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
+  workspaceId: string | null;
   creditCards: CreditCardType[];
   onSuccess: () => void;
   onAddCard?: (card: { name: string; bank: string | null; closing_day: number | null }) => Promise<void>;
@@ -53,6 +54,7 @@ export function ImportStatementDialog({
   open,
   onOpenChange,
   userId,
+  workspaceId,
   creditCards,
   onSuccess,
   onAddCard,
@@ -77,7 +79,7 @@ export function ImportStatementDialog({
     toggleAllSelection,
     importTransactions,
     reset,
-  } = useStatementImport();
+  } = useStatementImport(workspaceId);
 
   const handleClose = () => {
     setStep("upload");

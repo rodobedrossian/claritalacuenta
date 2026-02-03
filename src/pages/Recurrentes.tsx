@@ -7,6 +7,7 @@ import { AddRecurringExpenseDialog } from "@/components/recurring/AddRecurringEx
 import { RecurringExpensesList } from "@/components/recurring/RecurringExpensesList";
 import { useRecurringExpensesData } from "@/hooks/useRecurringExpensesData";
 import { useCategoriesData } from "@/hooks/useCategoriesData";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { Repeat } from "lucide-react";
 
 export default function Recurrentes() {
@@ -14,6 +15,7 @@ export default function Recurrentes() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const { workspaceId } = useWorkspace(userId);
   const { categories, loading: categoriesLoading } = useCategoriesData(userId);
   const {
     recurringExpenses,
@@ -21,7 +23,7 @@ export default function Recurrentes() {
     updateRecurringExpense,
     deleteRecurringExpense,
     generateTransaction,
-  } = useRecurringExpensesData(userId);
+  } = useRecurringExpensesData(userId, workspaceId);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {

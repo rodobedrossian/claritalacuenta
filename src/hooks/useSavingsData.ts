@@ -84,7 +84,7 @@ interface UseSavingsDataReturn {
   deleteGoal: (id: string) => Promise<void>;
 }
 
-export function useSavingsData(userId: string | null): UseSavingsDataReturn {
+export function useSavingsData(userId: string | null, workspaceId: string | null): UseSavingsDataReturn {
   const queryClient = useQueryClient();
   const [data, setData] = useState<SavingsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,7 +95,7 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
   }, [queryClient]);
 
   const fetchData = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || !workspaceId) return;
 
     try {
       setLoading(true);
@@ -136,9 +136,10 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
       };
 
       // If savings need to be rebuilt from entries, do it now
-      if (typedData.needsRebuild) {
+      if (typedData.needsRebuild && workspaceId) {
         await supabase.from("savings").insert([{
           user_id: userId,
+          workspace_id: workspaceId,
           usd_amount: typedData.currentSavings.usd,
           ars_amount: typedData.currentSavings.ars
         }]);
@@ -153,19 +154,19 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, workspaceId]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   const addEntry = useCallback(async (entry: Omit<SavingsEntry, "id" | "user_id" | "created_at">) => {
-    if (!userId || !data) return;
+    if (!userId || !workspaceId || !data) return;
 
     try {
       const { data: newEntry, error } = await supabase
         .from("savings_entries")
-        .insert([{ ...entry, user_id: userId }])
+        .insert([{ ...entry, user_id: userId, workspace_id: workspaceId }])
         .select()
         .single();
 
@@ -185,6 +186,7 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
       } else {
         await supabase.from("savings").insert([{
           user_id: userId,
+          workspace_id: workspaceId,
           usd_amount: entry.currency === "USD" ? newAmount : 0,
           ars_amount: entry.currency === "ARS" ? newAmount : 0
         }]);
@@ -335,7 +337,7 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
     try {
       const { data: newInvestment, error } = await supabase
         .from("investments")
-        .insert([{ ...investment, user_id: userId }])
+        .insert([{ ...investment, user_id: userId, workspace_id: workspaceId }])
         .select()
         .single();
 
@@ -365,7 +367,7 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
       toast.error("Error al registrar inversión");
       throw err;
     }
-  }, [userId]);
+  }, [userId, workspaceId]);
 
   const deleteInvestment = useCallback(async (id: string) => {
     try {
@@ -403,6 +405,7 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
       const { error: entryError } = await supabase.from("savings_entries").insert([
         {
           user_id: userId,
+          workspace_id: workspaceId,
           amount: investment.current_amount,
           currency: investment.currency,
           entry_type: "deposit",
@@ -428,6 +431,7 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
         const { error: insertError } = await supabase.from("savings").insert([
           {
             user_id: userId,
+            workspace_id: workspaceId,
             usd_amount: investment.currency === "USD" ? newAmount : 0,
             ars_amount: investment.currency === "ARS" ? newAmount : 0,
           },
@@ -537,7 +541,7 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
     try {
       const { data: newGoal, error } = await supabase
         .from("savings_goals")
-        .insert([{ ...goal, user_id: userId }])
+        .insert([{ ...goal, user_id: userId, workspace_id: workspaceId }])
         .select()
         .single();
 
@@ -563,7 +567,7 @@ export function useSavingsData(userId: string | null): UseSavingsDataReturn {
       toast.error("Error al crear objetivo");
       throw err;
     }
-  }, [userId]);
+  }, [userId, workspaceId]);
 
   const toggleGoalComplete = useCallback(async (id: string, completed: boolean) => {
     try {

@@ -14,6 +14,7 @@ import { CreditCardsList } from "@/components/credit-cards/CreditCardsList";
 import { CreditCardsSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useCreditCardStatements, StatementImport, CreditCardTransaction } from "@/hooks/useCreditCardStatements";
 import { useCreditCardsData } from "@/hooks/useCreditCardsData";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,8 +36,9 @@ const CreditCards = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("proyeccion");
 
+  const { workspaceId } = useWorkspace(userId);
   const { statements, loading, refetch, deleteStatement, getMonthlyTransactions, getMonthlyTotals, getStatementTotals } = useCreditCardStatements(userId);
-  const { creditCards, addCreditCard, deleteCreditCard } = useCreditCardsData(userId);
+  const { creditCards, addCreditCard, deleteCreditCard } = useCreditCardsData(userId, workspaceId);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -231,6 +233,7 @@ const CreditCards = () => {
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
         userId={userId}
+        workspaceId={workspaceId}
         creditCards={creditCards}
         onSuccess={refetch}
         onAddCard={addCreditCard}

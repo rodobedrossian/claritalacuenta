@@ -22,13 +22,13 @@ interface UseCreditCardsDataReturn {
   deleteCreditCard: (id: string) => Promise<void>;
 }
 
-export function useCreditCardsData(userId: string | null): UseCreditCardsDataReturn {
+export function useCreditCardsData(userId: string | null, workspaceId: string | null): UseCreditCardsDataReturn {
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchCreditCards = useCallback(async () => {
-    if (!userId) {
+    if (!userId || !workspaceId) {
       setLoading(false);
       return;
     }
@@ -51,14 +51,14 @@ export function useCreditCardsData(userId: string | null): UseCreditCardsDataRet
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, workspaceId]);
 
   useEffect(() => {
     fetchCreditCards();
   }, [fetchCreditCards]);
 
   const addCreditCard = useCallback(async (card: Omit<CreditCard, "id" | "user_id" | "created_at" | "updated_at">) => {
-    if (!userId) {
+    if (!userId || !workspaceId) {
       toast.error("Debes iniciar sesión");
       return;
     }
@@ -66,7 +66,7 @@ export function useCreditCardsData(userId: string | null): UseCreditCardsDataRet
     try {
       const { data, error } = await supabase
         .from("credit_cards")
-        .insert([{ ...card, user_id: userId }])
+        .insert([{ ...card, user_id: userId, workspace_id: workspaceId }])
         .select()
         .single();
 
@@ -79,7 +79,7 @@ export function useCreditCardsData(userId: string | null): UseCreditCardsDataRet
       toast.error("Error al agregar tarjeta");
       throw err;
     }
-  }, [userId]);
+  }, [userId, workspaceId]);
 
   const updateCreditCard = useCallback(async (id: string, card: Partial<Omit<CreditCard, "id" | "user_id" | "created_at" | "updated_at">>) => {
     try {

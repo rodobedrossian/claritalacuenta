@@ -33,6 +33,7 @@ import { format, addMonths, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { useDashboardData, Transaction } from "@/hooks/useDashboardData";
 import { useBudgetsData } from "@/hooks/useBudgetsData";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { AddSavingsWizard } from "@/components/savings-wizard/AddSavingsWizard";
 import { useSavingsData } from "@/hooks/useSavingsData";
 import { useMonthlyBalance } from "@/hooks/useMonthlyBalance";
@@ -72,6 +73,8 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const { workspaceId } = useWorkspace(user?.id ?? null);
+
   // Dashboard data
   const { 
     data: dashboardData, 
@@ -82,7 +85,7 @@ const Index = () => {
     deleteTransaction,
     addTransaction,
     updateSavingsTransfers
-  } = useDashboardData(activeMonth, user?.id);
+  } = useDashboardData(activeMonth, user?.id ?? null, workspaceId);
 
   // Insights data
   const { 
@@ -106,10 +109,10 @@ const Index = () => {
 
   const {
     budgetsWithSpending,
-  } = useBudgetsData(user?.id, activeMonth, transactionsForBudgets);
+  } = useBudgetsData(workspaceId, activeMonth, transactionsForBudgets);
 
   // Savings wizard (for "Ahorrar" quick action)
-  const { addEntry: addSavingsEntry, refetch: refetchSavings } = useSavingsData(user?.id);
+  const { addEntry: addSavingsEntry, refetch: refetchSavings } = useSavingsData(user?.id ?? null, workspaceId);
   const { balance: monthlyBalance } = useMonthlyBalance(user?.id);
 
   // Previous month surplus (show banner when current month and pending surplus)
@@ -120,7 +123,7 @@ const Index = () => {
     acknowledgeAsSaved,
     acknowledgeAsIgnored,
     refetch: refetchSurplus,
-  } = usePreviousMonthSurplus(user?.id);
+  } = usePreviousMonthSurplus(user?.id ?? null, workspaceId);
 
   const isViewingCurrentMonth =
     format(activeMonth, "yyyy-MM") === format(new Date(), "yyyy-MM");
