@@ -554,6 +554,7 @@ const Index = () => {
           open={importDialogOpen}
           onOpenChange={setImportDialogOpen}
           userId={user?.id || ""}
+          workspaceId={workspaceId}
           creditCards={creditCards}
           onSuccess={refetch}
         />

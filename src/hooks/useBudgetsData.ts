@@ -90,8 +90,8 @@ export const useBudgetsData = (
     budget: Omit<Budget, "id" | "user_id" | "created_at" | "updated_at" | "is_active" | "workspace_id">
   ) => {
     if (!workspaceId) return;
-    const { data: session } = await supabase.auth.getSession();
-    const userId = session?.data?.session?.user?.id;
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
     if (!userId) return;
 
     try {

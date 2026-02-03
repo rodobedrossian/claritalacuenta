@@ -39,12 +39,12 @@ export default function AcceptInvite() {
     let mounted = true;
 
     (async () => {
-      const { data: invData, error } = await supabase.rpc("get_workspace_invitation_by_token", {
+      const { data: invData, error } = await supabase.rpc("get_workspace_invitation_by_token" as any, {
         in_token: token,
       });
 
       if (!mounted) return;
-      if (error || !invData?.length) {
+      if (error || !invData || invData.length === 0) {
         setInvalid(true);
         setLoading(false);
         return;
