@@ -13,6 +13,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 import { showIOSBanner } from "@/hooks/use-ios-banner";
+import type { CommittedWordWithTimestamp } from "@/hooks/useVoiceTransaction";
 
 interface VoiceRecordingOverlayProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ interface VoiceRecordingOverlayProps {
   duration: number;
   transcribedText?: string;
   partialText?: string; // Live transcription text
+  committedWordsWithTimestamps?: CommittedWordWithTimestamp[] | null;
   getAudioLevels: () => Uint8Array;
   onStop: () => void;
   onCancel: () => void;
@@ -35,6 +37,7 @@ export const VoiceRecordingOverlay = ({
   duration,
   transcribedText,
   partialText,
+  committedWordsWithTimestamps,
   getAudioLevels,
   onStop,
   onCancel,
@@ -277,26 +280,33 @@ export const VoiceRecordingOverlay = ({
             >
               <div className="relative min-h-[120px] flex items-center justify-center">
                 <div className="text-2xl md:text-3xl font-bold text-foreground text-center leading-relaxed">
-                  {displayText.split(' ').map((word, i, arr) => (
-                    <motion.span
-                      key={`${i}-${word}`}
-                      initial={{ opacity: 0, y: 10, filter: "blur(10px)", scale: 0.8 }}
-                      animate={{ 
-                        opacity: i === arr.length - 1 ? 1 : 0.5, 
-                        y: 0,
-                        filter: "blur(0px)",
-                        scale: 1,
-                        color: i === arr.length - 1 ? "var(--primary)" : "currentColor"
-                      }}
-                      transition={{ 
-                        duration: 0.4,
-                        ease: [0.23, 1, 0.32, 1]
-                      }}
-                      className="inline-block mr-2"
-                    >
-                      {word}
-                    </motion.span>
-                  ))}
+                  {displayText.split(' ').map((word, i, arr) => {
+                    const isLastWord = i === arr.length - 1;
+                    const committedCount = committedWordsWithTimestamps?.length ?? 0;
+                    const isInCommittedTail = committedCount > 0 && arr.length - i <= committedCount && !isLastWord;
+                    const opacity = isLastWord ? 1 : isInCommittedTail ? 0.9 : 0.5;
+                    const color = isLastWord ? "var(--primary)" : "currentColor";
+                    return (
+                      <motion.span
+                        key={`${i}-${word}`}
+                        initial={{ opacity: 0, y: 10, filter: "blur(10px)", scale: 0.8 }}
+                        animate={{
+                          opacity,
+                          y: 0,
+                          filter: "blur(0px)",
+                          scale: 1,
+                          color
+                        }}
+                        transition={{
+                          duration: 0.4,
+                          ease: [0.23, 1, 0.32, 1]
+                        }}
+                        className={isInCommittedTail ? "inline-block mr-2 text-muted-foreground" : "inline-block mr-2"}
+                      >
+                        {word}
+                      </motion.span>
+                    );
+                  })}
                   {isRecording && (
                     <motion.span
                       animate={{ opacity: [1, 0, 1] }}

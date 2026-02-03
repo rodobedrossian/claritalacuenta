@@ -7,8 +7,6 @@ import {
   Target,
   Settings,
   LogOut,
-  Menu,
-  X,
   PanelLeftClose,
   PanelLeft,
   CreditCard,
@@ -21,6 +19,7 @@ import { performLogout } from "@/lib/biometricAuth";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { AddTransactionMethodSheet } from "@/components/AddTransactionMethodSheet";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -45,6 +44,7 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [addMethodSheetOpen, setAddMethodSheetOpen] = useState(false);
 
   // Close sidebar when navigating on mobile
   useEffect(() => {
@@ -64,7 +64,7 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
   const showExpanded = isMobile || !isCollapsed;
   const sidebarWidth = showExpanded ? "w-64" : "w-16";
 
-  // For mobile, we use bottom navigation instead of sidebar
+  // For mobile, we use bottom navigation; "+" opens choice sheet (manual vs voice)
   if (isMobile) {
     return (
       <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
@@ -73,8 +73,17 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
           {children}
         </main>
 
-        {/* Bottom Navigation */}
-        <BottomNavigation onAddClick={onMobileAddClick || (() => navigate("/?action=add-transaction"))} />
+        {/* Bottom Navigation: "+" opens method sheet so user can pick Manual or Voice from any screen */}
+        <BottomNavigation
+          onAddClick={() => setAddMethodSheetOpen(true)}
+        />
+
+        <AddTransactionMethodSheet
+          open={addMethodSheetOpen}
+          onOpenChange={setAddMethodSheetOpen}
+          onSelectManual={() => navigate("/?action=add-transaction", { replace: true })}
+          onSelectVoice={() => navigate("/?action=voice-record", { replace: true })}
+        />
       </div>
     );
   }

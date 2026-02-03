@@ -279,7 +279,7 @@ const Index = () => {
   };
 
   return (
-    <AppLayout onMobileAddClick={() => setAddTransactionDialogOpen(true)}>
+    <AppLayout>
       <div className="flex flex-col h-full bg-background overflow-hidden">
         {/* Mobile View */}
         {isMobile ? (
@@ -560,6 +560,7 @@ const Index = () => {
           duration={voiceTransaction.duration}
           transcribedText={voiceTransaction.transcribedText}
           partialText={voiceTransaction.partialText}
+          committedWordsWithTimestamps={voiceTransaction.lastCommittedWords}
           getAudioLevels={voiceTransaction.getAudioLevels}
           onStop={voiceTransaction.stopRecording}
           onCancel={voiceTransaction.cancel}

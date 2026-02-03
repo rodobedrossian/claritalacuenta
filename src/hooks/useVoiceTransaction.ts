@@ -23,6 +23,13 @@ interface UseVoiceTransactionProps {
   userId?: string;
 }
 
+// Word with timestamps from ElevenLabs committed_transcript_with_timestamps
+export interface CommittedWordWithTimestamp {
+  text: string;
+  start: number;
+  end: number;
+}
+
 // More granular states for better UX feedback
 export type VoiceRecordingState = 
   | "idle" 
@@ -58,6 +65,7 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
   const [state, setState] = useState<VoiceRecordingState>("idle");
   const [transcribedText, setTranscribedText] = useState<string>("");
   const [partialText, setPartialText] = useState<string>("");
+  const [lastCommittedWords, setLastCommittedWords] = useState<CommittedWordWithTimestamp[] | null>(null);
   const [parsedTransaction, setParsedTransaction] = useState<VoiceTransactionData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(0);
@@ -79,8 +87,11 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
   const stateRef = useRef<VoiceRecordingState>(state);
   const currentPartialRef = useRef<string>("");
   const hasReceivedSpeechRef = useRef<boolean>(false);
+  const hasSentFirstChunkRef = useRef<boolean>(false);
 
   const MAX_DURATION_MS = 30_000;
+  // Previous text context for first chunk only (< 50 chars, improves accuracy per ElevenLabs docs)
+  const STT_PREVIOUS_TEXT_CONTEXT = "Gasto o ingreso, monto y categoría en pesos o dólares";
   const SILENCE_TIMEOUT_MS = 2_000; // Stop after 2 seconds of silence (optimized for iOS feel)
 
   useEffect(() => {
@@ -278,11 +289,13 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
       setParsedTransaction(null);
       setTranscribedText("");
       setPartialText("");
+      setLastCommittedWords(null);
       currentPartialRef.current = "";
       setDuration(0);
       committedTextsRef.current = new Set();
       stopIntentRef.current = false;
       hasReceivedSpeechRef.current = false;
+      hasSentFirstChunkRef.current = false;
       setState("connecting");
       
       console.log("[Voice] Starting recording flow...");
@@ -342,17 +355,17 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
       const source = audioContext.createMediaStreamSource(stream);
       sourceRef.current = source;
       
-      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+      const processor = audioContext.createScriptProcessor(2048, 1, 1);
       processorRef.current = processor;
 
-      // 4. Create WebSocket connection to ElevenLabs
+      // 4. Create WebSocket connection to ElevenLabs (API: audio_format, include_timestamps)
       const wsUrl = new URL("wss://api.elevenlabs.io/v1/speech-to-text/realtime");
       wsUrl.searchParams.set("model_id", "scribe_v2_realtime");
       wsUrl.searchParams.set("token", token);
       wsUrl.searchParams.set("language_code", "es");
-      wsUrl.searchParams.set("sample_rate", "16000");
-      wsUrl.searchParams.set("encoding", "pcm_s16le");
+      wsUrl.searchParams.set("audio_format", "pcm_16000");
       wsUrl.searchParams.set("commit_strategy", "manual");
+      wsUrl.searchParams.set("include_timestamps", "true");
       
       console.log("[Voice] Connecting to WebSocket:", wsUrl.toString().replace(token, "TOKEN_HIDDEN"));
       
@@ -370,18 +383,22 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
         
         setState("recording");
         
-        // Start sending audio data
+        // Start sending audio data (previous_text only on first chunk per API)
         processor.onaudioprocess = (e) => {
           if (ws.readyState !== WebSocket.OPEN || stopIntentRef.current) return;
           
           const inputData = e.inputBuffer.getChannelData(0);
           const base64Audio = encodeAudioForAPI(new Float32Array(inputData));
+          const isFirstChunk = !hasSentFirstChunkRef.current;
+          if (isFirstChunk) hasSentFirstChunkRef.current = true;
           
           try {
-            ws.send(JSON.stringify({
+            const payload: Record<string, unknown> = {
               message_type: "input_audio_chunk",
               audio_base_64: base64Audio
-            }));
+            };
+            if (isFirstChunk) payload.previous_text = STT_PREVIOUS_TEXT_CONTEXT;
+            ws.send(JSON.stringify(payload));
           } catch (err) {
             console.error("[Voice] Error sending audio chunk:", err);
           }
@@ -448,7 +465,6 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
               // Final committed transcript - use Set to avoid duplicates
               if (data.text && data.text.trim()) {
                 const cleanText = data.text.trim()
-                  // Filter out invalid characters
                   .replace(/[^\p{L}\p{N}\p{P}\p{Z}]/gu, '');
                 if (cleanText && !committedTextsRef.current.has(cleanText)) {
                   committedTextsRef.current.add(cleanText);
@@ -456,11 +472,35 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
                   setTranscribedText(fullText);
                   currentPartialRef.current = "";
                   setPartialText(fullText);
-                  
-                  // Reset silence timer after committed speech
                   hasReceivedSpeechRef.current = true;
                   resetSilenceTimer();
                 }
+              }
+              break;
+
+            case "committed_transcript_with_timestamps":
+              // Same segment as committed_transcript but with word-level timestamps for UI
+              if (data.text && data.text.trim()) {
+                const cleanText = data.text.trim()
+                  .replace(/[^\p{L}\p{N}\p{P}\p{Z}]/gu, '');
+                if (cleanText && !committedTextsRef.current.has(cleanText)) {
+                  committedTextsRef.current.add(cleanText);
+                  const fullText = Array.from(committedTextsRef.current).join(" ");
+                  setTranscribedText(fullText);
+                  currentPartialRef.current = "";
+                  setPartialText(fullText);
+                  hasReceivedSpeechRef.current = true;
+                  resetSilenceTimer();
+                }
+                const words = Array.isArray(data.words) ? data.words : [];
+                const wordEntries: CommittedWordWithTimestamp[] = words
+                  .filter((w: { type?: string }) => w.type === "word")
+                  .map((w: { text: string; start: number; end: number }) => ({
+                    text: w.text,
+                    start: w.start,
+                    end: w.end
+                  }));
+                setLastCommittedWords(wordEntries.length > 0 ? wordEntries : null);
               }
               break;
               
@@ -527,6 +567,7 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
     setDuration(0);
     setError(null);
     setPartialText("");
+    setLastCommittedWords(null);
     currentPartialRef.current = "";
     setTranscribedText("");
     committedTextsRef.current = new Set();
@@ -539,6 +580,7 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
     setState("idle");
     setTranscribedText("");
     setPartialText("");
+    setLastCommittedWords(null);
     currentPartialRef.current = "";
     setParsedTransaction(null);
     setError(null);
@@ -571,6 +613,7 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
     state,
     transcribedText,
     partialText: liveText || partialText, // Live text for display during recording
+    lastCommittedWords,
     parsedTransaction,
     error,
     duration,
