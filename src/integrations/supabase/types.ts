@@ -260,40 +260,40 @@ export type Database = {
       }
       monthly_surpluses: {
         Row: {
-          id: string
-          user_id: string
-          month: string
-          surplus_usd: number
-          surplus_ars: number
-          status: string
-          saved_at: string | null
-          ignored_at: string | null
           created_at: string
+          id: string
+          ignored_at: string | null
+          month: string
+          saved_at: string | null
+          status: string
+          surplus_ars: number
+          surplus_usd: number
           updated_at: string
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          month: string
-          surplus_usd?: number
-          surplus_ars?: number
-          status?: string
-          saved_at?: string | null
-          ignored_at?: string | null
           created_at?: string
+          id?: string
+          ignored_at?: string | null
+          month: string
+          saved_at?: string | null
+          status?: string
+          surplus_ars?: number
+          surplus_usd?: number
           updated_at?: string
+          user_id: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          month?: string
-          surplus_usd?: number
-          surplus_ars?: number
-          status?: string
-          saved_at?: string | null
-          ignored_at?: string | null
           created_at?: string
+          id?: string
+          ignored_at?: string | null
+          month?: string
+          saved_at?: string | null
+          status?: string
+          surplus_ars?: number
+          surplus_usd?: number
           updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
