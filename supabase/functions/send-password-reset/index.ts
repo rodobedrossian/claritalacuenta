@@ -48,17 +48,17 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const safeSuccessResponse = () =>
-    new Response(
-      JSON.stringify({ ok: true }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -85,10 +85,7 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-    const {
-      data: linkData,
-      error: linkError,
-    } = await supabaseAdmin.auth.admin.generateLink({
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email,
       options: { redirect_to: redirectTo },
@@ -96,18 +93,15 @@ Deno.serve(async (req) => {
 
     if (linkError) {
       if (linkError.message?.toLowerCase().includes("rate limit")) {
-        return new Response(
-          JSON.stringify({ error: "rate_limit" }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        return new Response(JSON.stringify({ error: "rate_limit" }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
       return safeSuccessResponse();
     }
 
-    const actionLink =
-      linkData?.properties?.action_link ??
-      (linkData as { action_link?: string })?.action_link ??
-      "";
+    const actionLink = linkData?.properties?.action_link ?? (linkData as { action_link?: string })?.action_link ?? "";
 
     if (!actionLink) {
       return safeSuccessResponse();
