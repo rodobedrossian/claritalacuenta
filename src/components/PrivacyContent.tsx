@@ -4,7 +4,7 @@ export const PrivacyContent = () => (
     <section>
       <h2 className="text-base font-bold text-foreground mb-2">1. Información que recopilamos</h2>
       <p className="leading-relaxed">
-        En Clarita la cuenta, recopilamos la información que nos proporcionás directamente al crear una cuenta y usar nuestros servicios:
+        En Rucula, recopilamos la información que nos proporcionás directamente al crear una cuenta y usar nuestros servicios:
       </p>
       <ul className="list-disc list-inside mt-2 space-y-1 text-muted-foreground">
         <li>Dirección de correo electrónico</li>

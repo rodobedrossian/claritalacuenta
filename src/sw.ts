@@ -23,18 +23,18 @@ self.addEventListener('push', (event) => {
   } catch (e) {
     // Fallback if not JSON
     data = {
-      title: 'Clarita la cuenta',
+      title: 'Rucula',
       body: event.data.text(),
     };
     console.log('[SW] Push data as text:', data);
   }
 
-  const title = data.title || 'Clarita la cuenta';
+  const title = data.title || 'Rucula';
   const options: NotificationOptions & { renotify?: boolean } = {
     body: data.body || '',
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
-    tag: 'clarita-notification',
+    tag: 'rucula-notification',
     data: {
       url: data.data?.url || '/',
     },

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Shield, AlertCircle, PiggyBank } from "lucide-react";
+import { Loader2, Shield, AlertCircle } from "lucide-react";
 
 const AdminAuth = () => {
   const navigate = useNavigate();
@@ -96,7 +96,7 @@ const AdminAuth = () => {
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto flex items-center justify-center gap-3">
             <div className="p-2 rounded-xl gradient-primary">
-              <PiggyBank className="h-6 w-6 text-primary-foreground" />
+              <img src="/rucula-logo.png" alt="Rucula" className="h-6 w-6 object-contain" />
             </div>
             <div className="h-8 w-px bg-border" />
             <div className="flex items-center gap-2">

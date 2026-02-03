@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, Shield, Zap, PiggyBank } from "lucide-react";
+import { ArrowRight, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const features = [{
@@ -61,7 +61,7 @@ export const FooterCTA = () => {
         }} transition={{
           delay: 0.4
         }} className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
-            Unite a miles de personas que ya están manejando mejor sus finanzas con Clarita.
+            Unite a miles de personas que ya están manejando mejor sus finanzas con Rucula.
           </motion.p>
 
           {/* CTA Button */}
@@ -102,9 +102,9 @@ export const FooterCTA = () => {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-xl gradient-primary">
-                <PiggyBank className="h-5 w-5 text-primary-foreground" />
+                <img src="/rucula-logo.png" alt="Rucula" className="h-5 w-5 object-contain" />
               </div>
-              <span className="font-bold text-foreground">Clarita la cuenta</span>
+              <span className="font-bold text-foreground">Rucula</span>
             </div>
             
             <Link 
@@ -115,7 +115,7 @@ export const FooterCTA = () => {
             </Link>
 
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Clarita la cuenta
+              © {new Date().getFullYear()} Rucula
             </p>
           </div>
         </motion.div>

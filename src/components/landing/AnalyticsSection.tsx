@@ -41,7 +41,7 @@ export const AnalyticsSection = () => {
           </h2>
           
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            No solo registrás gastos. Clarita analiza tus patrones, proyecta tus compromisos 
+            No solo registrás gastos. Rucula analiza tus patrones, proyecta tus compromisos 
             y te da insights accionables para que tengas el control total.
           </p>
         </motion.div>

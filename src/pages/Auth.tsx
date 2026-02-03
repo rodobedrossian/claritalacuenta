@@ -440,9 +440,9 @@ const Auth = () => {
         <div className="relative z-10 flex flex-col justify-center p-12 text-foreground">
           <div className="flex items-center gap-3 mb-12">
             <div className="p-3 rounded-2xl gradient-primary shadow-stripe-lg">
-              <PiggyBank className="h-10 w-10 text-primary-foreground" />
+              <img src="/rucula-logo.png" alt="Rucula" className="h-10 w-10 object-contain" />
             </div>
-            <h1 className="text-4xl font-bold">Clarita la cuenta</h1>
+            <h1 className="text-4xl font-bold">Rucula</h1>
           </div>
           <h2 className="text-2xl font-medium mb-8 leading-relaxed text-foreground/80">
             Tomá el control de tus finanzas
@@ -473,9 +473,9 @@ const Auth = () => {
         <div className="w-full max-w-md">
           <div className="flex lg:hidden items-center justify-center gap-3 mb-8">
             <div className="p-2 rounded-xl gradient-primary shadow-stripe">
-              <PiggyBank className="h-8 w-8 text-primary-foreground" />
+              <img src="/rucula-logo.png" alt="Rucula" className="h-8 w-8 object-contain" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Clarita la cuenta</h1>
+            <h1 className="text-2xl font-bold text-foreground">Rucula</h1>
           </div>
 
           {!showReturningUser && (

@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system - Stripe-inspired Light Theme
+/* Definition of the design system - Rucula green palette (leaf-inspired)
    All colors MUST be HSL.
 */
 
@@ -17,18 +17,19 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 250 84% 54%;
+    /* Rucula green - primary: deep leaf green */
+    --primary: 152 48% 38%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 280 87% 65%;
+    --primary-glow: 145 52% 48%;
 
-    --secondary: 250 84% 96%;
-    --secondary-foreground: 250 84% 54%;
+    --secondary: 152 35% 93%;
+    --secondary-foreground: 152 48% 32%;
 
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 250 84% 96%;
-    --accent-foreground: 250 84% 54%;
+    --accent: 152 35% 93%;
+    --accent-foreground: 152 48% 32%;
 
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
@@ -41,29 +42,29 @@
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 250 84% 54%;
+    --ring: 152 48% 38%;
 
     --radius: 1.25rem;
 
-    /* Chart colors - vibrant for contrast */
-    --chart-1: 250 84% 54%;
-    --chart-2: 280 87% 65%;
+    /* Chart colors - green palette with accents */
+    --chart-1: 152 48% 38%;
+    --chart-2: 165 45% 45%;
     --chart-3: 142 71% 45%;
     --chart-4: 38 92% 50%;
-    --chart-5: 340 82% 60%;
-    --chart-6: 190 80% 50%;
+    --chart-5: 180 55% 42%;
+    --chart-6: 130 50% 48%;
     --chart-7: 25 95% 55%;
-    --chart-8: 280 70% 55%;
-    --chart-9: 160 70% 45%;
+    --chart-8: 170 45% 40%;
+    --chart-9: 160 55% 42%;
     --chart-10: 0 75% 55%;
 
-    /* Stripe-inspired gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(250 84% 54%), hsl(280 87% 65%));
-    --gradient-accent: linear-gradient(135deg, hsl(340 82% 65%), hsl(30 92% 60%));
-    --gradient-background: linear-gradient(135deg, hsl(340 82% 97%) 0%, hsl(270 87% 97%) 50%, hsl(200 90% 97%) 100%);
+    /* Rucula gradients - greens */
+    --gradient-primary: linear-gradient(135deg, hsl(152 48% 38%), hsl(145 52% 48%));
+    --gradient-accent: linear-gradient(135deg, hsl(142 55% 45%), hsl(165 45% 48%));
+    --gradient-background: linear-gradient(135deg, hsl(152 40% 97%) 0%, hsl(160 45% 96%) 50%, hsl(140 50% 97%) 100%);
     
     /* Card gradient for subtle depth */
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 40% 98%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(152 25% 98%) 100%);
 
     /* Elegant shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -72,7 +73,7 @@
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08);
     
     /* Glow effect for primary elements */
-    --shadow-glow: 0 0 20px hsl(250 84% 54% / 0.15);
+    --shadow-glow: 0 0 20px hsl(152 48% 38% / 0.2);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -121,15 +122,15 @@
     background: var(--gradient-background);
   }
 
-  /* Stripe-style decorative gradient background */
+  /* Rucula-style decorative gradient background */
   .stripe-gradient-bg {
     background: 
       linear-gradient(135deg, 
-        hsl(340 82% 96%) 0%, 
-        hsl(280 87% 96%) 25%,
-        hsl(250 84% 96%) 50%,
-        hsl(200 90% 96%) 75%,
-        hsl(180 80% 96%) 100%
+        hsl(152 40% 97%) 0%, 
+        hsl(160 45% 96%) 25%,
+        hsl(145 50% 96%) 50%,
+        hsl(165 40% 96%) 75%,
+        hsl(140 45% 97%) 100%
       );
   }
 
@@ -214,10 +215,10 @@
 
   @keyframes pulse-glow {
     0%, 100% {
-      box-shadow: 0 0 20px hsl(250 84% 54% / 0.2);
+      box-shadow: 0 0 20px hsl(152 48% 38% / 0.25);
     }
     50% {
-      box-shadow: 0 0 30px hsl(250 84% 54% / 0.4);
+      box-shadow: 0 0 30px hsl(152 48% 38% / 0.4);
     }
   }
 

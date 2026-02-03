@@ -8,8 +8,8 @@ const corsHeaders = {
 };
 
 const RESEND_API_URL = "https://api.resend.com/emails";
-const FROM_EMAIL = "Clarita <noreply@rucula.app>";
-const SUBJECT = "Restablecer contraseña - Clarita la cuenta";
+const FROM_EMAIL = "Rucula <noreply@rucula.app>";
+const SUBJECT = "Restablecer contraseña - Rucula";
 
 function htmlBody(resetLink: string): string {
   return `
@@ -21,10 +21,10 @@ function htmlBody(resetLink: string): string {
 </head>
 <body style="font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #333; max-width: 480px; margin: 0 auto; padding: 24px;">
   <p>Hola,</p>
-  <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta en Clarita la cuenta.</p>
+  <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta en Rucula.</p>
   <p><a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background: #0f766e; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">Restablecer contraseña</a></p>
   <p>Si no solicitaste este cambio, podés ignorar este email. El enlace caduca en 24 horas.</p>
-  <p style="color: #666; font-size: 14px;">— Clarita la cuenta</p>
+  <p style="color: #666; font-size: 14px;">— Rucula</p>
 </body>
 </html>
 `.trim();
@@ -33,13 +33,13 @@ function htmlBody(resetLink: string): string {
 function textBody(resetLink: string): string {
   return `Hola,
 
-Recibimos una solicitud para restablecer la contraseña de tu cuenta en Clarita la cuenta.
+Recibimos una solicitud para restablecer la contraseña de tu cuenta en Rucula.
 
 Restablecer contraseña: ${resetLink}
 
 Si no solicitaste este cambio, podés ignorar este email. El enlace caduca en 24 horas.
 
-— Clarita la cuenta`;
+— Rucula`;
 }
 
 Deno.serve(async (req) => {

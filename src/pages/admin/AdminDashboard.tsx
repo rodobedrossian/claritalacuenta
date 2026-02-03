@@ -150,7 +150,7 @@ const AdminDashboard = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="p-2 rounded-xl gradient-primary">
-              <PiggyBank className="h-5 w-5 text-primary-foreground" />
+              <img src="/rucula-logo.png" alt="Rucula" className="h-5 w-5 object-contain" />
             </div>
             <div className="h-6 w-px bg-border" />
             <h1 className="text-xl font-semibold">Backoffice</h1>
