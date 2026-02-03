@@ -45,7 +45,9 @@ const ForgotPasswordDialog = ({ open, onOpenChange, defaultEmail = "" }: ForgotP
     setLoading(true);
 
     try {
-      const redirectTo = `${window.location.origin}/reset-password`;
+      // Use production domain for password reset redirect
+      const productionDomain = "https://www.rucula.app";
+      const redirectTo = `${productionDomain}/reset-password`;
       const { data, error } = await supabase.functions.invoke("send-password-reset", {
         body: { email, redirectTo },
       });
