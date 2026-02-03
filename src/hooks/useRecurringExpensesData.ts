@@ -141,6 +141,7 @@ export const useRecurringExpensesData = (userId: string | null, workspaceId: str
       const { error } = await supabase.from("transactions").insert([
         {
           user_id: expense.user_id,
+          workspace_id: workspaceId!,
           type: "expense",
           amount: finalAmount,
           currency: expense.currency,
