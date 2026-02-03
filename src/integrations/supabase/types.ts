@@ -933,6 +933,10 @@ export type Database = {
           workspace_id: string
         }[]
       }
+      has_valid_invitation: {
+        Args: { _user_email: string; _workspace_id: string }
+        Returns: boolean
+      }
       user_workspace_ids: { Args: never; Returns: string[] }
     }
     Enums: {
