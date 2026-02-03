@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
-import { Target, Sparkles, Settings, LogOut, Tag, Repeat, PiggyBank, ChevronDown, Info, UserPlus } from "lucide-react";
+import { Target, Sparkles, Settings, LogOut, Tag, Repeat, PiggyBank, ChevronDown, Info, UserPlus, Users, UserMinus } from "lucide-react";
 import { performLogout } from "@/lib/biometricAuth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const APP_VERSION = "1.0.0";
 
@@ -49,6 +60,12 @@ export default function Mas() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteSending, setInviteSending] = useState(false);
+  const [members, setMembers] = useState<Array<{ user_id: string; role: string; full_name: string | null }>>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<{ user_id: string; full_name: string | null } | null>(null);
+  const [removing, setRemoving] = useState(false);
+
+  const { workspaceId } = useWorkspace(user?.id ?? null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -59,6 +76,69 @@ export default function Mas() {
       }
     });
   }, [navigate]);
+
+  useEffect(() => {
+    if (!workspaceId || !user?.id) {
+      setMembers([]);
+      return;
+    }
+    let mounted = true;
+    setMembersLoading(true);
+    (async () => {
+      const { data: rows, error: err } = await supabase
+        .from("workspace_members")
+        .select("user_id, role")
+        .eq("workspace_id", workspaceId);
+      if (err || !mounted) {
+        if (mounted) setMembers([]);
+        setMembersLoading(false);
+        return;
+      }
+      if (!rows?.length) {
+        setMembers([]);
+        setMembersLoading(false);
+        return;
+      }
+      const userIds = rows.map((r) => r.user_id);
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
+      const nameByUserId = new Map((profiles || []).map((p) => [p.id, p.full_name]));
+      if (!mounted) return;
+      setMembers(
+        rows.map((r) => ({
+          user_id: r.user_id,
+          role: r.role,
+          full_name: nameByUserId.get(r.user_id) ?? null,
+        }))
+      );
+      setMembersLoading(false);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [workspaceId, user?.id]);
+
+  const myRole = members.find((m) => m.user_id === user?.id)?.role ?? null;
+  const isOwner = myRole === "owner";
+
+  const handleRemoveMember = async () => {
+    if (!removeTarget || !workspaceId) return;
+    setRemoving(true);
+    try {
+      const { error } = await supabase
+        .from("workspace_members")
+        .delete()
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", removeTarget.user_id);
+      if (error) throw error;
+      setMembers((prev) => prev.filter((m) => m.user_id !== removeTarget.user_id));
+      setRemoveTarget(null);
+      toast.success("Miembro eliminado del espacio");
+    } catch (err: any) {
+      toast.error(err.message || "No se pudo eliminar");
+    } finally {
+      setRemoving(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await performLogout();
@@ -150,6 +230,70 @@ export default function Mas() {
             <ChevronDown className="h-5 w-5 text-muted-foreground -rotate-90" />
           </button>
 
+          {/* Miembros del espacio */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground">
+              <Users className="h-4 w-4" />
+              <span>Miembros del espacio</span>
+            </div>
+            <div className="rounded-xl border border-border/50 overflow-hidden bg-card">
+              {membersLoading ? (
+                <div className="px-4 py-6 text-center text-sm text-muted-foreground">Cargando…</div>
+              ) : members.length === 0 ? (
+                <div className="px-4 py-6 text-center text-sm text-muted-foreground">Solo vos en este espacio</div>
+              ) : (
+                <ul className="divide-y divide-border/50">
+                  {members.map((m) => {
+                    const isSelf = m.user_id === user?.id;
+                    const ownersCount = members.filter((x) => x.role === "owner").length;
+                    const canRemoveOther = isOwner && !isSelf;
+                    const canLeave = isSelf && (myRole !== "owner" || ownersCount > 1);
+                    const canRemove = canRemoveOther || canLeave;
+                    const label = m.full_name?.trim() || "Sin nombre";
+                    return (
+                      <li
+                        key={m.user_id}
+                        className="flex items-center justify-between gap-3 px-4 py-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0",
+                              "bg-muted text-muted-foreground"
+                            )}
+                          >
+                            {label.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground truncate">
+                              {label}
+                              {isSelf && (
+                                <span className="text-muted-foreground font-normal ml-1">(vos)</span>
+                              )}
+                            </p>
+                            <p className="text-xs text-muted-foreground capitalize">{m.role}</p>
+                          </div>
+                        </div>
+                        {canRemove && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                            onClick={() => setRemoveTarget({ user_id: m.user_id, full_name: m.full_name })}
+                          >
+                            <UserMinus className="h-4 w-4 mr-1" />
+                            {isSelf ? "Dejar espacio" : "Eliminar"}
+                          </Button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
+
           {/* Legales - navega a pantalla dedicada */}
           <button
             onClick={() => navigate("/legales")}
@@ -210,6 +354,34 @@ export default function Mas() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!removeTarget} onOpenChange={(open) => !open && setRemoveTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {removeTarget?.user_id === user?.id ? "Dejar el espacio" : "Eliminar miembro"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {removeTarget?.user_id === user?.id
+                ? "Vas a dejar de ver y editar este espacio compartido. Podés ser invitado de nuevo después."
+                : `¿Quitar a ${removeTarget?.full_name?.trim() || "este miembro"} del espacio? Dejará de ver y editar todo el espacio.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleRemoveMember();
+              }}
+              disabled={removing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removing ? "Eliminando…" : removeTarget?.user_id === user?.id ? "Dejar espacio" : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
