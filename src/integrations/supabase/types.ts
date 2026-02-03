@@ -921,6 +921,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_auth_user_email: { Args: never; Returns: string }
       get_workspace_invitation_by_token: {
         Args: { in_token: string }
         Returns: {
