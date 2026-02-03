@@ -103,9 +103,9 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
           <div className={cn("border-b border-border", !showExpanded ? "px-2 py-4" : "p-6")}>
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl gradient-primary shrink-0">
-                <PiggyBank className="h-6 w-6 text-primary-foreground" />
+                <img src="/rucula-logo.png" alt="Rucula" className="h-6 w-6 object-contain" />
               </div>
-              {showExpanded && <h1 className="text-lg font-bold text-foreground truncate">Clarita la cuenta</h1>}
+              {showExpanded && <h1 className="text-lg font-bold text-foreground truncate">Rucula</h1>}
             </div>
           </div>
 

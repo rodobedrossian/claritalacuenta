@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, PiggyBank } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FloatingOrbs } from "./FloatingOrbs";
 import { DashboardMockup } from "./DashboardMockup";
@@ -30,10 +30,10 @@ export const HeroSection = () => {
             delay: 0.2
           }}>
               <div className="p-2 rounded-xl gradient-primary">
-                <PiggyBank className="h-6 w-6 text-primary-foreground" />
+                <img src="/rucula-logo.png" alt="Rucula" className="h-6 w-6 object-contain" />
               </div>
               <span className="text-2xl font-black tracking-tight text-foreground">
-                Clarita la cuenta
+                Rucula
               </span>
             </motion.div>
 

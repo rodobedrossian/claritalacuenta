@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, PiggyBank } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import appStoreBadge from "@/assets/app-store-badge.svg";
 
 export const AppleFooter = () => {
@@ -17,7 +17,7 @@ export const AppleFooter = () => {
           {/* Logo */}
           <div className="flex justify-center">
             <div className="p-4 rounded-2xl gradient-primary">
-              <PiggyBank className="h-10 w-10 text-primary-foreground" />
+              <img src="/rucula-logo.png" alt="Rucula" className="h-10 w-10 object-contain" />
             </div>
           </div>
           
@@ -69,7 +69,7 @@ export const AppleFooter = () => {
           className="mt-20 pt-8 border-t border-border"
         >
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <p>© 2026 Clarita la cuenta. Todos los derechos reservados.</p>
+            <p>© 2026 Rucula. Todos los derechos reservados.</p>
             <div className="flex items-center gap-6">
               <Link to="/privacy" className="hover:text-foreground transition-colors">
                 Privacidad

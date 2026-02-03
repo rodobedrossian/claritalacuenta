@@ -33,7 +33,7 @@ function base64UrlDecode(str: string): Uint8Array {
 
 function normalizeVapidSubject(subjectRaw: string): string {
   const s = subjectRaw.trim();
-  if (!s) return "mailto:admin@claritalacuenta.lovable.app";
+  if (!s) return "mailto:admin@rucula.app";
   if (s.startsWith("mailto:") || s.startsWith("https://") || s.startsWith("http://")) return s;
   // If they set just an email, APNs tends to be strict; prefer mailto:
   if (s.includes("@")) return `mailto:${s}`;

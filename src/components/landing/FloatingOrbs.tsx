@@ -3,9 +3,9 @@ import { motion } from "framer-motion";
 export const FloatingOrbs = () => {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Large pink orb - top left */}
+      {/* Large soft green orb - top left */}
       <motion.div
-        className="absolute -top-40 -left-40 w-80 h-80 rounded-full bg-gradient-to-br from-pink-300/40 to-purple-300/30 blur-3xl"
+        className="absolute -top-40 -left-40 w-80 h-80 rounded-full bg-gradient-to-br from-green-300/40 to-emerald-300/30 blur-3xl"
         animate={{
           x: [0, 60, 0],
           y: [0, 40, 0],
@@ -20,7 +20,7 @@ export const FloatingOrbs = () => {
       
       {/* Medium purple orb - top right */}
       <motion.div
-        className="absolute -top-20 right-20 w-64 h-64 rounded-full bg-gradient-to-bl from-violet-300/35 to-indigo-300/25 blur-3xl"
+        className="absolute -top-20 right-20 w-64 h-64 rounded-full bg-gradient-to-bl from-emerald-300/35 to-green-300/25 blur-3xl"
         animate={{
           x: [0, -50, 0],
           y: [0, 50, 0],

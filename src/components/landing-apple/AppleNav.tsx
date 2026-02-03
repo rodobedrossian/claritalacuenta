@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { PiggyBank } from "lucide-react";
 
 export const AppleNav = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -30,10 +29,10 @@ export const AppleNav = () => {
         className="flex items-center gap-2"
       >
         <div className="p-1.5 rounded-xl gradient-primary">
-          <PiggyBank className="h-5 w-5 text-primary-foreground" />
+          <img src="/rucula-logo.png" alt="Rucula" className="h-5 w-5 object-contain" />
         </div>
         <span className="text-foreground text-xl font-semibold tracking-tight">
-          Clarita
+          Rucula
         </span>
       </Link>
       

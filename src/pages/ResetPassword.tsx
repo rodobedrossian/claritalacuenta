@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PiggyBank, Loader2, Check, Eye, EyeOff } from "lucide-react";
+import { Loader2, Check, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 const getWeakPasswordMessage = (error: { code?: string; weak_password?: { reasons?: string[] } }) => {
@@ -127,7 +127,7 @@ const ResetPassword = () => {
         <div className="w-full max-w-md text-center">
           <div className="flex justify-center mb-6">
             <div className="p-3 rounded-2xl gradient-primary shadow-stripe-lg">
-              <PiggyBank className="h-10 w-10 text-primary-foreground" />
+              <img src="/rucula-logo.png" alt="Rucula" className="h-10 w-10 object-contain" />
             </div>
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">Enlace inválido o expirado</h1>
@@ -165,9 +165,9 @@ const ResetPassword = () => {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-8">
           <div className="p-2 rounded-xl gradient-primary shadow-stripe">
-            <PiggyBank className="h-8 w-8 text-primary-foreground" />
+            <img src="/rucula-logo.png" alt="Rucula" className="h-8 w-8 object-contain" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Clarita la cuenta</h1>
+          <h1 className="text-2xl font-bold text-foreground">Rucula</h1>
         </div>
 
         <div className="mb-8">

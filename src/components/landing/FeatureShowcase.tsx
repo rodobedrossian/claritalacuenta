@@ -51,7 +51,7 @@ export const FeatureShowcase = () => {
 
           {/* Feature 2: Voice registration */}
           <FeatureCard
-            title="Hablale a Clarita"
+            title="Hablale a Rucula"
             description="Dictá tu gasto y la IA lo interpreta. 'Gasté 40 lucas en el super' y listo."
             icon={<Mic className="w-6 h-6 text-primary-foreground" />}
             index={1}
@@ -66,7 +66,7 @@ export const FeatureShowcase = () => {
             description="Subí el PDF de tu tarjeta y la IA extrae todas las transacciones automáticamente."
             icon={<FileText className="w-6 h-6 text-primary-foreground" />}
             index={2}
-            gradient="from-violet-500/5 to-purple-500/5"
+            gradient="from-emerald-500/5 to-green-500/5"
           >
             <div className="bg-muted/30 rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-3 p-3 bg-card rounded-lg border border-dashed border-primary/30">

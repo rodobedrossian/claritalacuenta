@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, PiggyBank } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Privacy = () => {
@@ -11,9 +11,9 @@ const Privacy = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/landing" className="flex items-center gap-2">
             <div className="p-1.5 rounded-xl gradient-primary">
-              <PiggyBank className="h-5 w-5 text-primary-foreground" />
+              <img src="/rucula-logo.png" alt="Rucula" className="h-5 w-5 object-contain" />
             </div>
-            <span className="font-bold text-foreground">Clarita la cuenta</span>
+            <span className="font-bold text-foreground">Rucula</span>
           </Link>
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -38,7 +38,7 @@ const Privacy = () => {
               1. Información que recopilamos
             </h2>
             <p className="leading-relaxed">
-              En Clarita la cuenta, recopilamos la información que nos proporcionás 
+              En Rucula, recopilamos la información que nos proporcionás 
               directamente al crear una cuenta y usar nuestros servicios:
             </p>
             <ul className="list-disc list-inside mt-3 space-y-2 text-muted-foreground">

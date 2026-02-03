@@ -5,7 +5,7 @@ import localforage from 'localforage';
 localforage.config({
   name: 'clarita_cuenta',
   storeName: 'query_cache',
-  description: 'Cache de consultas de React Query para Clarita la Cuenta'
+  description: 'Cache de consultas de React Query para Rucula'
 });
 
 export const queryPersister = createAsyncStoragePersister({

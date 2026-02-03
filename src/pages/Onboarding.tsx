@@ -80,7 +80,7 @@ const ExpensesPreview = () => (
       </div>
       <div className="flex items-center justify-between text-[10px] p-2 bg-muted/30 rounded-xl">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-violet-400" />
+          <div className="w-2 h-2 rounded-full bg-primary" />
           <span className="font-medium text-muted-foreground">Restaurantes</span>
         </div>
         <span className="font-bold">22%</span>
@@ -170,7 +170,7 @@ const Onboarding = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-gradient-to-b from-violet-50 to-white overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex flex-col bg-gradient-to-b from-green-50 to-white overflow-hidden">
       {/* Skip Button */}
       <div className="absolute top-0 right-0 p-6 pt-safe">
         <button 
@@ -203,10 +203,10 @@ const Onboarding = () => {
 
             {/* Text Content */}
             <div className="space-y-4 max-w-sm">
-              <h1 className="text-2xl font-black text-violet-950 tracking-tight leading-tight">
+              <h1 className="text-2xl font-black text-foreground tracking-tight leading-tight">
                 {steps[step].title}
               </h1>
-              <p className="text-sm font-medium text-violet-900/60 leading-relaxed px-4">
+              <p className="text-sm font-medium text-muted-foreground leading-relaxed px-4">
                 {steps[step].subtitle}
               </p>
             </div>
@@ -215,7 +215,7 @@ const Onboarding = () => {
       </div>
 
       {/* Footer / Controls */}
-      <div className="p-8 pb-safe-area-bottom w-full flex flex-col items-center space-y-8 bg-white/50 backdrop-blur-sm border-t border-violet-100/50">
+      <div className="p-8 pb-safe-area-bottom w-full flex flex-col items-center space-y-8 bg-white/50 backdrop-blur-sm border-t border-green-100/50">
         {/* Step Indicators */}
         <div className="flex gap-2">
           {steps.map((_, i) => (
