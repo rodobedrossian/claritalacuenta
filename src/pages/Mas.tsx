@@ -56,7 +56,7 @@ const menuItems = [
 
 export default function Mas() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<{ email?: string; user_metadata?: { full_name?: string } } | null>(null);
+  const [user, setUser] = useState<{ id: string; email?: string; user_metadata?: { full_name?: string } } | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteSending, setInviteSending] = useState(false);
