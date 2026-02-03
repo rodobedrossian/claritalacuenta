@@ -26,34 +26,41 @@ const ResetPassword = () => {
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if user has a valid recovery session
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // The user arrives here after clicking the email link
-      // Supabase automatically handles the token exchange
-      if (session) {
+    let resolved = false;
+    let timeoutId: NodeJS.Timeout;
+    
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[ResetPassword] Auth event:", event, "Session:", !!session);
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+        resolved = true;
+        clearTimeout(timeoutId);
         setIsValidSession(true);
-      } else {
-        // Listen for auth state changes (token exchange happens async)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-          if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
-            setIsValidSession(true);
-          }
-        });
-
-        // Give it a moment for the token exchange
-        setTimeout(() => {
-          if (isValidSession === null) {
-            setIsValidSession(false);
-          }
-        }, 2000);
-
-        return () => subscription.unsubscribe();
       }
-    };
+    });
 
-    checkSession();
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("[ResetPassword] Initial session check:", !!session);
+      if (session && !resolved) {
+        resolved = true;
+        clearTimeout(timeoutId);
+        setIsValidSession(true);
+      }
+    });
+
+    // Give it time for the token exchange from the URL
+    timeoutId = setTimeout(() => {
+      if (!resolved) {
+        console.log("[ResetPassword] Timeout reached, no valid session found");
+        setIsValidSession(false);
+      }
+    }, 3000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const handleResetPassword = async (e: React.FormEvent) => {
