@@ -29,7 +29,7 @@ interface UseBudgetsDataReturn {
 }
 
 export const useBudgetsData = (
-  userId: string | null,
+  workspaceId: string | null,
   activeMonth: Date,
   transactions: Array<{ category: string; currency: string; amount: number; type: string }>
 ): UseBudgetsDataReturn => {
@@ -37,7 +37,7 @@ export const useBudgetsData = (
   const [loading, setLoading] = useState(true);
 
   const fetchBudgets = useCallback(async () => {
-    if (!userId) {
+    if (!workspaceId) {
       setBudgets([]);
       setLoading(false);
       return;
@@ -47,7 +47,7 @@ export const useBudgetsData = (
       const { data, error } = await supabase
         .from("budgets")
         .select("*")
-        .eq("user_id", userId)
+        .eq("workspace_id", workspaceId)
         .eq("is_active", true);
 
       if (error) throw error;
@@ -60,7 +60,7 @@ export const useBudgetsData = (
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [workspaceId]);
 
   useEffect(() => {
     fetchBudgets();
@@ -87,14 +87,17 @@ export const useBudgetsData = (
   });
 
   const addBudget = async (
-    budget: Omit<Budget, "id" | "user_id" | "created_at" | "updated_at" | "is_active">
+    budget: Omit<Budget, "id" | "user_id" | "created_at" | "updated_at" | "is_active" | "workspace_id">
   ) => {
+    if (!workspaceId) return;
+    const { data: session } = await supabase.auth.getSession();
+    const userId = session?.data?.session?.user?.id;
     if (!userId) return;
 
     try {
       const { data, error } = await supabase
         .from("budgets")
-        .insert([{ ...budget, user_id: userId }])
+        .insert([{ ...budget, user_id: userId, workspace_id: workspaceId }])
         .select()
         .single();
 

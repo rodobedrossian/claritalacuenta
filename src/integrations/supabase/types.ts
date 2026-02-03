@@ -24,6 +24,7 @@ export type Database = {
           monthly_limit: number
           updated_at: string | null
           user_id: string
+          workspace_id: string
         }
         Insert: {
           category: string
@@ -34,6 +35,7 @@ export type Database = {
           monthly_limit: number
           updated_at?: string | null
           user_id: string
+          workspace_id: string
         }
         Update: {
           category?: string
@@ -44,6 +46,7 @@ export type Database = {
           monthly_limit?: number
           updated_at?: string | null
           user_id?: string
+          workspace_id?: string
         }
         Relationships: []
       }
@@ -93,6 +96,7 @@ export type Database = {
           transaction_type: string
           updated_at: string | null
           user_id: string
+          workspace_id: string
         }
         Insert: {
           amount: number
@@ -109,6 +113,7 @@ export type Database = {
           transaction_type: string
           updated_at?: string | null
           user_id: string
+          workspace_id: string
         }
         Update: {
           amount?: number
@@ -125,6 +130,7 @@ export type Database = {
           transaction_type?: string
           updated_at?: string | null
           user_id?: string
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -159,6 +165,7 @@ export type Database = {
           name: string
           updated_at: string | null
           user_id: string
+          workspace_id: string
         }
         Insert: {
           bank?: string | null
@@ -168,6 +175,7 @@ export type Database = {
           name: string
           updated_at?: string | null
           user_id: string
+          workspace_id: string
         }
         Update: {
           bank?: string | null
@@ -177,6 +185,7 @@ export type Database = {
           name?: string
           updated_at?: string | null
           user_id?: string
+          workspace_id?: string
         }
         Relationships: []
       }
@@ -219,6 +228,7 @@ export type Database = {
           start_date: string
           updated_at: string | null
           user_id: string
+          workspace_id: string
         }
         Insert: {
           created_at?: string | null
@@ -237,6 +247,7 @@ export type Database = {
           start_date: string
           updated_at?: string | null
           user_id: string
+          workspace_id: string
         }
         Update: {
           created_at?: string | null
@@ -255,6 +266,7 @@ export type Database = {
           start_date?: string
           updated_at?: string | null
           user_id?: string
+          workspace_id?: string
         }
         Relationships: []
       }
@@ -270,6 +282,7 @@ export type Database = {
           surplus_usd: number
           updated_at: string
           user_id: string
+          workspace_id: string
         }
         Insert: {
           created_at?: string
@@ -282,6 +295,7 @@ export type Database = {
           surplus_usd?: number
           updated_at?: string
           user_id: string
+          workspace_id: string
         }
         Update: {
           created_at?: string
@@ -294,6 +308,7 @@ export type Database = {
           surplus_usd?: number
           updated_at?: string
           user_id?: string
+          workspace_id?: string
         }
         Relationships: []
       }
@@ -440,6 +455,7 @@ export type Database = {
           is_active: boolean | null
           updated_at: string | null
           user_id: string
+          workspace_id: string
         }
         Insert: {
           category: string
@@ -451,6 +467,7 @@ export type Database = {
           is_active?: boolean | null
           updated_at?: string | null
           user_id: string
+          workspace_id: string
         }
         Update: {
           category?: string
@@ -462,6 +479,7 @@ export type Database = {
           is_active?: boolean | null
           updated_at?: string | null
           user_id?: string
+          workspace_id?: string
         }
         Relationships: []
       }
@@ -474,6 +492,7 @@ export type Database = {
           usd_amount: number
           usd_cash: number | null
           user_id: string | null
+          workspace_id: string
         }
         Insert: {
           ars_amount?: number
@@ -483,6 +502,7 @@ export type Database = {
           usd_amount?: number
           usd_cash?: number | null
           user_id?: string | null
+          workspace_id: string
         }
         Update: {
           ars_amount?: number
@@ -492,6 +512,7 @@ export type Database = {
           usd_amount?: number
           usd_cash?: number | null
           user_id?: string | null
+          workspace_id?: string
         }
         Relationships: []
       }
@@ -505,6 +526,7 @@ export type Database = {
           notes: string | null
           savings_type: string | null
           user_id: string
+          workspace_id: string
         }
         Insert: {
           amount: number
@@ -515,6 +537,7 @@ export type Database = {
           notes?: string | null
           savings_type?: string | null
           user_id: string
+          workspace_id: string
         }
         Update: {
           amount?: number
@@ -525,6 +548,7 @@ export type Database = {
           notes?: string | null
           savings_type?: string | null
           user_id?: string
+          workspace_id?: string
         }
         Relationships: []
       }
@@ -539,6 +563,7 @@ export type Database = {
           target_date: string | null
           updated_at: string | null
           user_id: string
+          workspace_id: string
         }
         Insert: {
           created_at?: string | null
@@ -550,6 +575,7 @@ export type Database = {
           target_date?: string | null
           updated_at?: string | null
           user_id: string
+          workspace_id: string
         }
         Update: {
           created_at?: string | null
@@ -561,6 +587,7 @@ export type Database = {
           target_date?: string | null
           updated_at?: string | null
           user_id?: string
+          workspace_id?: string
         }
         Relationships: []
       }
@@ -578,6 +605,7 @@ export type Database = {
           transactions_created: number | null
           updated_at: string
           user_id: string
+          workspace_id: string
         }
         Insert: {
           created_at?: string
@@ -592,6 +620,7 @@ export type Database = {
           transactions_created?: number | null
           updated_at?: string
           user_id: string
+          workspace_id: string
         }
         Update: {
           created_at?: string
@@ -606,6 +635,7 @@ export type Database = {
           transactions_created?: number | null
           updated_at?: string
           user_id?: string
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -636,6 +666,7 @@ export type Database = {
           status: string
           type: string
           user_id: string
+          workspace_id: string
         }
         Insert: {
           amount: number
@@ -655,6 +686,7 @@ export type Database = {
           status?: string
           type: string
           user_id: string
+          workspace_id: string
         }
         Update: {
           amount?: number
@@ -674,6 +706,7 @@ export type Database = {
           status?: string
           type?: string
           user_id?: string
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -698,6 +731,78 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      workspace_invitations: {
+        Row: {
+          id: string
+          workspace_id: string
+          email: string
+          invited_by_user_id: string
+          token: string
+          status: string
+          created_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          email: string
+          invited_by_user_id: string
+          token: string
+          status?: string
+          created_at?: string
+          expires_at: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          email?: string
+          invited_by_user_id?: string
+          token?: string
+          status?: string
+          created_at?: string
+          expires_at?: string
+        }
+        Relationships: []
+      }
+      workspace_members: {
+        Row: {
+          workspace_id: string
+          user_id: string
+          role: string
+          joined_at: string
+        }
+        Insert: {
+          workspace_id: string
+          user_id: string
+          role?: string
+          joined_at?: string
+        }
+        Update: {
+          workspace_id?: string
+          user_id?: string
+          role?: string
+          joined_at?: string
+        }
+        Relationships: []
+      }
+      workspaces: {
+        Row: {
+          id: string
+          name: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          created_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

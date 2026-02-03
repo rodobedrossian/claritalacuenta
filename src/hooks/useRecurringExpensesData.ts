@@ -24,12 +24,12 @@ interface UseRecurringExpensesDataReturn {
   generateTransaction: (expense: RecurringExpense, amount?: number) => Promise<void>;
 }
 
-export const useRecurringExpensesData = (userId: string | null): UseRecurringExpensesDataReturn => {
+export const useRecurringExpensesData = (userId: string | null, workspaceId: string | null): UseRecurringExpensesDataReturn => {
   const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchRecurringExpenses = useCallback(async () => {
-    if (!userId) {
+    if (!userId || !workspaceId) {
       setLoading(false);
       return;
     }
@@ -55,7 +55,7 @@ export const useRecurringExpensesData = (userId: string | null): UseRecurringExp
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, workspaceId]);
 
   useEffect(() => {
     fetchRecurringExpenses();
@@ -64,7 +64,7 @@ export const useRecurringExpensesData = (userId: string | null): UseRecurringExp
   const addRecurringExpense = async (
     expense: Omit<RecurringExpense, "id" | "user_id" | "created_at" | "updated_at">
   ) => {
-    if (!userId) {
+    if (!userId || !workspaceId) {
       toast.error("Debes iniciar sesión");
       return;
     }
@@ -72,7 +72,7 @@ export const useRecurringExpensesData = (userId: string | null): UseRecurringExp
     try {
       const { data, error } = await supabase
         .from("recurring_expenses")
-        .insert([{ ...expense, user_id: userId }])
+        .insert([{ ...expense, user_id: userId, workspace_id: workspaceId }])
         .select()
         .single();
 

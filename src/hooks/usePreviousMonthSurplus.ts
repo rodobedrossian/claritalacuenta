@@ -27,7 +27,7 @@ function getMonthLabel(monthStr: string): string {
   return format(date, "LLLL yyyy", { locale: es });
 }
 
-export function usePreviousMonthSurplus(userId: string | null) {
+export function usePreviousMonthSurplus(userId: string | null, workspaceId: string | null) {
   const [record, setRecord] = useState<MonthlySurplusRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -35,7 +35,7 @@ export function usePreviousMonthSurplus(userId: string | null) {
   const monthLabel = getMonthLabel(previousMonth);
 
   const fetchOrCreate = useCallback(async () => {
-    if (!userId) {
+    if (!userId || !workspaceId) {
       setLoading(false);
       return;
     }
@@ -47,7 +47,7 @@ export function usePreviousMonthSurplus(userId: string | null) {
       const { data: existing, error: fetchError } = await supabase
         .from("monthly_surpluses")
         .select("*")
-        .eq("user_id", userId)
+        .eq("workspace_id", workspaceId)
         .eq("month", previousMonth)
         .maybeSingle();
 
@@ -104,6 +104,7 @@ export function usePreviousMonthSurplus(userId: string | null) {
         .from("monthly_surpluses")
         .insert({
           user_id: userId,
+          workspace_id: workspaceId,
           month: previousMonth,
           surplus_usd: 0,
           surplus_ars: totalNetARS,
@@ -129,7 +130,7 @@ export function usePreviousMonthSurplus(userId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [userId, previousMonth]);
+  }, [userId, workspaceId, previousMonth]);
 
   useEffect(() => {
     fetchOrCreate();

@@ -8,6 +8,7 @@ import { BudgetsTable } from "@/components/budgets/BudgetsTable";
 import { AddBudgetDialog } from "@/components/budgets/AddBudgetDialog";
 import { BudgetsSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useBudgetsData } from "@/hooks/useBudgetsData";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCategoriesData } from "@/hooks/useCategoriesData";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
@@ -51,13 +52,15 @@ const Budgets = () => {
     fetchTransactions();
   }, [user, activeMonth]);
 
+  const { workspaceId } = useWorkspace(user?.id ?? null);
+
   const {
     budgets,
     budgetsWithSpending,
     addBudget,
     updateBudget,
     deleteBudget,
-  } = useBudgetsData(user?.id, activeMonth, transactions);
+  } = useBudgetsData(workspaceId, activeMonth, transactions);
 
   const { categories, loading: categoriesLoading } = useCategoriesData(user?.id);
 

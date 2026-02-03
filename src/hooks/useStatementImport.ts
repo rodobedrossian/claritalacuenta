@@ -66,7 +66,7 @@ interface UseStatementImportReturn {
   reset: () => void;
 }
 
-export function useStatementImport(): UseStatementImportReturn {
+export function useStatementImport(workspaceId: string | null): UseStatementImportReturn {
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -89,6 +89,10 @@ export function useStatementImport(): UseStatementImportReturn {
     creditCardId: string,
     statementMonth: Date
   ): Promise<boolean> => {
+    if (!workspaceId) {
+      toast.error("No se pudo determinar el espacio de trabajo");
+      return false;
+    }
     try {
       setUploading(true);
 
@@ -127,6 +131,7 @@ export function useStatementImport(): UseStatementImportReturn {
         .from("statement_imports")
         .insert({
           user_id: userId,
+          workspace_id: workspaceId,
           credit_card_id: creditCardId,
           file_path: filePath,
           file_name: file.name,
@@ -247,7 +252,7 @@ export function useStatementImport(): UseStatementImportReturn {
       setUploading(false);
       setParsing(false);
     }
-  }, []);
+  }, [workspaceId]);
 
   const toggleItemSelection = useCallback((id: string) => {
     setExtractedItems((prev) =>
@@ -332,10 +337,16 @@ export function useStatementImport(): UseStatementImportReturn {
         return false;
       }
 
+      if (!workspaceId) {
+        toast.error("No se pudo determinar el espacio de trabajo");
+        return false;
+      }
+
       // 1. Insert consumption transactions into dedicated credit_card_transactions table
       // category_id is null - will be auto-assigned later by AI
       const creditCardTransactions = selectedItems.map((item) => ({
         user_id: userId,
+        workspace_id: workspaceId,
         statement_import_id: statementImportId,
         credit_card_id: creditCardId,
         description: item.descripcion,
@@ -390,6 +401,7 @@ export function useStatementImport(): UseStatementImportReturn {
 
       const paymentTransactions: Array<{
         user_id: string;
+        workspace_id: string;
         type: string;
         amount: number;
         currency: string;
@@ -406,6 +418,7 @@ export function useStatementImport(): UseStatementImportReturn {
       if (totalARS > 0) {
         paymentTransactions.push({
           user_id: userId,
+          workspace_id: workspaceId,
           type: "expense",
           amount: totalARS,
           currency: "ARS",
@@ -423,6 +436,7 @@ export function useStatementImport(): UseStatementImportReturn {
       if (totalUSD > 0) {
         paymentTransactions.push({
           user_id: userId,
+          workspace_id: workspaceId,
           type: "expense",
           amount: totalUSD,
           currency: "USD",
@@ -467,7 +481,7 @@ export function useStatementImport(): UseStatementImportReturn {
     } finally {
       setImporting(false);
     }
-  }, [extractedItems, statementImportId, statementSummary]);
+  }, [extractedItems, statementImportId, statementSummary, workspaceId]);
 
   return {
     uploading,

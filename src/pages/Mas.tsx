@@ -2,9 +2,21 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
-import { Target, Sparkles, Settings, LogOut, Tag, Repeat, PiggyBank, ChevronDown, Info } from "lucide-react";
+import { Target, Sparkles, Settings, LogOut, Tag, Repeat, PiggyBank, ChevronDown, Info, UserPlus } from "lucide-react";
 import { performLogout } from "@/lib/biometricAuth";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 const APP_VERSION = "1.0.0";
 
@@ -34,6 +46,9 @@ const menuItems = [
 export default function Mas() {
   const navigate = useNavigate();
   const [user, setUser] = useState<{ email?: string; user_metadata?: { full_name?: string } } | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteSending, setInviteSending] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -52,6 +67,34 @@ export default function Mas() {
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Usuario";
   const initials = getInitials(user?.user_metadata?.full_name, user?.email);
+
+  const handleSendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Ingresá un email válido");
+      return;
+    }
+    setInviteSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-workspace-invite", {
+        body: { email },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      toast.success("Invitación enviada. Le va a llegar un mail para unirse al espacio.");
+      setInviteEmail("");
+      setInviteOpen(false);
+    } catch (err: any) {
+      console.error("Send invite:", err);
+      toast.error(err.message || "No se pudo enviar la invitación");
+    } finally {
+      setInviteSending(false);
+    }
+  };
 
   return (
     <AppLayout>
@@ -95,6 +138,18 @@ export default function Mas() {
             })}
           </div>
 
+          {/* Invitar - abre diálogo para invitar a alguien al espacio */}
+          <button
+            onClick={() => setInviteOpen(true)}
+            className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-left transition-colors bg-card border border-border/50 hover:bg-muted/50 active:opacity-90"
+          >
+            <div className="flex items-center gap-3">
+              <UserPlus className="h-5 w-5 text-primary" strokeWidth={2} />
+              <span className="font-medium text-foreground">Invitar</span>
+            </div>
+            <ChevronDown className="h-5 w-5 text-muted-foreground -rotate-90" />
+          </button>
+
           {/* Legales - navega a pantalla dedicada */}
           <button
             onClick={() => navigate("/legales")}
@@ -122,6 +177,39 @@ export default function Mas() {
           </p>
         </div>
       </div>
+
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invitar al espacio</DialogTitle>
+            <DialogDescription>
+              La persona va a recibir un mail con un enlace. Al aceptar, va a poder ver y agregar gastos, tarjetas y más en el mismo espacio.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSendInvite} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Email</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="ejemplo@email.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                disabled={inviteSending}
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setInviteOpen(false)} disabled={inviteSending}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={inviteSending}>
+                {inviteSending ? "Enviando…" : "Enviar invitación"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

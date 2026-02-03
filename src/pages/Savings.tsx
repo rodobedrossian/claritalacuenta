@@ -17,6 +17,7 @@ import { MobileHeader } from "@/components/MobileHeader";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { useSavingsData, SavingsEntry, Investment } from "@/hooks/useSavingsData";
 import { useMonthlyBalance } from "@/hooks/useMonthlyBalance";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
@@ -43,6 +44,8 @@ const Savings = () => {
   } | null>(null);
   const [reinvestSourceId, setReinvestSourceId] = useState<string | null>(null);
 
+  const { workspaceId } = useWorkspace(user?.id ?? null);
+
   // Use the consolidated data hook
   const {
     data: savingsData,
@@ -59,7 +62,7 @@ const Savings = () => {
     addGoal,
     toggleGoalComplete,
     deleteGoal
-  } = useSavingsData(user?.id);
+  } = useSavingsData(user?.id ?? null, workspaceId);
 
   // Get monthly balance for savings wizard
   const { balance: monthlyBalance, refetch: refetchBalance } = useMonthlyBalance(user?.id);
