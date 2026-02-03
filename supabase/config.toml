@@ -60,5 +60,8 @@ verify_jwt = false
 [functions.elevenlabs-scribe-token]
 verify_jwt = false
 
+[functions.send-password-reset]
+verify_jwt = false
+
 [functions.get-admin-users]
 verify_jwt = false

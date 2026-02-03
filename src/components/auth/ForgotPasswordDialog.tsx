@@ -45,26 +45,24 @@ const ForgotPasswordDialog = ({ open, onOpenChange, defaultEmail = "" }: ForgotP
     setLoading(true);
 
     try {
-      const redirectUrl = `${window.location.origin}/reset-password`;
-      
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectUrl,
+      const redirectTo = `${window.location.origin}/reset-password`;
+      const { data, error } = await supabase.functions.invoke("send-password-reset", {
+        body: { email, redirectTo },
       });
 
       if (error) {
-        // Don't reveal if email exists or not for security
-        if (error.message.includes("rate limit")) {
-          toast.error("Demasiados intentos. Esperá unos minutos.");
-        } else {
-          // Generic success message for security
-          setSent(true);
-        }
+        toast.error("Error al enviar el email. Intentá más tarde.");
+        return;
+      }
+
+      if (data?.error === "rate_limit") {
+        toast.error("Demasiados intentos. Esperá unos minutos.");
         return;
       }
 
       setSent(true);
-    } catch (error: any) {
-      toast.error("Error al enviar el email");
+    } catch (_err) {
+      toast.error("Error al enviar el email. Intentá más tarde.");
     } finally {
       setLoading(false);
     }
