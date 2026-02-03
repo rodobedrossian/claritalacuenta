@@ -141,18 +141,19 @@ const Index = () => {
           notes: note,
         });
       } else {
-        if (allocation.arsAmount > 0) {
+        const splitAllocation = allocation as { allARS: false; arsAmount: number; usdAmount: number };
+        if (splitAllocation.arsAmount > 0) {
           await addSavingsEntry({
-            amount: allocation.arsAmount,
+            amount: splitAllocation.arsAmount,
             currency: "ARS",
             entry_type: "deposit",
             savings_type: "bank",
             notes: note,
           });
         }
-        if (allocation.usdAmount > 0) {
+        if (splitAllocation.usdAmount > 0) {
           await addSavingsEntry({
-            amount: allocation.usdAmount,
+            amount: splitAllocation.usdAmount,
             currency: "USD",
             entry_type: "deposit",
             savings_type: "bank",

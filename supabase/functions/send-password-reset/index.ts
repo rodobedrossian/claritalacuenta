@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirect_to: redirectTo },
+      options: { redirectTo },
     });
 
     if (linkError) {

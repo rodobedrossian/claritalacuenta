@@ -60,6 +60,7 @@ export function usePreviousMonthSurplus(userId: string | null) {
       if (existing) {
         setRecord({
           ...existing,
+          status: existing.status as "pending" | "saved" | "ignored",
           surplus_usd: typeof existing.surplus_usd === "string" ? parseFloat(existing.surplus_usd) : existing.surplus_usd,
           surplus_ars: typeof existing.surplus_ars === "string" ? parseFloat(existing.surplus_ars) : existing.surplus_ars,
         });
@@ -119,6 +120,7 @@ export function usePreviousMonthSurplus(userId: string | null) {
 
       setRecord({
         ...inserted,
+        status: inserted.status as "pending" | "saved" | "ignored",
         surplus_usd: typeof inserted.surplus_usd === "string" ? parseFloat(inserted.surplus_usd) : inserted.surplus_usd,
         surplus_ars: typeof inserted.surplus_ars === "string" ? parseFloat(inserted.surplus_ars) : inserted.surplus_ars,
       });
