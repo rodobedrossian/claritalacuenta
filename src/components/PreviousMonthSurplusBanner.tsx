@@ -7,6 +7,8 @@ interface PreviousMonthSurplusBannerProps {
   monthLabel: string;
   onAddToSavings: () => void;
   onDismiss: () => void;
+  /** "full" = card (mobile); "compact" = single-line bar (desktop) */
+  variant?: "full" | "compact";
 }
 
 const formatCurrency = (amount: number, currency: "USD" | "ARS") => {
@@ -23,8 +25,36 @@ export function PreviousMonthSurplusBanner({
   monthLabel,
   onAddToSavings,
   onDismiss,
+  variant = "full",
 }: PreviousMonthSurplusBannerProps) {
   const monthCapitalized = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+
+  if (variant === "compact") {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 py-3 px-4 rounded-xl bg-success/5 border border-success/20">
+        <p className="text-sm text-foreground">
+          Te sobró {formatCurrency(surplusTotalARS, "ARS")} en {monthCapitalized}. Cerraste con balance positivo.
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onDismiss}
+            className="text-muted-foreground hover:text-foreground h-8"
+          >
+            Ahora no
+          </Button>
+          <Button
+            size="sm"
+            onClick={onAddToSavings}
+            className="bg-success hover:bg-success/90 text-white h-8"
+          >
+            Agregar a ahorros
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card className="overflow-hidden border-success/20 bg-gradient-to-br from-success/5 to-success/10">

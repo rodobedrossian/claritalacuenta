@@ -413,7 +413,7 @@ const Index = () => {
           /* Desktop View */
           <div className="flex-1 overflow-y-auto">
             <header className="border-b border-border bg-background sticky top-0 z-10">
-              <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+              <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
                 <div>
                   <p className="text-sm text-muted-foreground">Bienvenido, {user?.user_metadata?.full_name || user?.email}</p>
                   {lastUpdated && <p className="text-xs text-muted-foreground">USD/ARS: {exchangeRate.toFixed(2)}</p>}
@@ -425,35 +425,36 @@ const Index = () => {
               </div>
             </header>
 
-            <main className="container mx-auto px-6 py-8 space-y-8">
-              <div className="flex items-center justify-center gap-4">
-                <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <h2 className="text-xl font-bold capitalize min-w-[200px] text-center">
-                  {format(activeMonth, "MMMM yyyy", { locale: es })}
-                </h2>
-                <Button variant="ghost" size="icon" onClick={goToNextMonth}>
-                  <ChevronRight className="h-5 w-5" />
-                </Button>
-              </div>
-
-              <div className="bg-card rounded-2xl p-8 border text-center max-w-lg mx-auto shadow-sm">
-                <p className="text-sm font-medium text-muted-foreground mb-1">Balance neto</p>
-                <p className={`text-4xl font-bold ${globalNetBalanceARS >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {formatCurrency(globalNetBalanceARS, "ARS")}
-                </p>
+            <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+              {/* Month + Balance hero: same width as content, no narrow card */}
+              <div className="flex flex-col gap-6">
+                <div className="flex items-center justify-center gap-4">
+                  <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  <h2 className="text-xl font-bold capitalize min-w-[200px] text-center">
+                    {format(activeMonth, "MMMM yyyy", { locale: es })}
+                  </h2>
+                  <Button variant="ghost" size="icon" onClick={goToNextMonth}>
+                    <ChevronRight className="h-5 w-5" />
+                  </Button>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground mb-1">Balance neto</p>
+                  <p className={`text-4xl md:text-5xl font-black tracking-tight tabular-nums ${globalNetBalanceARS >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {formatCurrency(globalNetBalanceARS, "ARS")}
+                  </p>
+                </div>
               </div>
 
               {isViewingCurrentMonth && shouldShowSurplusBanner && previousMonthSurplus && (
-                <div className="max-w-lg mx-auto">
-                  <PreviousMonthSurplusBanner
-                    surplusTotalARS={surplusTotalARS}
-                    monthLabel={previousMonthLabel}
-                    onAddToSavings={() => setTransferSurplusModalOpen(true)}
-                    onDismiss={handleSurplusDismiss}
-                  />
-                </div>
+                <PreviousMonthSurplusBanner
+                  surplusTotalARS={surplusTotalARS}
+                  monthLabel={previousMonthLabel}
+                  onAddToSavings={() => setTransferSurplusModalOpen(true)}
+                  onDismiss={handleSurplusDismiss}
+                  variant="compact"
+                />
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
