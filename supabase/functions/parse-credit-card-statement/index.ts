@@ -124,7 +124,7 @@ Retorna un JSON válido con esta estructura exacta:
   }
 }
 
-Si no encuentras consumos, cuotas, impuestos o ajustes, retorna arrays vacíos para esos campos. SOLO retorna el JSON, sin texto adicional.
+IMPORTANTE: Retorna SOLO el objeto JSON puro, SIN markdown, SIN \`\`\`json, SIN texto adicional. Empieza directamente con { y termina con }
 
 TEXTO DEL RESUMEN:
 `;
@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
             ],
           },
         ],
-        max_tokens: 8000,
+        max_tokens: 16000,
       }),
     });
 
