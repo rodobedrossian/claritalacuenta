@@ -226,6 +226,15 @@
     animation: pulse-glow 2s ease-in-out infinite;
   }
 
+  @keyframes progress-indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+  }
+
+  .animate-progress-indeterminate {
+    animation: progress-indeterminate 1.5s ease-in-out infinite;
+  }
+
   .text-glow-primary {
     text-shadow: 0 0 12px hsl(var(--primary) / 0.4);
   }
