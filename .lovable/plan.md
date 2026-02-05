@@ -1,107 +1,69 @@
 
-## Plan: Mejorar UX de Importación con Mensajes de Progreso
+## Plan: Simplificar UI de Procesamiento con Icono de IA
 
-### Contexto
-El procesamiento tarda ~2 minutos debido al modelo `gemini-2.5-pro` (necesario para precisión en tablas). La conciliación no afecta el tiempo - es cálculo instantáneo post-IA.
+### Objetivo
+Cuando el PDF está siendo analizado, ocultar todo el formulario (selectores de tarjeta, mes, archivo) y mostrar solo una vista limpia y centrada con:
+- Icono de "magia/AI" (Sparkles de Lucide)
+- Barra de progreso animada
+- Mensaje de progreso que rota
 
-### Implementación
+### Cambios Técnicos
 
 #### Archivo: `src/components/credit-cards/ImportStatementDialog.tsx`
 
-**1. Agregar estados y constantes:**
+**1. Importar icono Sparkles:**
 ```typescript
-const PROGRESS_MESSAGES = [
-  "Subiendo archivo...",
-  "Analizando estructura del PDF...",
-  "Identificando consumos y cuotas...",
-  "Extrayendo montos e impuestos...",
-  "Validando totales...",
-  "Casi listo...",
-];
-
-const [progressIndex, setProgressIndex] = useState(0);
+import { Sparkles } from "lucide-react";
 ```
 
-**2. useEffect para rotar mensajes cada 15 segundos:**
-```typescript
-useEffect(() => {
-  if (uploading || parsing) {
-    const interval = setInterval(() => {
-      setProgressIndex((prev) => 
-        prev < PROGRESS_MESSAGES.length - 1 ? prev + 1 : prev
-      );
-    }, 15000);
-    return () => clearInterval(interval);
-  } else {
-    setProgressIndex(0);
-  }
-}, [uploading, parsing]);
-```
+**2. Modificar el step "upload" para ocultar el formulario durante el procesamiento:**
 
-**3. Reemplazar el botón de análisis (líneas 336-350):**
-
-Cuando está procesando, mostrar:
-- Barra de progreso indeterminada animada
-- Mensaje de progreso que cambia cada 15s
-- Texto "El análisis puede tomar 1-2 minutos"
-- Tip "No cierres esta ventana"
+En lugar de mostrar siempre el formulario completo, cuando `uploading || parsing` es true, mostrar solo la vista de progreso centrada:
 
 ```tsx
-{(uploading || parsing) ? (
-  <div className="space-y-4 py-2">
-    <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-      <div className="h-full w-2/5 bg-primary animate-progress-indeterminate" />
-    </div>
-    <div className="text-center space-y-1">
-      <p className="text-sm font-medium">{PROGRESS_MESSAGES[progressIndex]}</p>
-      <p className="text-xs text-muted-foreground">
-        El análisis puede tomar 1-2 minutos
-      </p>
-    </div>
-    <p className="text-xs text-center text-muted-foreground/70">
-      No cierres esta ventana
-    </p>
+{step === "upload" && (
+  <div className="space-y-4 py-4">
+    {(uploading || parsing) ? (
+      // Vista minimalista de procesamiento
+      <div className="flex flex-col items-center justify-center py-12 space-y-6">
+        <div className="relative">
+          <Sparkles className="h-12 w-12 text-primary animate-pulse" />
+        </div>
+        <div className="w-full max-w-xs space-y-4">
+          <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+            <div className="h-full w-2/5 bg-primary animate-progress-indeterminate" />
+          </div>
+          <p className="text-sm font-medium text-center">
+            {PROGRESS_MESSAGES[progressIndex]}
+          </p>
+        </div>
+      </div>
+    ) : (
+      // Formulario normal (selector de tarjeta, mes, archivo PDF)
+      <>
+        {/* ... contenido actual del formulario ... */}
+        <Button onClick={handleAnalyzeAndCheck} ...>
+          Analizar resumen
+        </Button>
+      </>
+    )}
   </div>
-) : (
-  <Button onClick={handleAnalyzeAndCheck} disabled={!selectedFile || !selectedCardId}>
-    Analizar resumen
-  </Button>
 )}
 ```
-
-#### Archivo: `src/index.css`
-
-Agregar animación de progreso indeterminado:
-```css
-@keyframes progress-indeterminate {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(300%); }
-}
-
-.animate-progress-indeterminate {
-  animation: progress-indeterminate 1.5s ease-in-out infinite;
-}
-```
-
----
 
 ### Resultado Visual
 
 **Antes:**
-- Botón con spinner genérico "Analizando..."
+- Se ve todo el formulario + barra de progreso abajo
+- Tres textos: mensaje, tiempo estimado, "no cierres"
 
 **Después:**
-- Barra de progreso animada
-- "Analizando estructura del PDF..." → "Identificando consumos..." → etc.
-- "El análisis puede tomar 1-2 minutos"
-- "No cierres esta ventana"
-
----
+- Solo se ve:
+  - ✨ Icono Sparkles animado (pulse)
+  - Barra de progreso indeterminada
+  - Un único mensaje que rota
+- Sin distracciones, foco total en la espera
 
 ### Impacto
-- **Archivos**: 2 (`ImportStatementDialog.tsx`, `index.css`)
+- **Archivo modificado**: 1 (`ImportStatementDialog.tsx`)
 - **Riesgo**: Muy bajo - solo cambios de UI
-- **La conciliación se mantiene** - no afecta el tiempo
-
-### Fase 2 (Futuro - Si es necesario)
-Procesamiento en background con polling a `statement_imports.status` para no bloquear al usuario. Requiere más cambios pero permite cerrar el dialog.
