@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getAdminLoginPath } from "@/lib/adminSubdomain";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, ShieldX } from "lucide-react";
@@ -16,7 +17,7 @@ const AdminLayout = () => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
-          navigate("/admin");
+          navigate(getAdminLoginPath());
           return;
         }
 
@@ -40,7 +41,7 @@ const AdminLayout = () => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || !session) {
-        navigate("/admin");
+        navigate(getAdminLoginPath());
       }
     });
 
@@ -49,7 +50,7 @@ const AdminLayout = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/admin");
+    navigate(getAdminLoginPath());
   };
 
   if (isLoading) {
