@@ -10,7 +10,32 @@ const corsHeaders = {
 
 const EXTRACTION_PROMPT = `Eres un experto en analizar resúmenes de tarjetas de crédito argentinas. Analiza el siguiente PDF de resumen de tarjeta de crédito y extrae TODOS los consumos, cuotas, impuestos y ajustes/créditos.
 
-REGLAS CRÍTICAS PARA CLASIFICACIÓN:
+=== INSTRUCCIONES CRÍTICAS PARA PARSEO TABULAR ===
+
+**REGLA #1 - ALINEACIÓN FILA POR FILA:**
+- CADA línea del PDF representa UNA transacción completa
+- El monto SIEMPRE está al FINAL de la línea, alineado a la derecha
+- La descripción está en el MEDIO, entre la fecha y el monto
+- **NUNCA** mezcles montos de una línea con descripciones de otra línea
+- Si una línea dice "APPYPF 00023 COMBUST" seguido de "47.478,68", ese monto corresponde a ESA descripción
+
+**REGLA #2 - FORMATO NUMÉRICO ARGENTINO:**
+- Separador de MILES: punto (.)
+- Separador de DECIMALES: coma (,)
+- Ejemplos de conversión:
+  * "47.478,68" en PDF → 47478.68 en JSON (cuarenta y siete mil cuatrocientos setenta y ocho con 68 centavos)
+  * "5.490" en PDF → 5490 en JSON (cinco mil cuatrocientos noventa, SIN decimales)
+  * "1.234.567,89" → 1234567.89
+  * "200,50" → 200.50 (doscientos con 50 centavos)
+- Si no hay coma, el número NO tiene decimales
+
+**REGLA #3 - VERIFICACIÓN DE ALINEACIÓN:**
+- Antes de retornar, VERIFICA que cada descripción tenga su monto correcto
+- Los montos suelen estar alineados verticalmente en una columna a la derecha
+- Las fechas están a la izquierda en formato DD/MM/YYYY o similar
+- Las descripciones varían en longitud pero el monto siempre está al final de la misma fila
+
+=== REGLAS DE CLASIFICACIÓN ===
 
 1. **CUOTAS**: Cualquier compra que tenga indicador de cuotas va SOLO en el array "cuotas".
    PATRONES DE CUOTAS A DETECTAR:
@@ -157,7 +182,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [
           {
             role: "user",
