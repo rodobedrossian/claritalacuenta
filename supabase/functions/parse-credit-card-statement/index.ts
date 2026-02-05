@@ -1,3 +1,6 @@
+/// <reference path="../deno.d.ts" />
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Deno URL import
+// @ts-ignore - resolved at runtime by Deno
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
