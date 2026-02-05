@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Loader2, Upload, FileText, CreditCard, Plus, X, AlertTriangle } from "lucide-react";
+import { Loader2, Upload, FileText, CreditCard, Plus, X, AlertTriangle, Sparkles } from "lucide-react";
 import { useStatementImport, ExtractedItem } from "@/hooks/useStatementImport";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format, startOfMonth, subMonths } from "date-fns";
@@ -261,126 +261,127 @@ export function ImportStatementDialog({
 
       {step === "upload" && (
         <div className="space-y-6 py-4">
-          <div className="space-y-2">
-            <Label>Tarjeta de crédito</Label>
-            {creditCards.length === 0 ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 text-muted-foreground text-sm">
-                  <CreditCard className="h-4 w-4 shrink-0" />
-                  <span>No tenés tarjetas registradas</span>
+          {(uploading || parsing) ? (
+            <div className="flex flex-col items-center justify-center py-12 space-y-6">
+              <div className="relative">
+                <Sparkles className="h-12 w-12 text-primary animate-pulse" />
+              </div>
+              <div className="w-full max-w-xs space-y-4">
+                <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                  <div className="h-full w-2/5 bg-primary animate-progress-indeterminate" />
                 </div>
-                {onAddCard && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setStep("add-card")}
-                    className="w-full gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Agregar tarjeta
-                  </Button>
+                <p className="text-sm font-medium text-center">
+                  {PROGRESS_MESSAGES[progressIndex]}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label>Tarjeta de crédito</Label>
+                {creditCards.length === 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 text-muted-foreground text-sm">
+                      <CreditCard className="h-4 w-4 shrink-0" />
+                      <span>No tenés tarjetas registradas</span>
+                    </div>
+                    {onAddCard && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setStep("add-card")}
+                        className="w-full gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Agregar tarjeta
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Select value={selectedCardId} onValueChange={setSelectedCardId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccioná una tarjeta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {creditCards.map((card) => (
+                          <SelectItem key={card.id} value={card.id}>
+                            <div className="flex items-center gap-2">
+                              <CreditCard className="h-4 w-4" />
+                              {card.name} {card.bank && `(${card.bank})`}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {onAddCard && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setStep("add-card")}
+                        className="gap-1 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Agregar otra tarjeta
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
-            ) : (
+
               <div className="space-y-2">
-                <Select value={selectedCardId} onValueChange={setSelectedCardId}>
+                <Label>Mes del resumen</Label>
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleccioná una tarjeta" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {creditCards.map((card) => (
-                      <SelectItem key={card.id} value={card.id}>
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="h-4 w-4" />
-                          {card.name} {card.bank && `(${card.bank})`}
-                        </div>
+                    {MONTHS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {onAddCard && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setStep("add-card")}
-                    className="gap-1 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    <Plus className="h-3 w-3" />
-                    Agregar otra tarjeta
-                  </Button>
-                )}
               </div>
-            )}
-          </div>
 
-          <div className="space-y-2">
-            <Label>Mes del resumen</Label>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MONTHS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Archivo PDF</Label>
-            <div
-              className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-6 md:p-8 text-center hover:border-primary/50 transition-colors cursor-pointer active:bg-muted/30"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              {selectedFile ? (
-                <div className="flex flex-col items-center gap-2">
-                  <FileText className="h-10 w-10 text-primary" />
-                  <span className="font-medium truncate max-w-full px-2">{selectedFile.name}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                  </span>
+              <div className="space-y-2">
+                <Label>Archivo PDF</Label>
+                <div
+                  className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-6 md:p-8 text-center hover:border-primary/50 transition-colors cursor-pointer active:bg-muted/30"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  {selectedFile ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <FileText className="h-10 w-10 text-primary" />
+                      <span className="font-medium truncate max-w-full px-2">{selectedFile.name}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <Upload className="h-10 w-10" />
+                      <span className="text-sm">Tocá para seleccionar un PDF</span>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                  <Upload className="h-10 w-10" />
-                  <span className="text-sm">Tocá para seleccionar un PDF</span>
-                </div>
-              )}
-            </div>
-          </div>
+              </div>
 
-          {(uploading || parsing) ? (
-            <div className="space-y-4 py-2">
-              <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                <div className="h-full w-2/5 bg-primary animate-progress-indeterminate" />
-              </div>
-              <div className="text-center space-y-1">
-                <p className="text-sm font-medium">{PROGRESS_MESSAGES[progressIndex]}</p>
-                <p className="text-xs text-muted-foreground">
-                  El análisis puede tomar 1-2 minutos
-                </p>
-              </div>
-              <p className="text-xs text-center text-muted-foreground/70">
-                No cierres esta ventana
-              </p>
-            </div>
-          ) : (
-            <Button
-              onClick={handleAnalyzeAndCheck}
-              disabled={!selectedFile || !selectedCardId}
-              className="w-full"
-            >
-              Analizar resumen
-            </Button>
+              <Button
+                onClick={handleAnalyzeAndCheck}
+                disabled={!selectedFile || !selectedCardId}
+                className="w-full"
+              >
+                Analizar resumen
+              </Button>
+            </>
           )}
         </div>
       )}
