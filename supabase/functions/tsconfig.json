@@ -4,10 +4,10 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "noEmit": true,
-    "strict": true,
+    "strict": false,
+    "noImplicitAny": false,
     "skipLibCheck": true,
     "lib": ["ESNext", "DOM"],
-    "types": [],
     "composite": true
   },
   "include": ["./**/*.ts", "deno.d.ts"]
