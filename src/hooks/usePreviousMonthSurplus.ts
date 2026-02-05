@@ -70,7 +70,7 @@ export function usePreviousMonthSurplus(userId: string | null, workspaceId: stri
 
       // 2. No record - fetch previous month dashboard data and compute surplus
       const { data: dashboardData, error: dashboardError } = await supabase.functions.invoke("get-dashboard-data", {
-        body: { month: previousMonth },
+        body: { month: previousMonth, workspace_id: workspaceId },
       });
 
       if (dashboardError) {

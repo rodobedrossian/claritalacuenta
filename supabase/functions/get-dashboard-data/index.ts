@@ -8,6 +8,7 @@ const corsHeaders = {
 
 interface DashboardRequest {
   month: string; // "2026-01" formato YYYY-MM
+  workspace_id?: string; // Optional workspace filter
 }
 
 interface Transaction {
@@ -57,13 +58,21 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { month } = await req.json() as DashboardRequest;
-    console.log(`Fetching dashboard data for month: ${month}, user: ${user.id}`);
+    const { month, workspace_id } = await req.json() as DashboardRequest;
+    console.log(`Fetching dashboard data for month: ${month}, user: ${user.id}, workspace: ${workspace_id || 'all'}`);
 
     // Parse month to get start and end dates
     const [year, monthNum] = month.split("-").map(Number);
     const monthStart = new Date(year, monthNum - 1, 1);
     const monthEnd = new Date(year, monthNum, 0, 23, 59, 59, 999);
+
+    // Helper to apply workspace filter
+    const applyWorkspaceFilter = <T extends { eq: (col: string, val: string) => T }>(query: T): T => {
+      if (workspace_id) {
+        return query.eq("workspace_id", workspace_id);
+      }
+      return query;
+    };
 
     // Execute all queries in parallel
     const [
@@ -76,22 +85,27 @@ Deno.serve(async (req) => {
       creditCardsResult,
       investmentsResult
     ] = await Promise.all([
-      // Transactions for the month
-      supabase
-        .from("transactions")
-        .select("id, type, amount, currency, category, description, date, user_id, from_savings, savings_source, payment_method")
-        .gte("date", monthStart.toISOString())
-        .lte("date", monthEnd.toISOString())
-        .order("date", { ascending: false }),
+      // Transactions for the month (with workspace filter)
+      (async () => {
+        let query = supabase
+          .from("transactions")
+          .select("id, type, amount, currency, category, description, date, user_id, from_savings, savings_source, payment_method")
+          .gte("date", monthStart.toISOString())
+          .lte("date", monthEnd.toISOString());
+        if (workspace_id) query = query.eq("workspace_id", workspace_id);
+        return query.order("date", { ascending: false });
+      })(),
       
-      // Current savings
-      supabase
-        .from("savings")
-        .select("usd_amount, ars_amount")
-        .limit(1)
-        .maybeSingle(),
+      // Current savings (with workspace filter)
+      (async () => {
+        let query = supabase
+          .from("savings")
+          .select("usd_amount, ars_amount");
+        if (workspace_id) query = query.eq("workspace_id", workspace_id);
+        return query.limit(1).maybeSingle();
+      })(),
       
-      // Exchange rate
+      // Exchange rate (global, no workspace filter)
       supabase
         .from("exchange_rates")
         .select("rate, updated_at")
@@ -99,7 +113,7 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle(),
       
-      // Categories
+      // Categories (global, no workspace filter)
       supabase
         .from("categories")
         .select("id, name, type")
@@ -111,25 +125,36 @@ Deno.serve(async (req) => {
         .select("id, full_name")
         .order("full_name"),
       
-      // Savings entries for the month (to calculate transfers from balance)
-      supabase
-        .from("savings_entries")
-        .select("amount, currency, notes, entry_type")
-        .eq("entry_type", "deposit")
-        .gte("created_at", monthStart.toISOString())
-        .lte("created_at", monthEnd.toISOString()),
+      // Savings entries for the month (with workspace filter)
+      (async () => {
+        let query = supabase
+          .from("savings_entries")
+          .select("amount, currency, notes, entry_type")
+          .eq("entry_type", "deposit")
+          .gte("created_at", monthStart.toISOString())
+          .lte("created_at", monthEnd.toISOString());
+        if (workspace_id) query = query.eq("workspace_id", workspace_id);
+        return query;
+      })(),
       
-      // Credit cards
-      supabase
-        .from("credit_cards")
-        .select("id, name, bank, closing_day")
-        .order("name"),
+      // Credit cards (with workspace filter)
+      (async () => {
+        let query = supabase
+          .from("credit_cards")
+          .select("id, name, bank, closing_day");
+        if (workspace_id) query = query.eq("workspace_id", workspace_id);
+        return query.order("name");
+      })(),
       
-      // Investments
-      supabase
-        .from("investments")
-        .select("current_amount, currency, is_active")
-        .eq("is_active", true)
+      // Investments (with workspace filter)
+      (async () => {
+        let query = supabase
+          .from("investments")
+          .select("current_amount, currency, is_active")
+          .eq("is_active", true);
+        if (workspace_id) query = query.eq("workspace_id", workspace_id);
+        return query;
+      })()
     ]);
 
     // Log any errors
