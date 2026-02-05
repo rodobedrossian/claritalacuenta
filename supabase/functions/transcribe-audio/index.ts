@@ -37,7 +37,7 @@ function processBase64Chunks(base64String: string, chunkSize = 32768): Uint8Arra
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
