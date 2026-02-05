@@ -1,81 +1,107 @@
 
+## Plan: Mejorar UX de Importación con Mensajes de Progreso
 
-## Plan: Corregir el Matcheo de Descripciones y Montos en la Importación de Resúmenes
+### Contexto
+El procesamiento tarda ~2 minutos debido al modelo `gemini-2.5-pro` (necesario para precisión en tablas). La conciliación no afecta el tiempo - es cálculo instantáneo post-IA.
 
-### Problema Identificado
-La IA (Gemini) está desalineando las descripciones de consumos con sus montos correspondientes al parsear el PDF. Por ejemplo:
-- **PDF original**: "APPYPF 00023 COMBUST" → $47.478,68
-- **Resultado actual**: "APPYPF 00023 COMBUST" → $5.490
+### Implementación
 
-Esto ocurre porque la IA reconstruye las relaciones fila-columna de manera incorrecta en tablas densas con formato numérico argentino.
+#### Archivo: `src/components/credit-cards/ImportStatementDialog.tsx`
 
-### Solución Propuesta
+**1. Agregar estados y constantes:**
+```typescript
+const PROGRESS_MESSAGES = [
+  "Subiendo archivo...",
+  "Analizando estructura del PDF...",
+  "Identificando consumos y cuotas...",
+  "Extrayendo montos e impuestos...",
+  "Validando totales...",
+  "Casi listo...",
+];
 
-#### 1. Mejorar el Prompt de Extracción
+const [progressIndex, setProgressIndex] = useState(0);
+```
 
-Agregar instrucciones más explícitas sobre cómo parsear la estructura tabular:
+**2. useEffect para rotar mensajes cada 15 segundos:**
+```typescript
+useEffect(() => {
+  if (uploading || parsing) {
+    const interval = setInterval(() => {
+      setProgressIndex((prev) => 
+        prev < PROGRESS_MESSAGES.length - 1 ? prev + 1 : prev
+      );
+    }, 15000);
+    return () => clearInterval(interval);
+  } else {
+    setProgressIndex(0);
+  }
+}, [uploading, parsing]);
+```
 
-- **Instrucciones de alineación**: Enfatizar que cada línea del resumen contiene fecha, descripción y monto en la MISMA fila
-- **Formato numérico**: Clarificar que los números usan formato argentino (punto = miles, coma = decimales)
-- **Validación de consistencia**: Instruir a la IA que verifique que los totales parciales coincidan con las sumas
+**3. Reemplazar el botón de análisis (líneas 336-350):**
 
-#### 2. Agregar Post-Validación
+Cuando está procesando, mostrar:
+- Barra de progreso indeterminada animada
+- Mensaje de progreso que cambia cada 15s
+- Texto "El análisis puede tomar 1-2 minutos"
+- Tip "No cierres esta ventana"
 
-Después de recibir la respuesta de la IA:
-- Comparar la suma calculada de items con el total del resumen
-- Si hay diferencia significativa (>1%), loggear advertencia para debug
-- Mostrar alerta al usuario sobre posibles inconsistencias
+```tsx
+{(uploading || parsing) ? (
+  <div className="space-y-4 py-2">
+    <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+      <div className="h-full w-2/5 bg-primary animate-progress-indeterminate" />
+    </div>
+    <div className="text-center space-y-1">
+      <p className="text-sm font-medium">{PROGRESS_MESSAGES[progressIndex]}</p>
+      <p className="text-xs text-muted-foreground">
+        El análisis puede tomar 1-2 minutos
+      </p>
+    </div>
+    <p className="text-xs text-center text-muted-foreground/70">
+      No cierres esta ventana
+    </p>
+  </div>
+) : (
+  <Button onClick={handleAnalyzeAndCheck} disabled={!selectedFile || !selectedCardId}>
+    Analizar resumen
+  </Button>
+)}
+```
+
+#### Archivo: `src/index.css`
+
+Agregar animación de progreso indeterminado:
+```css
+@keyframes progress-indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+.animate-progress-indeterminate {
+  animation: progress-indeterminate 1.5s ease-in-out infinite;
+}
+```
 
 ---
 
-### Cambios Técnicos
+### Resultado Visual
 
-#### Archivo: `supabase/functions/parse-credit-card-statement/index.ts`
+**Antes:**
+- Botón con spinner genérico "Analizando..."
 
-1. **Mejorar EXTRACTION_PROMPT** (líneas 11-105):
-
-```text
-Agregar sección de instrucciones de parseo tabular:
-
-INSTRUCCIONES CRÍTICAS PARA PARSEO TABULAR:
-
-1. CADA LÍNEA ES UNA TRANSACCIÓN COMPLETA:
-   - Formato típico: [Línea] [Fecha] [Descripción] [Monto]
-   - El monto SIEMPRE está al final de la línea, alineado a la derecha
-   - La descripción está en el medio, entre la fecha y el monto
-   - NUNCA mezcles montos de una línea con descripciones de otra
-
-2. FORMATO NUMÉRICO ARGENTINO:
-   - Separador de miles: punto (.)
-   - Separador de decimales: coma (,)
-   - Ejemplo: "47.478,68" = cuarenta y siete mil cuatrocientos setenta y ocho con 68 centavos
-   - Ejemplo: "5.490" = cinco mil cuatrocientos noventa (SIN decimales)
-   - "1.234.567,89" = un millón doscientos...
-
-3. VERIFICACIÓN DE ALINEACIÓN:
-   - Antes de retornar, verifica que cada descripción tenga su monto correcto
-   - Si la línea dice "APPYPF 00023 COMBUST" seguido de "47.478,68", 
-     el monto debe ser 47478.68, NO otro valor de otra línea
-
-4. PISTAS VISUALES:
-   - Los montos suelen estar alineados verticalmente en una columna derecha
-   - Las fechas están en formato DD/MM/YYYY o similar
-   - Las descripciones varían en longitud
-```
-
-2. **Agregar logging mejorado** para debugging:
-   - Loggear el raw response de la IA para análisis
-   - Incluir más detalles en la reconciliación
-
-3. **Considerar modelo alternativo**:
-   - Probar `google/gemini-2.5-pro` en lugar de `flash` para mejor precisión en parsing tabular
-   - El modelo Pro tiene mejor capacidad de reasoning para tablas complejas
+**Después:**
+- Barra de progreso animada
+- "Analizando estructura del PDF..." → "Identificando consumos..." → etc.
+- "El análisis puede tomar 1-2 minutos"
+- "No cierres esta ventana"
 
 ---
 
 ### Impacto
+- **Archivos**: 2 (`ImportStatementDialog.tsx`, `index.css`)
+- **Riesgo**: Muy bajo - solo cambios de UI
+- **La conciliación se mantiene** - no afecta el tiempo
 
-- **Archivos modificados**: 1 (`supabase/functions/parse-credit-card-statement/index.ts`)
-- **Riesgo**: Bajo - cambios en prompt no afectan estructura de datos
-- **Testing**: Reimportar el mismo PDF después del cambio para verificar
-
+### Fase 2 (Futuro - Si es necesario)
+Procesamiento en background con polling a `statement_imports.status` para no bloquear al usuario. Requiere más cambios pero permite cerrar el dialog.
