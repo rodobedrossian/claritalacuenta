@@ -11,7 +11,7 @@ export interface ExtractedItem {
   moneda: "ARS" | "USD";
   cuota_actual?: number | null;
   total_cuotas?: number | null;
-  tipo: "consumo" | "cuota" | "impuesto";
+  tipo: "consumo" | "cuota" | "impuesto" | "ajuste";
   selected: boolean;
 }
 
@@ -37,12 +37,50 @@ export interface ExtractedData {
     monto: number;
     moneda: string;
   }>;
+  ajustes?: Array<{
+    descripcion: string;
+    monto: number;
+    moneda: string;
+  }>;
   resumen?: {
     total_ars?: number;
     total_usd?: number;
     fecha_vencimiento?: string;
     fecha_cierre?: string;
   };
+  conciliacion?: {
+    total_consumos_ars: number;
+    total_impuestos_ars: number;
+    total_ajustes_ars: number;
+    total_calculado_ars: number;
+    total_resumen_ars: number;
+    diferencia_ars: number;
+    estado_ars: string;
+    total_consumos_usd: number;
+    total_impuestos_usd: number;
+    total_ajustes_usd: number;
+    total_calculado_usd: number;
+    total_resumen_usd: number;
+    diferencia_usd: number;
+    estado_usd: string;
+  };
+}
+
+export interface Conciliacion {
+  totalConsumosARS: number;
+  totalImpuestosARS: number;
+  totalAjustesARS: number;
+  totalCalculadoARS: number;
+  totalResumenARS: number;
+  diferenciaARS: number;
+  estadoARS: string;
+  totalConsumosUSD: number;
+  totalImpuestosUSD: number;
+  totalAjustesUSD: number;
+  totalCalculadoUSD: number;
+  totalResumenUSD: number;
+  diferenciaUSD: number;
+  estadoUSD: string;
 }
 
 interface StatementSummary {
@@ -50,6 +88,7 @@ interface StatementSummary {
   totalUSD: number;
   fechaVencimiento: string | null;
   fechaCierre: string | null;
+  conciliacion: Conciliacion | null;
 }
 
 interface UseStatementImportReturn {
@@ -227,14 +266,49 @@ export function useStatementImport(workspaceId: string | null): UseStatementImpo
         });
       });
 
+      // Add ajustes (créditos / bonificaciones)
+      (data.ajustes || []).forEach((a) => {
+        items.push({
+          id: `ajuste_${idCounter++}`,
+          fecha: "",
+          descripcion: a.descripcion,
+          monto: a.monto,
+          moneda: (a.moneda as "ARS" | "USD") || "ARS",
+          cuota_actual: null,
+          total_cuotas: null,
+          tipo: "ajuste",
+          selected: true,
+        });
+      });
+
       setExtractedItems(items);
-      
-      // Store statement summary for payment transaction creation
+
+      // Store statement summary and conciliación
+      const conciliacion: Conciliacion | null = data.conciliacion
+        ? {
+            totalConsumosARS: data.conciliacion.total_consumos_ars,
+            totalImpuestosARS: data.conciliacion.total_impuestos_ars,
+            totalAjustesARS: data.conciliacion.total_ajustes_ars,
+            totalCalculadoARS: data.conciliacion.total_calculado_ars,
+            totalResumenARS: data.conciliacion.total_resumen_ars,
+            diferenciaARS: data.conciliacion.diferencia_ars,
+            estadoARS: data.conciliacion.estado_ars,
+            totalConsumosUSD: data.conciliacion.total_consumos_usd,
+            totalImpuestosUSD: data.conciliacion.total_impuestos_usd,
+            totalAjustesUSD: data.conciliacion.total_ajustes_usd,
+            totalCalculadoUSD: data.conciliacion.total_calculado_usd,
+            totalResumenUSD: data.conciliacion.total_resumen_usd,
+            diferenciaUSD: data.conciliacion.diferencia_usd,
+            estadoUSD: data.conciliacion.estado_usd,
+          }
+        : null;
+
       setStatementSummary({
         totalARS: data.resumen?.total_ars || 0,
         totalUSD: data.resumen?.total_usd || 0,
         fechaVencimiento: data.resumen?.fecha_vencimiento || null,
         fechaCierre: data.resumen?.fecha_cierre || null,
+        conciliacion,
       });
       
       if (items.length === 0) {

@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const EXTRACTION_PROMPT = `Eres un experto en analizar resúmenes de tarjetas de crédito argentinas. Analiza el siguiente PDF de resumen de tarjeta de crédito y extrae TODOS los consumos, cuotas e impuestos.
+const EXTRACTION_PROMPT = `Eres un experto en analizar resúmenes de tarjetas de crédito argentinas. Analiza el siguiente PDF de resumen de tarjeta de crédito y extrae TODOS los consumos, cuotas, impuestos y ajustes/créditos.
 
 REGLAS CRÍTICAS PARA CLASIFICACIÓN:
 
@@ -32,10 +32,17 @@ REGLAS CRÍTICAS PARA CLASIFICACIÓN:
    
 3. **IMPUESTOS**: IVA, percepciones, impuesto PAIS, sellados, cargos administrativos
 
+4. **AJUSTES / CRÉDITOS**: Líneas con signo negativo que NO son pagos del cliente (créditos a favor del tarjetahabiente).
+   - Ejemplos reales: "CR.RG 5617 30% M 22.532,13-", "BONIFICACIÓN", "DEVOLUCIÓN", "NOTA DE CRÉDITO"
+   - Mantener el monto NEGATIVO en el valor (ej: -22532.13)
+   - NO clasificar como impuesto ni como consumo
+   - Van en el array "ajustes"
+
 IMPORTANTE - EVITAR DUPLICADOS:
-- Una transacción va en UN SOLO array (consumos O cuotas O impuestos)
+- Una transacción va en UN SOLO array (consumos O cuotas O impuestos O ajustes)
 - Si tiene CUALQUIER patrón de cuota (C.XX/YY, X/Y, etc.) → solo va en cuotas
 - Si es un impuesto/cargo → solo va en impuestos
+- Si es un crédito/ajuste/bonificación (monto negativo a favor del cliente) → solo va en ajustes
 - Todo lo demás sin patrón de cuota → solo va en consumos
 
 DATOS A EXTRAER:
@@ -74,6 +81,13 @@ Retorna un JSON válido con esta estructura exacta:
       "moneda": "ARS" o "USD"
     }
   ],
+  "ajustes": [
+    {
+      "descripcion": "CR.RG 5617 30%",
+      "monto": -22532.13,
+      "moneda": "ARS"
+    }
+  ],
   "resumen": {
     "total_ars": 0,
     "total_usd": 0,
@@ -82,7 +96,7 @@ Retorna un JSON válido con esta estructura exacta:
   }
 }
 
-Si no encuentras consumos, retorna arrays vacíos. SOLO retorna el JSON, sin texto adicional.
+Si no encuentras consumos, cuotas, impuestos o ajustes, retorna arrays vacíos para esos campos. SOLO retorna el JSON, sin texto adicional.
 
 TEXTO DEL RESUMEN:
 `;
@@ -209,14 +223,87 @@ Deno.serve(async (req) => {
     if (!extractedData.consumos) extractedData.consumos = [];
     if (!extractedData.cuotas) extractedData.cuotas = [];
     if (!extractedData.impuestos) extractedData.impuestos = [];
+    if (!extractedData.ajustes) extractedData.ajustes = [];
     if (!extractedData.resumen) extractedData.resumen = {};
 
-    const totalItems = extractedData.consumos.length + extractedData.cuotas.length + extractedData.impuestos.length;
+    const totalItems =
+      extractedData.consumos.length +
+      extractedData.cuotas.length +
+      extractedData.impuestos.length +
+      extractedData.ajustes.length;
+
+    // Deterministic reconciliation: compare sum of items vs resumen totals
+    const sumByCurrency = (
+      items: Array<{ monto: number; moneda?: string }>,
+      currency: string
+    ) =>
+      items
+        .filter((x) => (x.moneda || "ARS").toUpperCase() === currency)
+        .reduce((acc, x) => acc + Number(x.monto || 0), 0);
+
+    const totalConsumosARS =
+      sumByCurrency(extractedData.consumos, "ARS") + sumByCurrency(extractedData.cuotas, "ARS");
+    const totalImpuestosARS = sumByCurrency(extractedData.impuestos, "ARS");
+    const totalAjustesARS = sumByCurrency(extractedData.ajustes, "ARS");
+    const totalCalculadoARS = totalConsumosARS + totalImpuestosARS + totalAjustesARS;
+    const totalResumenARS = Number(extractedData.resumen?.total_ars ?? 0);
+    const diferenciaARS = totalResumenARS - totalCalculadoARS;
+
+    const totalConsumosUSD =
+      sumByCurrency(extractedData.consumos, "USD") + sumByCurrency(extractedData.cuotas, "USD");
+    const totalImpuestosUSD = sumByCurrency(extractedData.impuestos, "USD");
+    const totalAjustesUSD = sumByCurrency(extractedData.ajustes, "USD");
+    const totalCalculadoUSD = totalConsumosUSD + totalImpuestosUSD + totalAjustesUSD;
+    const totalResumenUSD = Number(extractedData.resumen?.total_usd ?? 0);
+    const diferenciaUSD = totalResumenUSD - totalCalculadoUSD;
+
+    const THRESHOLD_OK = 1;
+    const THRESHOLD_MINOR = 100;
+    let estadoARS: string;
+    let estadoUSD: string;
+    if (totalResumenARS === 0 && totalCalculadoARS === 0) {
+      estadoARS = "OK - Sin movimientos ARS";
+    } else if (Math.abs(diferenciaARS) < THRESHOLD_OK) {
+      estadoARS = "OK - Totales conciliados";
+    } else if (Math.abs(diferenciaARS) < THRESHOLD_MINOR) {
+      estadoARS = "Diferencia menor (redondeos / conversión)";
+    } else {
+      estadoARS = "Diferencia relevante - posible ajuste no clasificado";
+    }
+    if (totalResumenUSD === 0 && totalCalculadoUSD === 0) {
+      estadoUSD = "OK - Sin movimientos USD";
+    } else if (Math.abs(diferenciaUSD) < THRESHOLD_OK) {
+      estadoUSD = "OK - Totales conciliados";
+    } else if (Math.abs(diferenciaUSD) < THRESHOLD_MINOR) {
+      estadoUSD = "Diferencia menor (redondeos / conversión)";
+    } else {
+      estadoUSD = "Diferencia relevante - posible ajuste no clasificado";
+    }
+
+    extractedData.conciliacion = {
+      total_consumos_ars: Math.round(totalConsumosARS * 100) / 100,
+      total_impuestos_ars: Math.round(totalImpuestosARS * 100) / 100,
+      total_ajustes_ars: Math.round(totalAjustesARS * 100) / 100,
+      total_calculado_ars: Math.round(totalCalculadoARS * 100) / 100,
+      total_resumen_ars: totalResumenARS,
+      diferencia_ars: Math.round(diferenciaARS * 100) / 100,
+      estado_ars: estadoARS,
+      total_consumos_usd: Math.round(totalConsumosUSD * 100) / 100,
+      total_impuestos_usd: Math.round(totalImpuestosUSD * 100) / 100,
+      total_ajustes_usd: Math.round(totalAjustesUSD * 100) / 100,
+      total_calculado_usd: Math.round(totalCalculadoUSD * 100) / 100,
+      total_resumen_usd: totalResumenUSD,
+      diferencia_usd: Math.round(diferenciaUSD * 100) / 100,
+      estado_usd: estadoUSD,
+    };
+
     console.log("[parse-statement] Extracted:", {
       consumos: extractedData.consumos.length,
       cuotas: extractedData.cuotas.length,
       impuestos: extractedData.impuestos.length,
+      ajustes: extractedData.ajustes.length,
       total: totalItems,
+      conciliacion: extractedData.conciliacion,
     });
 
     // Update statement_imports record if ID provided
