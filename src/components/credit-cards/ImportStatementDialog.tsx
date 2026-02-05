@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +51,15 @@ const MONTHS_OPTIONS = Array.from({ length: 12 }, (_, i) => {
   };
 });
 
+const PROGRESS_MESSAGES = [
+  "Subiendo archivo...",
+  "Analizando estructura del PDF...",
+  "Identificando consumos y cuotas...",
+  "Extrayendo montos e impuestos...",
+  "Validando totales...",
+  "Casi listo...",
+];
+
 export function ImportStatementDialog({
   open,
   onOpenChange,
@@ -68,6 +77,7 @@ export function ImportStatementDialog({
   const [newCardName, setNewCardName] = useState("");
   const [newCardBank, setNewCardBank] = useState("");
   const [addingCard, setAddingCard] = useState(false);
+  const [progressIndex, setProgressIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -82,6 +92,21 @@ export function ImportStatementDialog({
     importTransactions,
     reset,
   } = useStatementImport(workspaceId);
+
+  // Rotate progress messages every 15 seconds during processing
+  useEffect(() => {
+    if (uploading || parsing) {
+      setProgressIndex(0);
+      const interval = setInterval(() => {
+        setProgressIndex((prev) =>
+          prev < PROGRESS_MESSAGES.length - 1 ? prev + 1 : prev
+        );
+      }, 15000);
+      return () => clearInterval(interval);
+    } else {
+      setProgressIndex(0);
+    }
+  }, [uploading, parsing]);
 
   const handleClose = () => {
     setStep("upload");
@@ -333,20 +358,30 @@ export function ImportStatementDialog({
             </div>
           </div>
 
-          <Button
-            onClick={handleAnalyzeAndCheck}
-            disabled={!selectedFile || !selectedCardId || uploading || parsing}
-            className="w-full"
-          >
-            {(uploading || parsing) ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin shrink-0" />
-                {uploading ? "Subiendo..." : "Analizando..."}
-              </>
-            ) : (
-              "Analizar resumen"
-            )}
-          </Button>
+          {(uploading || parsing) ? (
+            <div className="space-y-4 py-2">
+              <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                <div className="h-full w-2/5 bg-primary animate-progress-indeterminate" />
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-sm font-medium">{PROGRESS_MESSAGES[progressIndex]}</p>
+                <p className="text-xs text-muted-foreground">
+                  El análisis puede tomar 1-2 minutos
+                </p>
+              </div>
+              <p className="text-xs text-center text-muted-foreground/70">
+                No cierres esta ventana
+              </p>
+            </div>
+          ) : (
+            <Button
+              onClick={handleAnalyzeAndCheck}
+              disabled={!selectedFile || !selectedCardId}
+              className="w-full"
+            >
+              Analizar resumen
+            </Button>
+          )}
         </div>
       )}
 
