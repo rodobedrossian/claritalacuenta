@@ -75,6 +75,7 @@ export function ImportStatementDialog({
     parsing,
     importing,
     extractedItems,
+    statementSummary,
     uploadAndParse,
     toggleItemSelection,
     toggleAllSelection,
@@ -358,7 +359,7 @@ export function ImportStatementDialog({
               <Alert className="mb-4 border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-200 shrink-0 [&>svg]:text-amber-600">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Revisá los totales</AlertTitle>
-                <AlertDescription asChild>
+                <AlertDescription>
                   <div className="space-y-2 text-sm">
                     <p>
                       <strong>ARS:</strong> Consumos + cuotas: {statementSummary.conciliacion.totalConsumosARS.toLocaleString("es-AR")} + Impuestos: {statementSummary.conciliacion.totalImpuestosARS.toLocaleString("es-AR")} + Ajustes: {statementSummary.conciliacion.totalAjustesARS.toLocaleString("es-AR")} = Calculado: {statementSummary.conciliacion.totalCalculadoARS.toLocaleString("es-AR")}. Resumen PDF: {statementSummary.conciliacion.totalResumenARS.toLocaleString("es-AR")}. Diferencia: {statementSummary.conciliacion.diferenciaARS.toLocaleString("es-AR")}. {statementSummary.conciliacion.estadoARS}
