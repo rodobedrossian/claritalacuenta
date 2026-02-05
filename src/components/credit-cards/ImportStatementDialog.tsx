@@ -19,8 +19,9 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Loader2, Upload, FileText, CreditCard, Plus, X } from "lucide-react";
+import { Loader2, Upload, FileText, CreditCard, Plus, X, AlertTriangle } from "lucide-react";
 import { useStatementImport, ExtractedItem } from "@/hooks/useStatementImport";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format, startOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -350,6 +351,28 @@ export function ImportStatementDialog({
 
       {step === "preview" && (
         <div className="flex-1 flex flex-col min-h-0 py-4 overflow-hidden">
+          {/* Conciliación: desglose cuando hay diferencia relevante */}
+          {statementSummary?.conciliacion &&
+            (statementSummary.conciliacion.estadoARS.includes("Diferencia") ||
+              statementSummary.conciliacion.estadoUSD.includes("Diferencia")) && (
+              <Alert className="mb-4 border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-200 shrink-0 [&>svg]:text-amber-600">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Revisá los totales</AlertTitle>
+                <AlertDescription asChild>
+                  <div className="space-y-2 text-sm">
+                    <p>
+                      <strong>ARS:</strong> Consumos + cuotas: {statementSummary.conciliacion.totalConsumosARS.toLocaleString("es-AR")} + Impuestos: {statementSummary.conciliacion.totalImpuestosARS.toLocaleString("es-AR")} + Ajustes: {statementSummary.conciliacion.totalAjustesARS.toLocaleString("es-AR")} = Calculado: {statementSummary.conciliacion.totalCalculadoARS.toLocaleString("es-AR")}. Resumen PDF: {statementSummary.conciliacion.totalResumenARS.toLocaleString("es-AR")}. Diferencia: {statementSummary.conciliacion.diferenciaARS.toLocaleString("es-AR")}. {statementSummary.conciliacion.estadoARS}
+                    </p>
+                    {(statementSummary.conciliacion.totalResumenUSD !== 0 || statementSummary.conciliacion.totalCalculadoUSD !== 0) && (
+                      <p>
+                        <strong>USD:</strong> Calculado: {statementSummary.conciliacion.totalCalculadoUSD.toLocaleString("en-US")}. Resumen PDF: {statementSummary.conciliacion.totalResumenUSD.toLocaleString("en-US")}. Diferencia: {statementSummary.conciliacion.diferenciaUSD.toLocaleString("en-US")}. {statementSummary.conciliacion.estadoUSD}
+                      </p>
+                    )}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
           {/* Summary - responsive stack */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 p-4 bg-muted/50 rounded-xl shrink-0">
             <div className="flex items-center gap-2">
@@ -485,9 +508,18 @@ function ItemRow({ item, onToggle }: ItemRowProps) {
         return "secondary";
       case "impuesto":
         return "destructive";
+      case "ajuste":
+        return "outline";
       default:
         return "outline";
     }
+  };
+
+  const tipoLabel: Record<string, string> = {
+    consumo: "Consumo",
+    cuota: "Cuota",
+    impuesto: "Impuesto",
+    ajuste: "Ajuste / Crédito",
   };
 
   return (
@@ -502,7 +534,7 @@ function ItemRow({ item, onToggle }: ItemRowProps) {
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium truncate">{item.descripcion}</span>
           <Badge variant={getBadgeVariant(item.tipo)} className="shrink-0 text-[10px]">
-            {item.tipo}
+            {tipoLabel[item.tipo] ?? item.tipo}
           </Badge>
           {item.cuota_actual && item.total_cuotas && (
             <Badge variant="outline" className="shrink-0 text-[10px]">
@@ -516,7 +548,15 @@ function ItemRow({ item, onToggle }: ItemRowProps) {
       </div>
 
       <div className="w-24 text-right font-mono text-sm shrink-0">
-        <span className={item.moneda === "USD" ? "text-green-600 dark:text-green-500" : ""}>
+        <span
+          className={
+            item.tipo === "ajuste" && item.monto < 0
+              ? "text-green-600 dark:text-green-500"
+              : item.moneda === "USD"
+                ? "text-green-600 dark:text-green-500"
+                : ""
+          }
+        >
           {item.moneda === "USD" ? "US$" : "$"}
           {item.monto.toLocaleString(item.moneda === "USD" ? "en-US" : "es-AR")}
         </span>
