@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getAdminLoginPath } from "@/lib/adminSubdomain";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -73,7 +74,7 @@ const AdminDashboard = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        navigate("/admin");
+        navigate(getAdminLoginPath());
         return;
       }
 
@@ -121,7 +122,7 @@ const AdminDashboard = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/admin");
+    navigate(getAdminLoginPath());
   };
 
   const handlePageChange = (page: number) => {

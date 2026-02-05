@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getAdminDashboardPath } from "@/lib/adminSubdomain";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +25,7 @@ const AdminAuth = () => {
         if (session) {
           const appMetadata = session.user.app_metadata;
           if (appMetadata?.role === "admin") {
-            navigate("/admin/dashboard");
+            navigate(getAdminDashboardPath());
             return;
           }
         }
@@ -73,7 +74,7 @@ const AdminAuth = () => {
       }
 
       // Admin verified - navigate to dashboard
-      navigate("/admin/dashboard");
+      navigate(getAdminDashboardPath());
     } catch (err) {
       console.error("Login error:", err);
       setError("Error inesperado. Intentá de nuevo.");
