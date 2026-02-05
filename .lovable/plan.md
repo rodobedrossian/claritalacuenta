@@ -1,69 +1,45 @@
 
-## Plan: Simplificar UI de Procesamiento con Icono de IA
+# Plan: Re-deploy de Edge Functions faltantes
 
-### Objetivo
-Cuando el PDF está siendo analizado, ocultar todo el formulario (selectores de tarjeta, mes, archivo) y mostrar solo una vista limpia y centrada con:
-- Icono de "magia/AI" (Sparkles de Lucide)
-- Barra de progreso animada
-- Mensaje de progreso que rota
+## Diagnóstico
 
-### Cambios Técnicos
+Detecté que varias Edge Functions no están desplegadas en el backend:
 
-#### Archivo: `src/components/credit-cards/ImportStatementDialog.tsx`
+| Function | Estado | Respuesta |
+|----------|--------|-----------|
+| `get-dashboard-data` | Funcionando | 200 OK |
+| `get-transactions-data` | No desplegada | 404 NOT_FOUND |
+| `get-savings-data` | No desplegada | 404 NOT_FOUND |
+| `generate-insights` | No desplegada | 404 NOT_FOUND |
+| `elevenlabs-scribe-token` | No desplegada | 404 NOT_FOUND |
 
-**1. Importar icono Sparkles:**
-```typescript
-import { Sparkles } from "lucide-react";
-```
+Esto sucede porque los cambios al código solo actualizaron los archivos pero no se re-desplegaron las funciones. La configuración CORS en el código está correcta (ya tiene `Access-Control-Allow-Methods`), pero al no existir las funciones desplegadas, devuelven 404 y el navegador lo reporta como error CORS.
 
-**2. Modificar el step "upload" para ocultar el formulario durante el procesamiento:**
+## Solución
 
-En lugar de mostrar siempre el formulario completo, cuando `uploading || parsing` es true, mostrar solo la vista de progreso centrada:
+1. **Re-desplegar todas las Edge Functions afectadas:**
+   - `get-savings-data`
+   - `get-transactions-data`
+   - `generate-insights`
+   - `elevenlabs-scribe-token`
 
-```tsx
-{step === "upload" && (
-  <div className="space-y-4 py-4">
-    {(uploading || parsing) ? (
-      // Vista minimalista de procesamiento
-      <div className="flex flex-col items-center justify-center py-12 space-y-6">
-        <div className="relative">
-          <Sparkles className="h-12 w-12 text-primary animate-pulse" />
-        </div>
-        <div className="w-full max-w-xs space-y-4">
-          <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-            <div className="h-full w-2/5 bg-primary animate-progress-indeterminate" />
-          </div>
-          <p className="text-sm font-medium text-center">
-            {PROGRESS_MESSAGES[progressIndex]}
-          </p>
-        </div>
-      </div>
-    ) : (
-      // Formulario normal (selector de tarjeta, mes, archivo PDF)
-      <>
-        {/* ... contenido actual del formulario ... */}
-        <Button onClick={handleAnalyzeAndCheck} ...>
-          Analizar resumen
-        </Button>
-      </>
-    )}
-  </div>
-)}
-```
+2. **Verificar que funcionan correctamente** después del despliegue
 
-### Resultado Visual
+3. **Hacer un hard refresh** en tu navegador para limpiar cache
 
-**Antes:**
-- Se ve todo el formulario + barra de progreso abajo
-- Tres textos: mensaje, tiempo estimado, "no cierres"
+## Cambios técnicos
 
-**Después:**
-- Solo se ve:
-  - ✨ Icono Sparkles animado (pulse)
-  - Barra de progreso indeterminada
-  - Un único mensaje que rota
-- Sin distracciones, foco total en la espera
+- Sin cambios de código necesarios, las funciones ya tienen los CORS headers correctos
+- Solo se necesita ejecutar el despliegue de las funciones existentes
 
-### Impacto
-- **Archivo modificado**: 1 (`ImportStatementDialog.tsx`)
-- **Riesgo**: Muy bajo - solo cambios de UI
+## Impacto esperado
+
+Después del despliegue:
+- La pantalla de Ahorros cargará correctamente
+- La pantalla de Transacciones funcionará
+- Los Insights se generarán
+- El grabador de voz obtendrá su token
+
+## Tiempo estimado
+
+5 minutos (despliegue automático)
