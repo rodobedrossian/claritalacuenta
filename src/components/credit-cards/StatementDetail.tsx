@@ -63,8 +63,8 @@ interface StatementDetailProps {
   onStatementUpdated?: (updatedStatement: StatementImport) => void;
 }
 
-type FilterType = "all" | "consumo" | "cuota" | "impuesto";
-type TransactionType = "consumo" | "cuota" | "impuesto";
+type FilterType = "all" | "consumo" | "cuota" | "impuesto" | "ajuste";
+type TransactionType = "consumo" | "cuota" | "impuesto" | "ajuste";
 
 const normalizeDescription = (desc: string): string => {
   return desc.toLowerCase().trim().replace(/\s+/g, ' ');
@@ -214,6 +214,7 @@ export const StatementDetail = ({
       case "consumo": return "default";
       case "cuota": return "secondary";
       case "impuesto": return "outline";
+      case "ajuste": return "outline";
       default: return "default";
     }
   };
@@ -501,7 +502,7 @@ export const StatementDetail = ({
             />
           </div>
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mb-1 md:overflow-visible md:pb-0 md:mb-0">
-            {(["all", "consumo", "cuota", "impuesto"] as FilterType[]).map((type) => (
+            {(["all", "consumo", "cuota", "impuesto", "ajuste"] as FilterType[]).map((type) => (
               <Button
                 key={type}
                 variant={filterType === type ? "default" : "outline"}
@@ -614,6 +615,7 @@ export const StatementDetail = ({
                         <SelectItem value="consumo"><Badge variant="default">consumo</Badge></SelectItem>
                         <SelectItem value="cuota"><Badge variant="secondary">cuota</Badge></SelectItem>
                         <SelectItem value="impuesto"><Badge variant="outline">impuesto</Badge></SelectItem>
+                        <SelectItem value="ajuste"><Badge variant="outline">ajuste</Badge></SelectItem>
                       </SelectContent>
                     </Select>
                   </TableCell>
@@ -697,6 +699,7 @@ function TransactionCard({
               <SelectItem value="consumo">consumo</SelectItem>
               <SelectItem value="cuota">cuota</SelectItem>
               <SelectItem value="impuesto">impuesto</SelectItem>
+              <SelectItem value="ajuste">ajuste</SelectItem>
             </SelectContent>
           </Select>
           <Select value={item.category_id || ""} onValueChange={onCategoryChange}>
