@@ -366,20 +366,24 @@ export const StatementDetail = ({
   );
 
   const chartItems = useMemo(() => {
-    return transactions.map(tx => ({
-      descripcion: tx.description,
-      monto: tx.amount,
-      moneda: tx.currency,
-    }));
+    return transactions
+      .filter(tx => tx.transaction_type !== "ajuste")
+      .map(tx => ({
+        descripcion: tx.description,
+        monto: tx.amount,
+        moneda: tx.currency,
+      }));
   }, [transactions]);
 
   const itemCategories = useMemo(() => {
     const map: Record<string, string> = {};
-    transactions.forEach((tx) => {
-      if (tx.category_id) {
-        map[tx.description] = tx.category_id;
-      }
-    });
+    transactions
+      .filter(tx => tx.transaction_type !== "ajuste")
+      .forEach((tx) => {
+        if (tx.category_id) {
+          map[tx.description] = tx.category_id;
+        }
+      });
     return map;
   }, [transactions]);
 
