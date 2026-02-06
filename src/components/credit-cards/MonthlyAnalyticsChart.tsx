@@ -57,12 +57,12 @@ export const MonthlyAnalyticsChart = ({
     return map;
   }, [creditCards]);
 
-  // Calculate data by category
+  // Calculate data by category (excluding adjustments to prevent pie chart distortion)
   const categoryData = useMemo(() => {
     const data = new Map<string, number>();
 
     transactions
-      .filter((t) => t.currency === currency)
+      .filter((t) => t.currency === currency && t.transaction_type !== "ajuste")
       .forEach((t) => {
         const categoryName = t.category_id
           ? categoryMap.get(t.category_id) || "Sin categoría"
