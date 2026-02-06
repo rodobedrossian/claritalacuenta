@@ -1,40 +1,87 @@
 
-# Plan: Desplegar Edge Function `parse-voice-transaction`
+# Plan: Excluir ajustes del Pie Chart de Categorías
 
-## Diagnóstico
+## Problema identificado
 
-El envío de voz para generar transacciones está fallando porque:
+Los **ajustes** son transacciones con montos **negativos** (ej: devoluciones, bonificaciones) que cuando se incluyen en el cálculo del pie chart:
 
-| Paso | Estado | Detalle |
-|------|--------|---------|
-| ✅ Grabación de audio | OK | El micrófono funciona correctamente |
-| ✅ WebSocket a ElevenLabs | OK | Conexión exitosa, transcripción recibida |
-| ✅ Token scribe | OK | Se obtiene sin problemas |
-| ❌ `parse-voice-transaction` | **No desplegada** | Devuelve 404 NOT_FOUND |
-
-El flujo es:
-1. Usuario graba voz → ElevenLabs transcribe "Agregame una transacción de 5000 pesos"
-2. App envía texto a `parse-voice-transaction` para extraer monto, categoría, etc.
-3. **La función no está desplegada** → 404 → Error CORS/Fetch
+1. Reducen artificialmente el total de una categoría
+2. Generan porcentajes incorrectos (ej: 150%, -20%)
+3. Pueden crear valores negativos que **rompen el pie chart** (Recharts no puede renderizar sectores negativos)
 
 ## Solución
 
-1. **Desplegar la función `parse-voice-transaction`**
-   - El código ya existe y está correcto
-   - Tiene los CORS headers apropiados
-   - Está configurada en `config.toml`
-   - Solo falta ejecutar el deploy
+Excluir transacciones con `transaction_type === "ajuste"` **solo** de los datos que van al pie chart de categorías. 
 
-2. **Verificar que funciona** después del despliegue
+**NO afectar:**
+- ✅ Lista de transacciones (ajustes siguen visibles)
+- ✅ Totales del resumen (totalArs/totalUsd siguen incluyendo ajustes)
+- ✅ Gráfico de barras por tarjeta (puede manejar valores mixtos)
 
 ## Cambios técnicos
 
-- Sin cambios de código, la función ya está lista
-- Solo deploy de `parse-voice-transaction`
+### 1. StatementDetail.tsx
 
-## Impacto esperado
+Modificar `chartItems` para excluir ajustes:
 
-Después del despliegue:
-- La grabación de voz procesará correctamente el texto
-- El usuario verá el modal de confirmación con los datos extraídos
-- Podrá guardar la transacción exitosamente
+```typescript
+const chartItems = useMemo(() => {
+  return transactions
+    .filter(tx => tx.transaction_type !== "ajuste")
+    .map(tx => ({
+      descripcion: tx.description,
+      monto: tx.amount,
+      moneda: tx.currency,
+    }));
+}, [transactions]);
+```
+
+Modificar `itemCategories` para solo mapear transacciones que van al chart:
+
+```typescript
+const itemCategories = useMemo(() => {
+  const map: Record<string, string> = {};
+  transactions
+    .filter(tx => tx.transaction_type !== "ajuste")
+    .forEach((tx) => {
+      if (tx.category_id) {
+        map[tx.description] = tx.category_id;
+      }
+    });
+  return map;
+}, [transactions]);
+```
+
+### 2. MonthlyAnalyticsChart.tsx
+
+Modificar `categoryData` para excluir ajustes del pie chart:
+
+```typescript
+const categoryData = useMemo(() => {
+  const data = new Map<string, number>();
+
+  transactions
+    .filter((t) => t.currency === currency && t.transaction_type !== "ajuste")
+    .forEach((t) => {
+      // ... resto igual
+    });
+
+  // ... resto igual
+}, [transactions, currency, categoryMap]);
+```
+
+**El `cardData` NO se modifica** - el gráfico de barras puede manejar valores mixtos correctamente.
+
+## Archivos a modificar
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/credit-cards/StatementDetail.tsx` | Filtrar `chartItems` e `itemCategories` |
+| `src/components/credit-cards/MonthlyAnalyticsChart.tsx` | Filtrar `categoryData` solamente |
+
+## Resultado
+
+- El pie chart mostrará solo gastos reales (consumos, cuotas, impuestos)
+- Los porcentajes serán precisos y sumarán 100%
+- Los ajustes siguen visibles en la lista y contando para el balance total
+- El gráfico de barras por tarjeta no cambia
