@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,35 +25,30 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const { session } = useAuth();
 
+  // Initial session from context (e.g. already logged in or token exchanged)
+  useEffect(() => {
+    if (session) {
+      setIsValidSession(true);
+    }
+  }, [session]);
+
+  // Recovery flow: listen for PASSWORD_RECOVERY / SIGNED_IN and timeout
   useEffect(() => {
     let resolved = false;
     let timeoutId: NodeJS.Timeout;
-    
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("[ResetPassword] Auth event:", event, "Session:", !!session);
-      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && s)) {
         resolved = true;
         clearTimeout(timeoutId);
         setIsValidSession(true);
       }
     });
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("[ResetPassword] Initial session check:", !!session);
-      if (session && !resolved) {
-        resolved = true;
-        clearTimeout(timeoutId);
-        setIsValidSession(true);
-      }
-    });
-
-    // Give it time for the token exchange from the URL
     timeoutId = setTimeout(() => {
       if (!resolved) {
-        console.log("[ResetPassword] Timeout reached, no valid session found");
         setIsValidSession(false);
       }
     }, 3000);

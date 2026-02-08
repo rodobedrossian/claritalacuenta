@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,22 +21,8 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const Categories = () => {
-  const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
-        setUser(session.user);
-      }
-      setAuthLoading(false);
-    });
-  }, [navigate]);
-
-  const { categories, loading, addCategory, updateCategory, deleteCategory } = useCategoriesData(user?.id);
+  const { user, loading: authLoading } = useAuth();
+  const { categories, loading, addCategory, updateCategory, deleteCategory } = useCategoriesData(user?.id ?? null);
 
   const systemCategories = categories.filter(c => !c.user_id);
   const myCategories = categories.filter(c => c.user_id);

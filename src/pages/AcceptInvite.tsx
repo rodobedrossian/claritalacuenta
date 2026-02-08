@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,10 +23,10 @@ export default function AcceptInvite() {
   const navigate = useNavigate();
   const token = searchParams.get("token");
 
+  const { user } = useAuth();
   const [invitation, setInvitation] = useState<InvitationRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [invalid, setInvalid] = useState(false);
-  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -59,9 +60,6 @@ export default function AcceptInvite() {
       }
 
       setInvitation(row);
-
-      const { data: { user: u } } = await supabase.auth.getUser();
-      if (mounted) setUser(u ?? null);
       setLoading(false);
     })();
 
@@ -69,13 +67,6 @@ export default function AcceptInvite() {
       mounted = false;
     };
   }, [token]);
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleAccept = async (e: React.FormEvent) => {
     e.preventDefault();

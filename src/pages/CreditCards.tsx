@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { CreditCard, TrendingDown, Receipt, Upload, Settings2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { StatementsList } from "@/components/credit-cards/StatementsList";
@@ -26,8 +26,8 @@ interface Category {
 }
 
 const CreditCards = () => {
-  const navigate = useNavigate();
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedStatement, setSelectedStatement] = useState<StatementImport | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -39,18 +39,6 @@ const CreditCards = () => {
   const { workspaceId } = useWorkspace(userId);
   const { statements, loading, refetch, deleteStatement, getMonthlyTransactions, getMonthlyTotals, getStatementTotals } = useCreditCardStatements(userId);
   const { creditCards, addCreditCard, deleteCreditCard } = useCreditCardsData(userId, workspaceId);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-      setUserId(session.user.id);
-    };
-    checkAuth();
-  }, [navigate]);
 
   useEffect(() => {
     const fetchCategories = async () => {

@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
 import { Filter, Loader2, ChevronDown, ChevronUp } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { TransactionsList } from "@/components/TransactionsList";
 import { EditTransactionDialog } from "@/components/EditTransactionDialog";
 import { AppLayout } from "@/components/AppLayout";
@@ -17,9 +16,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { toast } from "sonner";
 
 const Transactions = () => {
-  const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -46,24 +43,13 @@ const Transactions = () => {
     refetch,
     updateTransaction,
     deleteTransaction
-  } = useTransactionsData(filters, user?.id);
+  } = useTransactionsData(filters, user?.id ?? null);
 
   // Pull to refresh handler
   const handleRefresh = useCallback(async () => {
     await refetch();
     toast.success("Transacciones actualizadas");
   }, [refetch]);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
-        setUser(session.user);
-        setAuthLoading(false);
-      }
-    });
-  }, [navigate]);
 
   // Intersection observer for infinite scroll
   useEffect(() => {

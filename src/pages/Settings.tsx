@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,8 +36,7 @@ import { toast } from "sonner";
 export default function Settings() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<{ id: string; email?: string; user_metadata?: { full_name?: string } } | null>(null);
+  const { user, session, loading: authLoading } = useAuth();
   const [biometricOn, setBiometricOn] = useState(false);
   const [biometricToggling, setBiometricToggling] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -48,17 +48,6 @@ export default function Settings() {
   }, [showBiometric]);
 
   const pushNotifications = usePushNotifications(user?.id ?? null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUser(data.user);
-      } else {
-        navigate("/auth");
-      }
-      setLoading(false);
-    });
-  }, [navigate]);
 
   const handleDeleteAccount = async () => {
     if (!user?.id) return;
@@ -84,7 +73,7 @@ export default function Settings() {
     }
   };
 
-  if (loading || pushNotifications.loading) {
+  if (authLoading || pushNotifications.loading) {
     return (
       <AppLayout>
         <SettingsSkeleton />
@@ -126,7 +115,6 @@ export default function Settings() {
                       setBiometricToggling(true);
                       try {
                         if (checked) {
-                          const { data: { session } } = await supabase.auth.getSession();
                           if (!session) {
                             showIOSBanner("Tenés que estar conectado para activar Face ID.", "error");
                             return;

@@ -12,6 +12,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useOfflineDetection } from "@/hooks/use-offline-detection";
 import { isAdminSubdomain } from "@/lib/adminSubdomain";
 import { ADMIN_SUBDOMAIN_HOST } from "@/lib/adminSubdomain";
+import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import AdminLayout from "@/components/admin/AdminLayout";
 import Index from "./pages/Index";
@@ -70,21 +71,23 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <IOSSystemBanner />
-        {!isMobile && (
-          <>
-            <Toaster />
-            <Sonner />
-          </>
-        )}
-        <BrowserRouter>
-          <AppRoutes
-            shouldShowOnboarding={shouldShowOnboarding}
-            isIOSApp={isIOSApp}
-          />
-        </BrowserRouter>
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <IOSSystemBanner />
+          {!isMobile && (
+            <>
+              <Toaster />
+              <Sonner />
+            </>
+          )}
+          <BrowserRouter>
+            <AppRoutes
+              shouldShowOnboarding={shouldShowOnboarding}
+              isIOSApp={isIOSApp}
+            />
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

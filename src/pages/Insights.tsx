@@ -1,48 +1,18 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { InsightsPanel } from "@/components/insights/InsightsPanel";
 import { InsightsSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useInsightsData } from "@/hooks/useInsightsData";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 const Insights = () => {
-  const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [userId, setUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-      setUserId(session.user.id);
-      setLoading(false);
-    };
-
-    checkAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!session) {
-          navigate("/auth");
-        } else {
-          setUserId(session.user.id);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const { data, loading: insightsLoading, refetch } = useInsightsData(userId);
 
-  if (loading) {
+  if (authLoading) {
     return (
       <AppLayout>
         <InsightsSkeleton />

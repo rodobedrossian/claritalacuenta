@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { getAdminLoginPath } from "@/lib/adminSubdomain";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,32 +62,21 @@ interface AdminData {
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { session } = useAuth();
   const [data, setData] = useState<AdminData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const fetchData = async (page: number = 1) => {
+    if (!session) {
+      navigate(getAdminLoginPath());
+      return;
+    }
     setIsLoading(true);
     setError(null);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate(getAdminLoginPath());
-        return;
-      }
-
-      const { data: responseData, error: fnError } = await supabase.functions.invoke(
-        "get-admin-users",
-        {
-          body: {},
-          headers: {},
-        }
-      );
-
-      // Use query params for pagination
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-admin-users?page=${page}&per_page=50`,
         {
@@ -117,8 +107,8 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    fetchData(1);
-  }, []);
+    if (session) fetchData(1);
+  }, [session]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
 import { Card } from "@/components/ui/card";
 import { BudgetsTable } from "@/components/budgets/BudgetsTable";
@@ -14,9 +14,7 @@ import { format, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 
 const Budgets = () => {
-  const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
   const [activeMonth] = useState<Date>(new Date());
   const [transactions, setTransactions] = useState<Array<{
     category: string;
@@ -62,20 +60,9 @@ const Budgets = () => {
     deleteBudget,
   } = useBudgetsData(workspaceId, activeMonth, transactions);
 
-  const { categories, loading: categoriesLoading } = useCategoriesData(user?.id);
+  const { categories, loading: categoriesLoading } = useCategoriesData(user?.id ?? null);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
-        setUser(session.user);
-        setLoading(false);
-      }
-    });
-  }, [navigate]);
-
-  if (loading || categoriesLoading) {
+  if (authLoading || categoriesLoading) {
     return (
       <AppLayout>
         <BudgetsSkeleton />

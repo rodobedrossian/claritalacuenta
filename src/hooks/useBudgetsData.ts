@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export interface Budget {
@@ -89,10 +90,8 @@ export const useBudgetsData = (
   const addBudget = async (
     budget: Omit<Budget, "id" | "user_id" | "created_at" | "updated_at" | "is_active" | "workspace_id">
   ) => {
-    if (!workspaceId) return;
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    if (!userId) return;
+    if (!workspaceId || !user?.id) return;
+    const userId = user.id;
 
     try {
       const { data, error } = await supabase

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { QuickActions } from "@/components/QuickActions";
 import { StatCard } from "@/components/StatCard";
@@ -45,7 +46,7 @@ const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const [user, setUser] = useState<any>(null);
+  const { user } = useAuth();
   const [isRefreshingRate, setIsRefreshingRate] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -59,19 +60,6 @@ const Index = () => {
   const [isTransferringSurplus, setIsTransferringSurplus] = useState(false);
   const [showVoiceSuccess, setShowVoiceSuccess] = useState(false);
   const [isVoiceTransaction, setIsVoiceTransaction] = useState(false);
-
-  // Auth setup
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const { workspaceId } = useWorkspace(user?.id ?? null);
 

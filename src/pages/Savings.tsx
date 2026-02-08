@@ -1,6 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useMemo, useState, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SavingsEntriesList } from "@/components/savings/SavingsEntriesList";
 import { InvestmentsList } from "@/components/savings/InvestmentsList";
@@ -23,11 +22,12 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 
 const Savings = () => {
-  const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [user, setUser] = useState<any>(null);
-  const [userName, setUserName] = useState("Usuario");
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const userName = useMemo(() => {
+    const fullName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Usuario";
+    return fullName.split(" ")[0];
+  }, [user]);
   const [editingEntry, setEditingEntry] = useState<SavingsEntry | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
@@ -66,21 +66,6 @@ const Savings = () => {
 
   // Get monthly balance for savings wizard
   const { balance: monthlyBalance, refetch: refetchBalance } = useMonthlyBalance(user?.id);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
-        setUser(session.user);
-        // Extract first name for greeting
-        const fullName = session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "Usuario";
-        const firstName = fullName.split(" ")[0];
-        setUserName(firstName);
-        setLoading(false);
-      }
-    });
-  }, [navigate]);
 
   const handleEditEntry = (entry: SavingsEntry) => {
     triggerHaptic('light');
@@ -135,7 +120,7 @@ const Savings = () => {
     // Just a wrapper, real implementation should be imported if available
   };
 
-  if (loading || dataLoading) {
+  if (dataLoading) {
     return (
       <AppLayout>
         <SavingsSkeleton />

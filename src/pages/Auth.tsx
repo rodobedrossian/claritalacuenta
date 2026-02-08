@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,13 +62,12 @@ const Auth = () => {
   const [checkingBiometric, setCheckingBiometric] = useState(true);
 
   // Check if already logged in
+  const { session } = useAuth();
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate(redirectTo, { replace: true });
-      }
-    });
-  }, [navigate, redirectTo]);
+    if (session) {
+      navigate(redirectTo, { replace: true });
+    }
+  }, [session, navigate, redirectTo]);
 
   // When showing returning user, try Face ID first if biometric is configured
   useEffect(() => {

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { getAdminLoginPath } from "@/lib/adminSubdomain";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,52 +9,22 @@ import { Loader2, ShieldX } from "lucide-react";
 
 const AdminLayout = () => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { session, loading: authLoading } = useAuth();
+  const isAdmin = session?.user?.app_metadata?.role === "admin";
 
   useEffect(() => {
-    const checkAdminAccess = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          navigate(getAdminLoginPath());
-          return;
-        }
-
-        // Check admin role in app_metadata
-        const appMetadata = session.user.app_metadata;
-        if (appMetadata?.role === "admin") {
-          setIsAdmin(true);
-        } else {
-          setIsAdmin(false);
-        }
-      } catch (error) {
-        console.error("Error checking admin access:", error);
-        setIsAdmin(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAdminAccess();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT" || !session) {
-        navigate(getAdminLoginPath());
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    if (authLoading) return;
+    if (!session) {
+      navigate(getAdminLoginPath());
+    }
+  }, [authLoading, session, navigate]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate(getAdminLoginPath());
   };
 
-  if (isLoading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

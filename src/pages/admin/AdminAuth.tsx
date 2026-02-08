@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { getAdminDashboardPath } from "@/lib/adminSubdomain";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,29 +16,14 @@ const AdminAuth = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [checkingSession, setCheckingSession] = useState(true);
+  const { session, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    const checkExistingSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session) {
-          const appMetadata = session.user.app_metadata;
-          if (appMetadata?.role === "admin") {
-            navigate(getAdminDashboardPath());
-            return;
-          }
-        }
-      } catch (error) {
-        console.error("Error checking session:", error);
-      } finally {
-        setCheckingSession(false);
-      }
-    };
-
-    checkExistingSession();
-  }, [navigate]);
+    if (authLoading) return;
+    if (session?.user?.app_metadata?.role === "admin") {
+      navigate(getAdminDashboardPath());
+    }
+  }, [authLoading, session, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +69,7 @@ const AdminAuth = () => {
     }
   };
 
-  if (checkingSession) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

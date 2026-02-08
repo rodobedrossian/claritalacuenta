@@ -210,12 +210,9 @@ export function useDashboardData(activeMonth: Date, userId: string | null, works
 
       // If expense is from savings, handle savings deduction
       if (transaction.type === "expense" && transaction.from_savings && transaction.savings_source) {
-        const { data: session } = await supabase.auth.getSession();
-        const uid = session?.session?.user?.id;
-        
-        if (uid && workspaceId) {
+        if (userId && workspaceId) {
           await supabase.from("savings_entries").insert([{
-            user_id: uid,
+            user_id: userId,
             workspace_id: workspaceId,
             amount: transaction.amount,
             currency: transaction.currency,
@@ -252,7 +249,7 @@ export function useDashboardData(activeMonth: Date, userId: string | null, works
       toast.error("Error al registrar transacción");
       throw err;
     }
-  }, [queryClient, workspaceId]);
+  }, [queryClient, workspaceId, userId]);
 
   const updateCurrentSavings = useCallback((savings: { usd: number; ars: number }) => {
     // This could also be a mutation or just invalidation
