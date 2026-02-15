@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const Categories = () => {
+  const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { categories, loading, addCategory, updateCategory, deleteCategory } = useCategoriesData(user?.id ?? null);
 
