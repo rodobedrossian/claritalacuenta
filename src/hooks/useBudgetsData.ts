@@ -34,6 +34,7 @@ export const useBudgetsData = (
   activeMonth: Date,
   transactions: Array<{ category: string; currency: string; amount: number; type: string }>
 ): UseBudgetsDataReturn => {
+  const { user } = useAuth();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
 
