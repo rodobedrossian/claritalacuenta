@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TrendingUp, PiggyBank, BarChart3, Check, Loader2 } from "lucide-react";
 import ForgotPasswordDialog from "@/components/auth/ForgotPasswordDialog";
+import { RuculaLogo } from "@/components/RuculaLogo";
 
 import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
@@ -440,11 +441,8 @@ const Auth = () => {
           />
         </div>
         <div className="relative z-10 flex flex-col justify-center p-12 text-foreground">
-          <div className="flex items-center gap-3 mb-12">
-            <div className="p-3 rounded-2xl gradient-primary shadow-stripe-lg">
-              <img src="/rucula-logo.png" alt="Rucula" className="h-10 w-10 object-contain" />
-            </div>
-            <h1 className="text-4xl font-bold">Rucula</h1>
+          <div className="flex items-center justify-center gap-3 mb-12">
+            <RuculaLogo size="xl" />
           </div>
           <h2 className="text-2xl font-medium mb-8 leading-relaxed text-foreground/80">
             Tomá el control de tus finanzas
@@ -474,10 +472,7 @@ const Auth = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 pb-[max(2rem,env(safe-area-inset-bottom,0px))] lg:pb-12 bg-background">
         <div className="w-full max-w-md">
           <div className="flex lg:hidden items-center justify-center gap-3 mb-8">
-            <div className="p-2 rounded-xl gradient-primary shadow-stripe">
-              <img src="/rucula-logo.png" alt="Rucula" className="h-8 w-8 object-contain" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">Rucula</h1>
+            <RuculaLogo size="lg" />
           </div>
 
           {!showReturningUser && (

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { RuculaLogo } from "@/components/RuculaLogo";
 
 export const AppleNav = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -28,12 +29,7 @@ export const AppleNav = () => {
         to="/landing-apple" 
         className="flex items-center gap-2"
       >
-        <div className="p-1.5 rounded-xl gradient-primary">
-          <img src="/rucula-logo.png" alt="Rucula" className="h-5 w-5 object-contain" />
-        </div>
-        <span className="text-foreground text-xl font-semibold tracking-tight">
-          Rucula
-        </span>
+        <RuculaLogo size="sm" />
       </Link>
       
       <Link

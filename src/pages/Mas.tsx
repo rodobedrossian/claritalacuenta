@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
-import { Target, Sparkles, Settings, LogOut, Tag, Repeat, PiggyBank, ChevronDown, Info, UserPlus, Users, UserMinus } from "lucide-react";
+import { Target, Sparkles, Settings, LogOut, Tag, Repeat, PiggyBank, ChevronDown, Info, UserPlus, Users, UserMinus, Clock } from "lucide-react";
 import { performLogout } from "@/lib/biometricAuth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,9 @@ export default function Mas() {
   const [membersLoading, setMembersLoading] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<{ user_id: string; full_name: string | null } | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [pendingInvitations, setPendingInvitations] = useState<Array<{ id: string; email: string; created_at: string }>>([]);
+  const [pendingInvitationsLoading, setPendingInvitationsLoading] = useState(false);
+  const [pendingRefreshKey, setPendingRefreshKey] = useState(0);
 
   const { workspaceId } = useWorkspace(user?.id ?? null);
 
@@ -117,6 +120,31 @@ export default function Mas() {
     };
   }, [workspaceId, user?.id]);
 
+  useEffect(() => {
+    if (!workspaceId || !user?.id) {
+      setPendingInvitations([]);
+      return;
+    }
+    let mounted = true;
+    setPendingInvitationsLoading(true);
+    (async () => {
+      const { data: rows, error } = await supabase
+        .from("workspace_invitations")
+        .select("id, email, created_at")
+        .eq("workspace_id", workspaceId)
+        .eq("status", "pending")
+        .gt("expires_at", new Date().toISOString());
+      if (!mounted) return;
+      if (error) {
+        setPendingInvitations([]);
+      } else {
+        setPendingInvitations(rows ?? []);
+      }
+      setPendingInvitationsLoading(false);
+    })();
+    return () => { mounted = false; };
+  }, [workspaceId, user?.id, pendingRefreshKey]);
+
   const myRole = members.find((m) => m.user_id === user?.id)?.role ?? null;
   const isOwner = myRole === "owner";
 
@@ -168,6 +196,7 @@ export default function Mas() {
       toast.success("Invitación enviada. Le va a llegar un mail para unirse al espacio.");
       setInviteEmail("");
       setInviteOpen(false);
+      setPendingRefreshKey((k) => k + 1);
     } catch (err: any) {
       console.error("Send invite:", err);
       toast.error(err.message || "No se pudo enviar la invitación");
@@ -237,11 +266,40 @@ export default function Mas() {
               <span>Miembros del espacio</span>
             </div>
             <div className="rounded-xl border border-border/50 overflow-hidden bg-card">
+              {/* Invitaciones pendientes */}
+              {(pendingInvitations.length > 0 || pendingInvitationsLoading) && (
+                <div className="border-b border-border/50">
+                  <div className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>Invitaciones pendientes</span>
+                  </div>
+                  {pendingInvitationsLoading ? (
+                    <div className="px-4 py-3 text-sm text-muted-foreground">Cargando…</div>
+                  ) : pendingInvitations.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-muted-foreground">No hay invitaciones pendientes</div>
+                  ) : (
+                    <ul className="divide-y divide-border/50">
+                      {pendingInvitations.map((inv) => (
+                        <li key={inv.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                          <span className="text-sm font-medium text-foreground truncate">{inv.email}</span>
+                          <span className="text-xs text-muted-foreground flex-shrink-0">
+                            {new Date(inv.created_at).toLocaleDateString("es-AR", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
               {membersLoading ? (
                 <div className="px-4 py-6 text-center text-sm text-muted-foreground">Cargando…</div>
-              ) : members.length === 0 ? (
+              ) : members.length === 0 && !pendingInvitations.length ? (
                 <div className="px-4 py-6 text-center text-sm text-muted-foreground">Solo vos en este espacio</div>
-              ) : (
+              ) : members.length > 0 ? (
                 <ul className="divide-y divide-border/50">
                   {members.map((m) => {
                     const isSelf = m.user_id === user?.id;
@@ -290,7 +348,7 @@ export default function Mas() {
                     );
                   })}
                 </ul>
-              )}
+              ) : null}
             </div>
           </div>
 

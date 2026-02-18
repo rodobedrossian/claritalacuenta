@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { RuculaLogo } from "@/components/RuculaLogo";
 
 interface InvitationRow {
   id: string;
@@ -16,6 +17,7 @@ interface InvitationRow {
   status: string;
   expires_at: string;
   inviter_email: string | null;
+  has_account?: boolean;
 }
 
 export default function AcceptInvite() {
@@ -29,6 +31,8 @@ export default function AcceptInvite() {
   const [invalid, setInvalid] = useState(false);
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -68,41 +72,47 @@ export default function AcceptInvite() {
     };
   }, [token]);
 
+  const completeAccept = async (userId: string, displayName: string) => {
+    if (!invitation) return;
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ full_name: displayName })
+      .eq("id", userId);
+
+    if (profileError) throw profileError;
+
+    const { error: memberError } = await supabase.from("workspace_members").insert({
+      workspace_id: invitation.workspace_id,
+      user_id: userId,
+      role: "member",
+    });
+
+    if (memberError) {
+      if (memberError.code === "23505") {
+        toast.info("Ya formás parte de este espacio");
+      } else throw memberError;
+    }
+
+    const { error: invError } = await supabase
+      .from("workspace_invitations")
+      .update({ status: "accepted" })
+      .eq("id", invitation.id);
+
+    if (invError) throw invError;
+
+    toast.success("¡Listo! Ya podés ver y editar todo en el espacio compartido.");
+    navigate("/", { replace: true });
+  };
+
   const handleAccept = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!invitation || !user) return;
     const displayName = name.trim() || user.email?.split("@")[0] || "Usuario";
 
     setSubmitting(true);
+    setAuthError(null);
     try {
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ full_name: displayName })
-        .eq("id", user.id);
-
-      if (profileError) throw profileError;
-
-      const { error: memberError } = await supabase.from("workspace_members").insert({
-        workspace_id: invitation.workspace_id,
-        user_id: user.id,
-        role: "member",
-      });
-
-      if (memberError) {
-        if (memberError.code === "23505") {
-          toast.info("Ya formás parte de este espacio");
-        } else throw memberError;
-      }
-
-      const { error: invError } = await supabase
-        .from("workspace_invitations")
-        .update({ status: "accepted" })
-        .eq("id", invitation.id);
-
-      if (invError) throw invError;
-
-      toast.success("¡Listo! Ya podés ver y editar todo en el espacio compartido.");
-      navigate("/", { replace: true });
+      await completeAccept(user.id, displayName);
     } catch (err: any) {
       console.error("Accept invite:", err);
       toast.error(err.message || "No se pudo aceptar la invitación");
@@ -111,9 +121,65 @@ export default function AcceptInvite() {
     }
   };
 
-  const redirectToAuth = () => {
-    const redirect = `/accept-invite?token=${encodeURIComponent(token ?? "")}`;
-    navigate(`/auth?redirect=${encodeURIComponent(redirect)}`);
+  const handleUnifiedSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!invitation) return;
+    const displayName = name.trim() || invitation.email?.split("@")[0] || "Usuario";
+    const pwd = password.trim();
+    if (!pwd || pwd.length < 6) {
+      setAuthError("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+
+    setSubmitting(true);
+    setAuthError(null);
+    try {
+      const hasAccount = invitation.has_account ?? false;
+
+      if (hasAccount) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: invitation.email,
+          password: pwd,
+        });
+        if (error) {
+          if (error.message.includes("Invalid login") || error.message.includes("incorrect")) {
+            setAuthError("Contraseña incorrecta");
+          } else {
+            setAuthError(error.message);
+          }
+          return;
+        }
+        if (data.user) {
+          await completeAccept(data.user.id, displayName);
+        }
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email: invitation.email,
+          password: pwd,
+          options: { data: { full_name: displayName } },
+        });
+        if (error) {
+          if (error.message.includes("already registered") || error.message.includes("already been registered")) {
+            setAuthError("Ese email ya está registrado. Usá tu contraseña para ingresar.");
+          } else {
+            setAuthError(error.message);
+          }
+          return;
+        }
+        if (data.user) {
+          if (data.session) {
+            await completeAccept(data.user.id, displayName);
+          } else {
+            toast.success("Revisá tu email para confirmar la cuenta. Después volvé a este link para ingresar.");
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error("Unified submit:", err);
+      setAuthError(err.message || "No se pudo completar");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -143,22 +209,62 @@ export default function AcceptInvite() {
     );
   }
 
-  if (!user) {
+  if (!user && invitation) {
+    const hasAccount = invitation.has_account ?? false;
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="text-center max-w-sm space-y-6">
+        <div className="w-full max-w-sm space-y-6">
           <div className="flex justify-center">
-            <img src="/rucula-logo.png" alt="Rucula" className="h-12 w-12 object-contain" />
+            <RuculaLogo size="lg" />
           </div>
-          <h1 className="text-xl font-semibold text-foreground">Te invitaron a Rucula</h1>
-          <p className="text-muted-foreground text-sm">
-            {invitation?.inviter_email
-              ? `${invitation.inviter_email} te invitó a compartir su espacio. Iniciá sesión o creá una cuenta para aceptar.`
-              : "Alguien te invitó a compartir su espacio. Iniciá sesión o creá una cuenta para aceptar."}
+          <h1 className="text-xl font-semibold text-foreground text-center">
+            Unite a Rucula
+          </h1>
+          <p className="text-muted-foreground text-sm text-center">
+            {invitation.inviter_email
+              ? `${invitation.inviter_email} te invitó a compartir su espacio.`
+              : "Alguien te invitó a compartir su espacio."}
           </p>
-          <Button onClick={redirectToAuth} className="w-full" size="lg">
-            Iniciar sesión o crear cuenta
-          </Button>
+          <p className="text-sm text-foreground font-medium text-center">
+            Vas a ingresar con <strong>{invitation.email}</strong>
+          </p>
+          <form onSubmit={handleUnifiedSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="unified-name">Nombre</Label>
+              <Input
+                id="unified-name"
+                type="text"
+                placeholder="Tu nombre"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoFocus
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="unified-password">Contraseña</Label>
+              <Input
+                id="unified-password"
+                type="password"
+                placeholder={hasAccount ? "Tu contraseña" : "Creá una contraseña (mín. 6 caracteres)"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            {authError && (
+              <p className="text-sm text-destructive">{authError}</p>
+            )}
+            <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+              {submitting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : hasAccount ? (
+                "Ingresar"
+              ) : (
+                "Crear cuenta e ingresar"
+              )}
+            </Button>
+          </form>
         </div>
       </div>
     );
@@ -168,7 +274,7 @@ export default function AcceptInvite() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex justify-center">
-          <img src="/rucula-logo.png" alt="Rucula" className="h-12 w-12 object-contain" />
+          <RuculaLogo size="lg" />
         </div>
         <h1 className="text-xl font-semibold text-foreground text-center">
           ¿Cuál es tu nombre?

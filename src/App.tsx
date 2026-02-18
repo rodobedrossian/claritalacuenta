@@ -75,12 +75,8 @@ const App = () => {
       <AuthProvider>
         <TooltipProvider>
           <IOSSystemBanner />
-          {!isMobile && (
-            <>
-              <Toaster />
-              <Sonner />
-            </>
-          )}
+          <Sonner />
+          {!isMobile && <Toaster />}
           <BrowserRouter>
             <ErrorBoundary>
               <AppRoutes

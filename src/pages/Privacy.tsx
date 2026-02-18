@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { RuculaLogo } from "@/components/RuculaLogo";
 
 const Privacy = () => {
   const navigate = useNavigate();
@@ -10,10 +11,7 @@ const Privacy = () => {
       <header className="border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/landing" className="flex items-center gap-2">
-            <div className="p-1.5 rounded-xl gradient-primary">
-              <img src="/rucula-logo.png" alt="Rucula" className="h-5 w-5 object-contain" />
-            </div>
-            <span className="font-bold text-foreground">Rucula</span>
+            <RuculaLogo size="sm" />
           </Link>
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-4 h-4 mr-2" />

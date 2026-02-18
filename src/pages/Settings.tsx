@@ -8,7 +8,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { SettingsSkeleton } from "@/components/skeletons/DashboardSkeleton";
-import { Bell, Fingerprint, User, Trash2, Loader2 } from "lucide-react";
+import { Bell, Fingerprint, User, Trash2, Loader2, UserPlus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   isBiometricSupported,
   isBiometricEnabled,
@@ -41,6 +51,9 @@ export default function Settings() {
   const [biometricToggling, setBiometricToggling] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteSending, setInviteSending] = useState(false);
   const showBiometric = isBiometricSupported();
 
   useEffect(() => {
@@ -70,6 +83,34 @@ export default function Settings() {
     } finally {
       setDeleting(false);
       setDeleteDialogOpen(false);
+    }
+  };
+
+  const handleSendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Ingresá un email válido");
+      return;
+    }
+    setInviteSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-workspace-invite", {
+        body: { email },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      toast.success("Invitación enviada. Le va a llegar un mail para unirse al espacio.");
+      setInviteEmail("");
+      setInviteOpen(false);
+    } catch (err: any) {
+      console.error("Send invite:", err);
+      toast.error(err?.message || "No se pudo enviar la invitación");
+    } finally {
+      setInviteSending(false);
     }
   };
 
@@ -178,6 +219,26 @@ export default function Settings() {
                 </CardContent>
               </Card>
 
+              {!isMobile && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <UserPlus className="h-5 w-5 text-primary" />
+                      Invitar al espacio
+                    </CardTitle>
+                    <CardDescription>
+                      Enviá una invitación por email para que otra persona se sume a tu workspace y pueda ver y editar junto con vos.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button onClick={() => setInviteOpen(true)} variant="secondary" className="w-full sm:w-auto">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Enviar invitación
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card className="border-destructive/30">
                 <CardHeader>
                   <CardTitle className="text-lg text-destructive flex items-center gap-2">
@@ -222,6 +283,46 @@ export default function Settings() {
 
         <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden" />
       </div>
+
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invitar al espacio</DialogTitle>
+            <DialogDescription>
+              Ingresá el email de la persona que querés invitar. Le va a llegar un correo con el link para unirse a tu workspace.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSendInvite} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Email</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="ejemplo@email.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                disabled={inviteSending}
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setInviteOpen(false)} disabled={inviteSending}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={inviteSending}>
+                {inviteSending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enviando…
+                  </>
+                ) : (
+                  "Enviar invitación"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
