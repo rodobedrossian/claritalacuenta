@@ -76,6 +76,11 @@
     --shadow-glow: 0 0 20px hsl(152 48% 38% / 0.2);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Hero card - dark emerald gradient */
+    --gradient-hero: linear-gradient(160deg, hsl(152 55% 28%) 0%, hsl(165 50% 22%) 100%);
+    --hero-foreground: 0 0% 100%;
+    --hero-muted: 0 0% 100% / 0.6;
   }
 }
 

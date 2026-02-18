@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { TrendingUp, TrendingDown, PiggyBank, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { TrendingUp, TrendingDown, PiggyBank } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { DashboardHeader } from "@/components/DashboardHeader";
@@ -298,6 +298,11 @@ const Index = () => {
                   onCurrentMonth={goToCurrentMonth}
                   netBalance={globalNetBalanceARS}
                   formatCurrency={formatCurrency}
+                  miniStats={[
+                    { label: "Ingresos", value: formatCurrency(globalIncomeARS, "ARS"), icon: TrendingUp, variant: "success" },
+                    { label: "Gastos", value: formatCurrency(globalExpensesARS, "ARS"), icon: TrendingDown, variant: "destructive" },
+                    { label: "Ahorros", value: formatCurrency(liquidSavings.usd, "USD"), icon: PiggyBank, variant: "primary" },
+                  ]}
                 />
 
                 <main className="container mx-auto px-4 py-3 space-y-4">
@@ -320,47 +325,6 @@ const Index = () => {
                     />
                   )}
 
-                  <div className="grid grid-cols-1 gap-3 animate-fade-in">
-                    <StatCard 
-                      title="Ingresos del mes" 
-                      value={formatCurrency(globalIncomeARS, "ARS")}
-                      secondaryTop={formatCurrency(totals.incomeUSD, "USD")}
-                      secondaryBottom={formatCurrency(totals.incomeARS, "ARS")}
-                      icon={TrendingUp}
-                      variant="success"
-                    />
-                    <StatCard 
-                      title="Gastos del mes" 
-                      value={formatCurrency(globalExpensesARS, "ARS")}
-                      secondaryTop={formatCurrency(totals.expensesUSD, "USD")}
-                      secondaryBottom={formatCurrency(totals.expensesARS, "ARS")}
-                      icon={TrendingDown}
-                      variant="destructive"
-                    />
-                    <StatCard 
-                      title="Ahorros" 
-                      value={
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="text-lg sm:text-xl font-black">{formatCurrency(liquidSavings.usd, "USD")}</span>
-                            <span className="text-[9px] font-bold opacity-40 uppercase tracking-wider text-muted-foreground">líquidos</span>
-                          </div>
-                          {(Number(totalInvested.ars) > 0 || Number(totalInvested.usd) > 0) && (
-                            <div className="flex items-baseline gap-1.5 border-t border-border/20 pt-0.5 mt-0.5">
-                              <span className="text-lg sm:text-xl font-black text-primary/80">
-                                {formatCurrency(totalInvested.ars, "ARS")}
-                                {Number(totalInvested.usd) > 0 && ` / ${formatCurrency(totalInvested.usd, "USD")}`}
-                              </span>
-                              <span className="text-[9px] font-bold opacity-40 uppercase tracking-wider text-muted-foreground">invertidos</span>
-                            </div>
-                          )}
-                        </div>
-                      }
-                      icon={PiggyBank}
-                      onClick={() => navigate("/savings")}
-                    />
-                  </div>
-
                   <QuickActions 
                     onAddExpense={() => setAddTransactionDialogOpen(true)}
                     onVoiceRecord={() => voiceTransaction.startRecording()}
@@ -373,7 +337,7 @@ const Index = () => {
                     {budgetsWithSpending.length > 0 ? (
                       <BudgetProgress budgets={budgetsWithSpending} onManageBudgets={() => navigate("/budgets")} />
                     ) : (
-                      <Card className="p-6 bg-card border border-border shadow-stripe">
+                      <Card className="p-6 bg-card border border-border/30 rounded-2xl">
                         <div className="flex flex-col gap-4 text-center">
                           <h3 className="text-lg font-semibold">Presupuestos del mes</h3>
                           <Button onClick={() => navigate("/budgets")} className="gradient-primary w-full">Crear presupuesto</Button>
@@ -400,41 +364,34 @@ const Index = () => {
         ) : (
           /* Desktop View */
           <div className="flex-1 overflow-y-auto">
-            <header className="border-b border-border bg-background sticky top-0 z-10">
-              <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
-                <div>
-                  <p className="text-sm text-muted-foreground">Bienvenido, {user?.user_metadata?.full_name || user?.email}</p>
-                  {lastUpdated && <p className="text-xs text-muted-foreground">USD cripto/ARS: {exchangeRate.toFixed(2)}</p>}
-                </div>
-                <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setImportDialogOpen(true)}>Importar</Button>
-                  <Button onClick={() => setAddTransactionDialogOpen(true)}>Nueva transacción</Button>
-                </div>
-              </div>
-            </header>
+            <div className="max-w-5xl mx-auto">
+              {/* Desktop Hero */}
+              <DashboardHeader
+                userName={user?.user_metadata?.full_name || user?.email}
+                exchangeRate={exchangeRate}
+                lastUpdated={lastUpdated}
+                isRefreshingRate={isRefreshingRate}
+                onRefreshRate={fetchExchangeRate}
+                activeMonth={activeMonth}
+                onPreviousMonth={goToPreviousMonth}
+                onNextMonth={goToNextMonth}
+                onCurrentMonth={goToCurrentMonth}
+                netBalance={globalNetBalanceARS}
+                formatCurrency={formatCurrency}
+                miniStats={[
+                  { label: "Ingresos", value: formatCurrency(globalIncomeARS, "ARS"), icon: TrendingUp, variant: "success" },
+                  { label: "Gastos", value: formatCurrency(globalExpensesARS, "ARS"), icon: TrendingDown, variant: "destructive" },
+                  { label: "Ahorros", value: formatCurrency(liquidSavings.usd, "USD"), icon: PiggyBank, variant: "primary" },
+                ]}
+              />
 
-            <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
-              {/* Month + Balance hero: same width as content, no narrow card */}
-              <div className="flex flex-col gap-6">
-                <div className="flex items-center justify-center gap-4">
-                  <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
-                    <ChevronLeft className="h-5 w-5" />
-                  </Button>
-                  <h2 className="text-xl font-bold capitalize min-w-[200px] text-center">
-                    {format(activeMonth, "MMMM yyyy", { locale: es })}
-                  </h2>
-                  <Button variant="ghost" size="icon" onClick={goToNextMonth}>
-                    <ChevronRight className="h-5 w-5" />
-                  </Button>
-                </div>
-                <div className="text-center">
-                  <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground mb-1">Balance neto</p>
-                  <p className={`text-4xl md:text-5xl font-black tracking-tight tabular-nums ${globalNetBalanceARS >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {formatCurrency(globalNetBalanceARS, "ARS")}
-                  </p>
-                </div>
+              <div className="flex gap-3 justify-end px-6 py-4">
+                <Button variant="outline" onClick={() => setImportDialogOpen(true)}>Importar</Button>
+                <Button onClick={() => setAddTransactionDialogOpen(true)}>Nueva transacción</Button>
               </div>
+            </div>
 
+            <main className="max-w-5xl mx-auto px-6 pb-8 space-y-8">
               {isViewingCurrentMonth && shouldShowSurplusBanner && previousMonthSurplus && (
                 <PreviousMonthSurplusBanner
                   surplusTotalARS={surplusTotalARS}
@@ -498,7 +455,7 @@ const Index = () => {
                 {budgetsWithSpending.length > 0 ? (
                   <BudgetProgress budgets={budgetsWithSpending} onManageBudgets={() => navigate("/budgets")} />
                 ) : (
-                  <Card className="p-6 bg-card border border-border shadow-sm">
+                  <Card className="p-6 bg-card border border-border/30 rounded-2xl">
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-lg font-semibold">Presupuestos del mes</h3>
