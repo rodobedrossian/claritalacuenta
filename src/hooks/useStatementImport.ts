@@ -182,17 +182,15 @@ export function useStatementImport(workspaceId: string | null): UseStatementImpo
       }
 
       // Create import record (credit_card_id may be null - will be resolved by edge function)
-      const importPayload: Record<string, unknown> = {
+      const importPayload = {
         user_id: userId,
         workspace_id: workspaceId,
         file_path: filePath,
         file_name: file.name,
         statement_month: statementMonth.toISOString().split("T")[0],
         status: "processing",
+        ...(creditCardId ? { credit_card_id: creditCardId } : {}),
       };
-      if (creditCardId) {
-        importPayload.credit_card_id = creditCardId;
-      }
 
       const { data: importRecord, error: insertError } = await supabase
         .from("statement_imports")
