@@ -42,6 +42,14 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Get workspace_id from statement_imports
+    const { data: importRow } = await supabase
+      .from("statement_imports")
+      .select("workspace_id")
+      .eq("id", statement_import_id)
+      .single();
+    const workspace_id = importRow?.workspace_id || null;
+
     // 1. Get all transactions from this import that need categorization
     const { data: transactions, error: txError } = await supabase
       .from("credit_card_transactions")
@@ -177,6 +185,23 @@ Responde SOLO con un JSON array así:
       } else {
         const aiData = await aiResponse.json();
         const content = aiData.choices?.[0]?.message?.content;
+
+        // Log AI usage asynchronously (fire-and-forget)
+        const aiUsage = aiData.usage;
+        if (aiUsage) {
+          supabase.from("ai_usage_logs").insert({
+            user_id,
+            workspace_id: workspace_id || '00000000-0000-0000-0000-000000000000',
+            function_name: "auto-categorize-transactions",
+            model: "google/gemini-2.5-flash-lite",
+            prompt_tokens: aiUsage.prompt_tokens || 0,
+            completion_tokens: aiUsage.completion_tokens || 0,
+            total_tokens: aiUsage.total_tokens || 0,
+            reference_id: statement_import_id,
+          }).then(({ error: logErr }) => {
+            if (logErr) console.error("[auto-categorize] Failed to log AI usage:", logErr);
+          });
+        }
 
         if (content) {
           try {

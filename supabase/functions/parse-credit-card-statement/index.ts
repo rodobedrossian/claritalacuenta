@@ -277,6 +277,23 @@ Deno.serve(async (req) => {
     const aiData = await aiResponse.json();
     const content = aiData.choices?.[0]?.message?.content;
 
+    // Log AI usage asynchronously (fire-and-forget)
+    const usage = aiData.usage;
+    if (usage) {
+      supabase.from("ai_usage_logs").insert({
+        user_id,
+        workspace_id,
+        function_name: "parse-credit-card-statement",
+        model: "google/gemini-3-flash-preview",
+        prompt_tokens: usage.prompt_tokens || 0,
+        completion_tokens: usage.completion_tokens || 0,
+        total_tokens: usage.total_tokens || 0,
+        reference_id: statement_import_id || null,
+      }).then(({ error }) => {
+        if (error) console.error("[parse-statement] Failed to log AI usage:", error);
+      });
+    }
+
     if (!content) {
       console.error("[parse-statement] No content in AI response:", aiData);
       throw new Error("AI did not return any content");

@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage_logs: {
+        Row: {
+          completion_tokens: number | null
+          created_at: string
+          function_name: string
+          id: string
+          model: string
+          prompt_tokens: number | null
+          reference_id: string | null
+          total_tokens: number | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          completion_tokens?: number | null
+          created_at?: string
+          function_name: string
+          id?: string
+          model: string
+          prompt_tokens?: number | null
+          reference_id?: string | null
+          total_tokens?: number | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          completion_tokens?: number | null
+          created_at?: string
+          function_name?: string
+          id?: string
+          model?: string
+          prompt_tokens?: number | null
+          reference_id?: string | null
+          total_tokens?: number | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       budgets: {
         Row: {
           category: string
