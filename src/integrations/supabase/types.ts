@@ -184,7 +184,10 @@ export type Database = {
       }
       credit_cards: {
         Row: {
+          account_number: string | null
           bank: string | null
+          card_identifier: string | null
+          card_network: string | null
           closing_day: number | null
           created_at: string | null
           id: string
@@ -194,7 +197,10 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          account_number?: string | null
           bank?: string | null
+          card_identifier?: string | null
+          card_network?: string | null
           closing_day?: number | null
           created_at?: string | null
           id?: string
@@ -204,7 +210,10 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          account_number?: string | null
           bank?: string | null
+          card_identifier?: string | null
+          card_network?: string | null
           closing_day?: number | null
           created_at?: string | null
           id?: string

@@ -91,6 +91,16 @@ interface StatementSummary {
   conciliacion: Conciliacion | null;
 }
 
+export interface DetectedCard {
+  id: string;
+  name: string;
+  bank: string | null;
+  card_network: string | null;
+  account_number: string | null;
+  closing_day: number | null;
+  is_new: boolean;
+}
+
 interface UseStatementImportReturn {
   uploading: boolean;
   parsing: boolean;
@@ -98,7 +108,9 @@ interface UseStatementImportReturn {
   extractedItems: ExtractedItem[];
   statementImportId: string | null;
   statementSummary: StatementSummary | null;
-  uploadAndParse: (file: File, userId: string, creditCardId: string, statementMonth: Date) => Promise<boolean>;
+  detectedCard: DetectedCard | null;
+  resolvedCardId: string | null;
+  uploadAndParse: (file: File, userId: string, statementMonth: Date, creditCardId?: string) => Promise<boolean>;
   toggleItemSelection: (id: string) => void;
   toggleAllSelection: (selected: boolean) => void;
   importTransactions: (userId: string, creditCardId: string, statementMonth: Date, cardName: string) => Promise<boolean>;
@@ -112,6 +124,8 @@ export function useStatementImport(workspaceId: string | null): UseStatementImpo
   const [extractedItems, setExtractedItems] = useState<ExtractedItem[]>([]);
   const [statementImportId, setStatementImportId] = useState<string | null>(null);
   const [statementSummary, setStatementSummary] = useState<StatementSummary | null>(null);
+  const [detectedCard, setDetectedCard] = useState<DetectedCard | null>(null);
+  const [resolvedCardId, setResolvedCardId] = useState<string | null>(null);
 
   const reset = useCallback(() => {
     setExtractedItems([]);
@@ -120,13 +134,15 @@ export function useStatementImport(workspaceId: string | null): UseStatementImpo
     setImporting(false);
     setStatementImportId(null);
     setStatementSummary(null);
+    setDetectedCard(null);
+    setResolvedCardId(null);
   }, []);
 
   const uploadAndParse = useCallback(async (
     file: File,
     userId: string,
-    creditCardId: string,
-    statementMonth: Date
+    statementMonth: Date,
+    creditCardId?: string
   ): Promise<boolean> => {
     if (!workspaceId) {
       toast.error("No se pudo determinar el espacio de trabajo");
@@ -165,18 +181,22 @@ export function useStatementImport(workspaceId: string | null): UseStatementImpo
         return false;
       }
 
-      // Create import record
+      // Create import record (credit_card_id may be null - will be resolved by edge function)
+      const importPayload: Record<string, unknown> = {
+        user_id: userId,
+        workspace_id: workspaceId,
+        file_path: filePath,
+        file_name: file.name,
+        statement_month: statementMonth.toISOString().split("T")[0],
+        status: "processing",
+      };
+      if (creditCardId) {
+        importPayload.credit_card_id = creditCardId;
+      }
+
       const { data: importRecord, error: insertError } = await supabase
         .from("statement_imports")
-        .insert({
-          user_id: userId,
-          workspace_id: workspaceId,
-          credit_card_id: creditCardId,
-          file_path: filePath,
-          file_name: file.name,
-          statement_month: statementMonth.toISOString().split("T")[0],
-          status: "processing",
-        })
+        .insert(importPayload)
         .select()
         .single();
 
@@ -186,18 +206,20 @@ export function useStatementImport(workspaceId: string | null): UseStatementImpo
         return false;
       }
 
-      // Store the import ID for later use
       setStatementImportId(importRecord.id);
       setUploading(false);
       setParsing(true);
 
-      // Call edge function to parse
+      // Call edge function to parse (includes user/workspace for card auto-detection)
       const { data: parseResult, error: parseError } = await supabase.functions.invoke(
         "parse-credit-card-statement",
         {
           body: {
             file_path: filePath,
             statement_import_id: importRecord.id,
+            user_id: userId,
+            workspace_id: workspaceId,
+            credit_card_id: creditCardId || null,
           },
         }
       );
@@ -216,6 +238,14 @@ export function useStatementImport(workspaceId: string | null): UseStatementImpo
       }
 
       const data: ExtractedData = parseResult.data;
+
+      // Store auto-detected card info from edge function
+      if (parseResult.credit_card_id) {
+        setResolvedCardId(parseResult.credit_card_id);
+      }
+      if (parseResult.detected_card) {
+        setDetectedCard(parseResult.detected_card);
+      }
 
       // Transform to unified items list
       const items: ExtractedItem[] = [];
@@ -564,6 +594,8 @@ export function useStatementImport(workspaceId: string | null): UseStatementImpo
     extractedItems,
     statementImportId,
     statementSummary,
+    detectedCard,
+    resolvedCardId,
     uploadAndParse,
     toggleItemSelection,
     toggleAllSelection,

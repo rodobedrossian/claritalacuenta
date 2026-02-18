@@ -1,4 +1,4 @@
-import { CreditCard, Trash2, Edit2 } from "lucide-react";
+import { CreditCard, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -45,15 +45,22 @@ export const CreditCardsList = ({ creditCards, onDelete }: CreditCardsListProps)
         <TableRow>
           <TableHead>Nombre</TableHead>
           <TableHead>Banco</TableHead>
-          <TableHead>Día de Cierre</TableHead>
+          <TableHead>Red</TableHead>
+          <TableHead>Cierre</TableHead>
           <TableHead className="w-[100px]">Acciones</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {creditCards.map((card) => (
           <TableRow key={card.id}>
-            <TableCell className="font-medium">{card.name}</TableCell>
+            <TableCell className="font-medium">
+              {card.name}
+              {card.account_number && (
+                <span className="ml-1.5 text-xs text-muted-foreground">****{card.account_number}</span>
+              )}
+            </TableCell>
             <TableCell>{card.bank || "-"}</TableCell>
+            <TableCell>{card.card_network || "-"}</TableCell>
             <TableCell>{card.closing_day || "-"}</TableCell>
             <TableCell>
               <AlertDialog>

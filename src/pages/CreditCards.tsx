@@ -38,7 +38,7 @@ const CreditCards = () => {
 
   const { workspaceId } = useWorkspace(userId);
   const { statements, loading, refetch, deleteStatement, getMonthlyTransactions, getMonthlyTotals, getStatementTotals } = useCreditCardStatements(userId);
-  const { creditCards, addCreditCard, deleteCreditCard } = useCreditCardsData(userId, workspaceId);
+  const { creditCards, addCreditCard, deleteCreditCard, refetch: refetchCards } = useCreditCardsData(userId, workspaceId);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -223,8 +223,10 @@ const CreditCards = () => {
         userId={userId}
         workspaceId={workspaceId}
         creditCards={creditCards}
-        onSuccess={refetch}
-        onAddCard={addCreditCard}
+        onSuccess={() => {
+          refetch();
+          refetchCards();
+        }}
       />
     </AppLayout>
   );
