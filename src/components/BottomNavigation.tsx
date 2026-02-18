@@ -3,23 +3,20 @@ import {
   LayoutDashboard,
   Receipt,
   CreditCard,
-  Plus,
+  PiggyBank,
   MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-interface BottomNavigationProps {
-  onAddClick: () => void;
-}
 
 const mainNavItems = [
   { title: "Inicio", path: "/", icon: LayoutDashboard },
   { title: "Movimientos", path: "/transactions", icon: Receipt },
-  { title: "add", path: "add", icon: Plus }, // Special add button
   { title: "Tarjetas", path: "/credit-cards", icon: CreditCard },
+  { title: "Ahorros", path: "/savings", icon: PiggyBank },
   { title: "Más", path: "/mas", icon: MoreHorizontal },
 ];
 
-export const BottomNavigation = ({ onAddClick }: BottomNavigationProps) => {
+export const BottomNavigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -33,21 +30,6 @@ export const BottomNavigation = ({ onAddClick }: BottomNavigationProps) => {
       <div className="flex items-center justify-around h-[72px] px-2">
         {mainNavItems.map((item) => {
           const Icon = item.icon;
-          
-          // Special handling for the add button
-          if (item.path === "add") {
-            return (
-              <button
-                key="add"
-                onClick={onAddClick}
-                className="flex flex-col items-center justify-center -mt-8 active:scale-95 transition-transform"
-              >
-                <div className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-stripe-lg border-4 border-background">
-                  <Plus className="h-8 w-8 text-primary-foreground" />
-                </div>
-              </button>
-            );
-          }
 
           const active = isActive(item.path);
           

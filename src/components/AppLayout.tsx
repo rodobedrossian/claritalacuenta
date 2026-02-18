@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { RuculaLogo } from "@/components/RuculaLogo";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BottomNavigation } from "@/components/BottomNavigation";
-import { AddTransactionMethodSheet } from "@/components/AddTransactionMethodSheet";
+import { FloatingActionButton } from "@/components/FloatingActionButton";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -45,7 +45,6 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
-  const [addMethodSheetOpen, setAddMethodSheetOpen] = useState(false);
 
   // Close sidebar when navigating on mobile
   useEffect(() => {
@@ -65,25 +64,21 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
   const showExpanded = isMobile || !isCollapsed;
   const sidebarWidth = showExpanded ? "w-64" : "w-16";
 
-  // For mobile, we use bottom navigation; "+" opens choice sheet (manual vs voice)
+  // For mobile, we use bottom navigation + floating FAB
   if (isMobile) {
     return (
       <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
-        {/* Main content area - scroll handled by individual pages */}
+        {/* Main content area */}
         <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
           {children}
         </main>
 
-        {/* Bottom Navigation: "+" opens method sheet so user can pick Manual or Voice from any screen */}
-        <BottomNavigation
-          onAddClick={() => setAddMethodSheetOpen(true)}
-        />
+        <BottomNavigation />
 
-        <AddTransactionMethodSheet
-          open={addMethodSheetOpen}
-          onOpenChange={setAddMethodSheetOpen}
-          onSelectManual={() => navigate("/?action=add-transaction", { replace: true })}
-          onSelectVoice={() => navigate("/?action=voice-record", { replace: true })}
+        <FloatingActionButton
+          onAddManual={() => navigate("/?action=add-transaction", { replace: true })}
+          onVoiceRecord={() => navigate("/?action=voice-record", { replace: true })}
+          onImportStatement={() => navigate("/?action=import-statement", { replace: true })}
         />
       </div>
     );
