@@ -340,11 +340,18 @@ export function useStatementImport(workspaceId: string | null): UseStatementImpo
       });
       
       if (items.length === 0) {
-        toast.warning("No se encontraron consumos en el PDF");
-      } else {
-        toast.success(`Se encontraron ${items.length} items`);
+        toast.error("No se encontraron consumos en el PDF. Verificá que el archivo sea un resumen de tarjeta válido.");
+        // Mark import as failed so no phantom record remains
+        if (importRecord?.id) {
+          await supabase
+            .from("statement_imports")
+            .update({ status: "error", error_message: "No se encontraron transacciones", transactions_created: 0 })
+            .eq("id", importRecord.id);
+        }
+        return false;
       }
-
+      
+      toast.success(`Se encontraron ${items.length} items`);
       return true;
     } catch (error) {
       console.error("Upload and parse error:", error);
