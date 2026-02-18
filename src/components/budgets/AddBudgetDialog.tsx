@@ -5,8 +5,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  DialogTrigger } from
+"@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -14,8 +14,8 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  SelectValue } from
+"@/components/ui/select";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,7 +32,7 @@ interface AddBudgetDialogProps {
     currency: string;
   }) => Promise<void>;
   categories: Category[];
-  existingBudgets: Array<{ category: string; currency: string }>;
+  existingBudgets: Array<{category: string;currency: string;}>;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -42,7 +42,7 @@ export const AddBudgetDialog = ({
   categories,
   existingBudgets,
   open: controlledOpen,
-  onOpenChange: controlledOnOpenChange,
+  onOpenChange: controlledOnOpenChange
 }: AddBudgetDialogProps) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
@@ -53,14 +53,14 @@ export const AddBudgetDialog = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filter categories to only show expense categories that don't have a budget yet
-  const availableCategories = categories
-    .filter((c) => c.type === "expense")
-    .filter(
-      (c) =>
-        !existingBudgets.some(
-          (b) => b.category === c.name && b.currency === currency
-        )
-    );
+  const availableCategories = categories.
+  filter((c) => c.type === "expense").
+  filter(
+    (c) =>
+    !existingBudgets.some(
+      (b) => b.category === c.name && b.currency === currency
+    )
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +81,7 @@ export const AddBudgetDialog = ({
       await onAdd({
         category,
         monthly_limit: limit,
-        currency,
+        currency
       });
       setOpen(false);
       resetForm();
@@ -98,14 +98,14 @@ export const AddBudgetDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {!controlledOpen && (
-        <DialogTrigger asChild>
-          <Button size="sm" className="gradient-primary gap-2">
-            <Plus className="h-4 w-4" />
-            Nuevo Presupuesto
-          </Button>
+      {!controlledOpen &&
+      <DialogTrigger asChild>
+          
+
+
+
         </DialogTrigger>
-      )}
+      }
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Crear Presupuesto</DialogTitle>
@@ -119,8 +119,8 @@ export const AddBudgetDialog = ({
                 onValueChange={(v) => {
                   setCurrency(v as "USD" | "ARS");
                   setCategory(""); // Reset category when currency changes
-                }}
-              >
+                }}>
+
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -138,8 +138,8 @@ export const AddBudgetDialog = ({
                 value={monthlyLimit}
                 onChange={(e) => setMonthlyLimit(e.target.value)}
                 min="0"
-                step="0.01"
-              />
+                step="0.01" />
+
             </div>
           </div>
 
@@ -150,17 +150,17 @@ export const AddBudgetDialog = ({
                 <SelectValue placeholder="Seleccionar categoría" />
               </SelectTrigger>
               <SelectContent>
-                {availableCategories.length === 0 ? (
-                  <div className="p-2 text-sm text-muted-foreground text-center">
+                {availableCategories.length === 0 ?
+                <div className="p-2 text-sm text-muted-foreground text-center">
                     No hay categorías disponibles para esta moneda
-                  </div>
-                ) : (
-                  availableCategories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.name}>
+                  </div> :
+
+                availableCategories.map((cat) =>
+                <SelectItem key={cat.id} value={cat.name}>
                       {cat.name}
                     </SelectItem>
-                  ))
-                )}
+                )
+                }
               </SelectContent>
             </Select>
           </div>
@@ -168,12 +168,12 @@ export const AddBudgetDialog = ({
           <Button
             type="submit"
             className="w-full gradient-primary"
-            disabled={isSubmitting || !category || !monthlyLimit}
-          >
+            disabled={isSubmitting || !category || !monthlyLimit}>
+
             {isSubmitting ? "Creando..." : "Crear Presupuesto"}
           </Button>
         </form>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 };
