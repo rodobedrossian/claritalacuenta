@@ -82,6 +82,13 @@ DATOS A EXTRAER:
 
 Retorna un JSON válido con esta estructura exacta:
 {
+  "tarjeta": {
+    "red": "VISA" | "MASTERCARD" | "AMEX" | "CABAL" | "NARANJA" | "OTRA",
+    "banco": "Nombre del banco emisor (ej: Galicia, Santander, BBVA, HSBC, etc.)",
+    "numero_cuenta": "Últimos 4 dígitos de la tarjeta o número de cuenta visible en el resumen",
+    "titular": "Nombre del titular tal como aparece en el resumen",
+    "dia_cierre": 15
+  },
   "consumos": [
     {
       "fecha": "DD/MM/YYYY",
@@ -124,6 +131,13 @@ Retorna un JSON válido con esta estructura exacta:
   }
 }
 
+INSTRUCCIONES PARA "tarjeta":
+- "red": La red de la tarjeta. Buscá logos, textos como "VISA", "MASTERCARD", "AMERICAN EXPRESS", "AMEX", "CABAL", "NARANJA X". Si no está claro, usá "OTRA".
+- "banco": El nombre del banco emisor. Aparece en el encabezado del resumen. Extraé solo el nombre comercial (ej: "Galicia" no "Banco de Galicia y Buenos Aires S.A.U.").
+- "numero_cuenta": Los últimos 4 dígitos visibles del número de tarjeta, o el número de cuenta/socio si es lo único disponible. Si no hay ninguno, usá null.
+- "titular": El nombre completo del titular de la tarjeta como aparece en el resumen. Si no está visible, usá null.
+- "dia_cierre": El día del mes en que cierra el resumen (1-31). Extraelo de la fecha de cierre. Si la fecha de cierre es "15/01/2026", el dia_cierre es 15.
+
 IMPORTANTE: Retorna SOLO el objeto JSON puro, SIN markdown, SIN \`\`\`json, SIN texto adicional. Empieza directamente con { y termina con }
 
 TEXTO DEL RESUMEN:
@@ -135,10 +149,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { file_path, statement_import_id } = await req.json();
+    const { file_path, statement_import_id, user_id, workspace_id, credit_card_id } = await req.json();
     
     if (!file_path) {
       throw new Error("file_path is required");
+    }
+    if (!user_id || !workspace_id) {
+      throw new Error("user_id and workspace_id are required");
     }
 
     console.log("[parse-statement] Starting parse for:", file_path);
@@ -332,16 +349,122 @@ Deno.serve(async (req) => {
       ajustes: extractedData.ajustes.length,
       total: totalItems,
       conciliacion: extractedData.conciliacion,
+      tarjeta: extractedData.tarjeta,
     });
+
+    // --- Card auto-detection ---
+    let resolvedCardId = credit_card_id || null;
+    let detectedCard: {
+      id: string;
+      name: string;
+      bank: string | null;
+      card_network: string | null;
+      account_number: string | null;
+      closing_day: number | null;
+      is_new: boolean;
+    } | null = null;
+
+    const tarjeta = extractedData.tarjeta;
+    if (tarjeta) {
+      const network = (tarjeta.red || "").toUpperCase().trim();
+      const banco = (tarjeta.banco || "").trim();
+      const numeroCuenta = (tarjeta.numero_cuenta || "").trim();
+      const diaCierre = tarjeta.dia_cierre ? Number(tarjeta.dia_cierre) : null;
+
+      // Build a stable identifier: NETWORK_BANK_LAST4 (all lowercased, spaces removed)
+      const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
+      const parts = [normalize(network), normalize(banco), normalize(numeroCuenta)].filter(Boolean);
+      const cardIdentifier = parts.length >= 2 ? parts.join("_") : null;
+
+      console.log("[parse-statement] Card identifier:", cardIdentifier);
+
+      if (cardIdentifier && !resolvedCardId) {
+        // Try to find existing card by identifier in this workspace
+        const { data: existingCard } = await supabase
+          .from("credit_cards")
+          .select("id, name, bank, card_network, account_number, closing_day")
+          .eq("workspace_id", workspace_id)
+          .eq("card_identifier", cardIdentifier)
+          .maybeSingle();
+
+        if (existingCard) {
+          console.log("[parse-statement] Found existing card:", existingCard.id);
+          resolvedCardId = existingCard.id;
+          detectedCard = { ...existingCard, is_new: false };
+
+          // Update closing_day if we now have it and the card didn't
+          if (diaCierre && !existingCard.closing_day) {
+            await supabase
+              .from("credit_cards")
+              .update({ closing_day: diaCierre })
+              .eq("id", existingCard.id);
+          }
+        } else {
+          // Create a new card automatically
+          const cardName = [network, banco, numeroCuenta ? `****${numeroCuenta}` : ""]
+            .filter(Boolean)
+            .join(" ");
+
+          const { data: newCard, error: cardError } = await supabase
+            .from("credit_cards")
+            .insert({
+              user_id,
+              workspace_id,
+              name: cardName || "Tarjeta importada",
+              bank: banco || null,
+              card_network: network || null,
+              account_number: numeroCuenta || null,
+              card_identifier: cardIdentifier,
+              closing_day: diaCierre,
+            })
+            .select("id, name, bank, card_network, account_number, closing_day")
+            .single();
+
+          if (cardError) {
+            console.error("[parse-statement] Failed to create card:", cardError);
+          } else if (newCard) {
+            console.log("[parse-statement] Created new card:", newCard.id);
+            resolvedCardId = newCard.id;
+            detectedCard = { ...newCard, is_new: true };
+          }
+        }
+      } else if (resolvedCardId) {
+        // Card was provided, but update its metadata if missing
+        const { data: existingCard } = await supabase
+          .from("credit_cards")
+          .select("id, name, bank, card_network, account_number, closing_day")
+          .eq("id", resolvedCardId)
+          .single();
+
+        if (existingCard) {
+          const updates: Record<string, unknown> = {};
+          if (!existingCard.card_network && network) updates.card_network = network;
+          if (!existingCard.account_number && numeroCuenta) updates.account_number = numeroCuenta;
+          if (!existingCard.bank && banco) updates.bank = banco;
+          if (!existingCard.closing_day && diaCierre) updates.closing_day = diaCierre;
+          if (cardIdentifier) updates.card_identifier = cardIdentifier;
+
+          if (Object.keys(updates).length > 0) {
+            await supabase.from("credit_cards").update(updates).eq("id", resolvedCardId);
+          }
+          detectedCard = { ...existingCard, ...updates, is_new: false } as typeof detectedCard;
+        }
+      }
+    }
 
     // Update statement_imports record if ID provided
     if (statement_import_id) {
+      const updatePayload: Record<string, unknown> = {
+        status: "completed",
+        extracted_data: extractedData,
+      };
+      if (resolvedCardId) {
+        updatePayload.credit_card_id = resolvedCardId;
+      }
+
       const { error: updateError } = await supabase
         .from("statement_imports")
-        .update({
-          status: "completed",
-          extracted_data: extractedData,
-        })
+        .update(updatePayload)
         .eq("id", statement_import_id);
 
       if (updateError) {
@@ -354,6 +477,8 @@ Deno.serve(async (req) => {
         success: true,
         data: extractedData,
         total_items: totalItems,
+        credit_card_id: resolvedCardId,
+        detected_card: detectedCard,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

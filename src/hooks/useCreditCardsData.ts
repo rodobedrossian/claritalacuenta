@@ -8,6 +8,9 @@ export interface CreditCard {
   name: string;
   bank: string | null;
   closing_day: number | null;
+  card_network: string | null;
+  account_number: string | null;
+  card_identifier: string | null;
   created_at: string;
   updated_at: string;
 }

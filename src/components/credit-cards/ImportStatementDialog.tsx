@@ -4,7 +4,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Drawer,
@@ -18,13 +17,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Loader2, Upload, FileText, CreditCard, Plus, X, AlertTriangle, Sparkles } from "lucide-react";
+import { Loader2, Upload, FileText, CreditCard, X, AlertTriangle, Sparkles } from "lucide-react";
 import { useStatementImport, ExtractedItem } from "@/hooks/useStatementImport";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format, startOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
-import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface CreditCardType {
@@ -40,7 +37,6 @@ interface ImportStatementDialogProps {
   workspaceId: string | null;
   creditCards: CreditCardType[];
   onSuccess: () => void;
-  onAddCard?: (card: { name: string; bank: string | null; closing_day: number | null }) => Promise<void>;
 }
 
 const MONTHS_OPTIONS = Array.from({ length: 12 }, (_, i) => {
@@ -67,16 +63,12 @@ export function ImportStatementDialog({
   workspaceId,
   creditCards,
   onSuccess,
-  onAddCard,
 }: ImportStatementDialogProps) {
   const isMobile = useIsMobile();
-  const [step, setStep] = useState<"upload" | "preview" | "importing" | "add-card">("upload");
+  const [step, setStep] = useState<"upload" | "preview" | "importing">("upload");
   const [selectedCardId, setSelectedCardId] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>(MONTHS_OPTIONS[0].value);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [newCardName, setNewCardName] = useState("");
-  const [newCardBank, setNewCardBank] = useState("");
-  const [addingCard, setAddingCard] = useState(false);
   const [progressIndex, setProgressIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,6 +78,8 @@ export function ImportStatementDialog({
     importing,
     extractedItems,
     statementSummary,
+    detectedCard,
+    resolvedCardId,
     uploadAndParse,
     toggleItemSelection,
     toggleAllSelection,
@@ -113,35 +107,8 @@ export function ImportStatementDialog({
     setSelectedCardId("");
     setSelectedMonth(MONTHS_OPTIONS[0].value);
     setSelectedFile(null);
-    setNewCardName("");
-    setNewCardBank("");
     reset();
     onOpenChange(false);
-  };
-
-  const handleAddCard = async () => {
-    if (!newCardName.trim()) {
-      toast.error("Ingresa un nombre para la tarjeta");
-      return;
-    }
-    if (!onAddCard) return;
-
-    setAddingCard(true);
-    try {
-      await onAddCard({
-        name: newCardName.trim(),
-        bank: newCardBank.trim() || null,
-        closing_day: null,
-      });
-      toast.success("Tarjeta agregada correctamente");
-      setNewCardName("");
-      setNewCardBank("");
-      setStep("upload");
-    } catch {
-      // Error handled in hook
-    } finally {
-      setAddingCard(false);
-    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,26 +117,29 @@ export function ImportStatementDialog({
   };
 
   const handleAnalyzeAndCheck = async () => {
-    if (!selectedFile || !selectedCardId) return;
+    if (!selectedFile) return;
 
     const success = await uploadAndParse(
       selectedFile,
       userId,
-      selectedCardId,
-      new Date(selectedMonth)
+      new Date(selectedMonth),
+      selectedCardId || undefined
     );
 
     if (success) setStep("preview");
   };
 
   const handleImport = async () => {
+    const finalCardId = resolvedCardId || selectedCardId;
+    if (!finalCardId) return;
+
     setStep("importing");
 
-    const cardName = selectedCard?.name || "Tarjeta";
+    const cardName = detectedCard?.name || selectedCard?.name || "Tarjeta";
 
     const success = await importTransactions(
       userId,
-      selectedCardId,
+      finalCardId,
       new Date(selectedMonth),
       cardName
     );
@@ -192,11 +162,10 @@ export function ImportStatementDialog({
 
   const selectedCard = creditCards.find((c) => c.id === selectedCardId);
 
-  const stepDescriptions = {
-    upload: "Subí el PDF de tu resumen para extraer los consumos automáticamente.",
+  const stepDescriptions: Record<string, string> = {
+    upload: "Subí el PDF y la tarjeta se detecta automáticamente.",
     preview: "Revisá los consumos. Las categorías se asignarán automáticamente.",
     importing: "",
-    "add-card": "Agregá una nueva tarjeta para continuar con la importación.",
   };
 
   const Header = (
@@ -215,50 +184,6 @@ export function ImportStatementDialog({
 
   const Content = (
     <>
-      {step === "add-card" && onAddCard && (
-        <div className="space-y-6 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="newCardName">Nombre de la tarjeta *</Label>
-            <Input
-              id="newCardName"
-              placeholder="Ej: VISA Oro"
-              value={newCardName}
-              onChange={(e) => setNewCardName(e.target.value)}
-              className="bg-muted border-border"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="newCardBank">Banco (opcional)</Label>
-            <Input
-              id="newCardBank"
-              placeholder="Ej: Galicia"
-              value={newCardBank}
-              onChange={(e) => setNewCardBank(e.target.value)}
-              className="bg-muted border-border"
-            />
-          </div>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => setStep("upload")} className="flex-1">
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleAddCard}
-              disabled={addingCard || !newCardName.trim()}
-              className="flex-1"
-            >
-              {addingCard ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Agregando...
-                </>
-              ) : (
-                "Agregar y Continuar"
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
-
       {step === "upload" && (
         <div className="space-y-6 py-4">
           {(uploading || parsing) ? (
@@ -277,73 +202,6 @@ export function ImportStatementDialog({
             </div>
           ) : (
             <>
-              <div className="space-y-2">
-                <Label>Tarjeta de crédito</Label>
-                {creditCards.length === 0 ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 text-muted-foreground text-sm">
-                      <CreditCard className="h-4 w-4 shrink-0" />
-                      <span>No tenés tarjetas registradas</span>
-                    </div>
-                    {onAddCard && (
-                      <Button
-                        variant="outline"
-                        onClick={() => setStep("add-card")}
-                        className="w-full gap-2"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Agregar tarjeta
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Select value={selectedCardId} onValueChange={setSelectedCardId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccioná una tarjeta" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {creditCards.map((card) => (
-                          <SelectItem key={card.id} value={card.id}>
-                            <div className="flex items-center gap-2">
-                              <CreditCard className="h-4 w-4" />
-                              {card.name} {card.bank && `(${card.bank})`}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {onAddCard && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setStep("add-card")}
-                        className="gap-1 text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        <Plus className="h-3 w-3" />
-                        Agregar otra tarjeta
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Mes del resumen</Label>
-                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MONTHS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
               <div className="space-y-2">
                 <Label>Archivo PDF</Label>
                 <div
@@ -374,9 +232,53 @@ export function ImportStatementDialog({
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label>Mes del resumen</Label>
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTHS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {creditCards.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-xs">
+                    Tarjeta (opcional — se detecta automáticamente del PDF)
+                  </Label>
+                  <Select value={selectedCardId} onValueChange={setSelectedCardId}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Detección automática" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {creditCards.map((card) => (
+                        <SelectItem key={card.id} value={card.id}>
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="h-3.5 w-3.5" />
+                            {card.name} {card.bank && `(${card.bank})`}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="p-3 bg-primary/5 border border-primary/10 rounded-xl text-sm text-muted-foreground">
+                <Sparkles className="h-4 w-4 inline mr-1.5 text-primary" />
+                La tarjeta, banco y red se detectan automáticamente del resumen.
+              </div>
+
               <Button
                 onClick={handleAnalyzeAndCheck}
-                disabled={!selectedFile || !selectedCardId}
+                disabled={!selectedFile}
                 className="w-full"
               >
                 Analizar resumen
@@ -388,6 +290,47 @@ export function ImportStatementDialog({
 
       {step === "preview" && (
         <div className="flex-1 flex flex-col min-h-0 py-4 overflow-hidden">
+          {/* Detected card banner OR fallback card picker */}
+          {detectedCard ? (
+            <div className="mb-4 p-3 bg-muted/50 rounded-xl shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <CreditCard className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{detectedCard.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {[detectedCard.card_network, detectedCard.bank, detectedCard.account_number ? `****${detectedCard.account_number}` : null].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
+                {detectedCard.is_new && (
+                  <Badge variant="secondary" className="text-[10px] shrink-0">Nueva</Badge>
+                )}
+              </div>
+            </div>
+          ) : !resolvedCardId && !selectedCardId && creditCards.length > 0 ? (
+            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl shrink-0 space-y-2">
+              <p className="text-sm text-amber-900 dark:text-amber-200">
+                No se pudo detectar la tarjeta automáticamente. Seleccioná una:
+              </p>
+              <Select value={selectedCardId} onValueChange={setSelectedCardId}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Seleccioná una tarjeta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {creditCards.map((card) => (
+                    <SelectItem key={card.id} value={card.id}>
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-3.5 w-3.5" />
+                        {card.name} {card.bank && `(${card.bank})`}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+
           {/* Conciliación: desglose cuando hay diferencia relevante */}
           {statementSummary?.conciliacion &&
             (statementSummary.conciliacion.estadoARS.includes("Diferencia") ||
@@ -462,7 +405,7 @@ export function ImportStatementDialog({
             </Button>
             <Button
               onClick={handleImport}
-              disabled={selectedCount === 0 || importing}
+              disabled={selectedCount === 0 || importing || (!resolvedCardId && !selectedCardId)}
               className="flex-1"
             >
               {importing ? (
