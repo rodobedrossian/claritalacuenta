@@ -44,6 +44,7 @@ export const CreditCardsList = ({ creditCards, onDelete }: CreditCardsListProps)
       <TableHeader>
         <TableRow>
           <TableHead>Nombre</TableHead>
+          <TableHead>N° Cuenta</TableHead>
           <TableHead>Banco</TableHead>
           <TableHead>Red</TableHead>
           <TableHead>Cierre</TableHead>
@@ -53,11 +54,9 @@ export const CreditCardsList = ({ creditCards, onDelete }: CreditCardsListProps)
       <TableBody>
         {creditCards.map((card) => (
           <TableRow key={card.id}>
-            <TableCell className="font-medium">
-              {card.name}
-              {card.account_number && (
-                <span className="ml-1.5 text-xs text-muted-foreground">****{card.account_number}</span>
-              )}
+            <TableCell className="font-medium">{card.name}</TableCell>
+            <TableCell className="text-muted-foreground text-xs">
+              {card.account_number || "-"}
             </TableCell>
             <TableCell>{card.bank || "-"}</TableCell>
             <TableCell>{card.card_network || "-"}</TableCell>
