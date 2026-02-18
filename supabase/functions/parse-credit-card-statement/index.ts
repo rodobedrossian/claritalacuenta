@@ -60,11 +60,17 @@ const EXTRACTION_PROMPT = `Eres un experto en analizar resúmenes de tarjetas de
    
 3. **IMPUESTOS**: IVA, percepciones, impuesto PAIS, sellados, cargos administrativos
 
-4. **AJUSTES / CRÉDITOS**: Líneas con signo negativo que NO son pagos del cliente (créditos a favor del tarjetahabiente).
+4. **AJUSTES / CRÉDITOS**: Líneas con signo negativo que son créditos/bonificaciones/devoluciones a favor del tarjetahabiente.
    - Ejemplos reales: "CR.RG 5617 30% M 22.532,13-", "BONIFICACIÓN", "DEVOLUCIÓN", "NOTA DE CRÉDITO"
    - Mantener el monto NEGATIVO en el valor (ej: -22532.13)
    - NO clasificar como impuesto ni como consumo
    - Van en el array "ajustes"
+   
+   **EXCLUSIONES CRÍTICAS - NO incluir en ajustes ni en ningún otro array:**
+   - "SU PAGO EN PESOS", "SU PAGO EN USD", "SU PAGO EN DOLARES", "PAGO EN PESOS", "PAGO EN DOLARES"
+   - Cualquier línea que represente el PAGO del saldo anterior del cliente (son movimientos de caja, no del resumen actual)
+   - "SALDO ANTERIOR", "SALDO PERIODO ANTERIOR"
+   - Estos pagos/saldos anteriores deben ser IGNORADOS completamente, ya que distorsionan la conciliación de totales
 
 IMPORTANTE - EVITAR DUPLICADOS:
 - Una transacción va en UN SOLO array (consumos O cuotas O impuestos O ajustes)
@@ -78,7 +84,7 @@ DATOS A EXTRAER:
 - **MONTOS NEGATIVOS**: Si un monto tiene signo negativo (ej: "-200.883,89"), ES UNA BONIFICACIÓN/DEVOLUCIÓN. MANTENER el signo negativo en el valor.
 - Las fechas suelen estar en formato DD/MM o DD-Mon-YY (ej: "15-Nov-25")
 - Para fechas como "15-Nov-25", convertir a "15/11/2025"
-- IGNORA: pagos anteriores, límites de crédito, tasas de interés, info institucional, avisos legales
+- IGNORA COMPLETAMENTE: pagos del saldo anterior ("SU PAGO EN PESOS", "SU PAGO EN USD", "PAGO EN PESOS", "SALDO ANTERIOR"), límites de crédito, tasas de interés, info institucional, avisos legales. Estos NO van en NINGÚN array.
 
 Retorna un JSON válido con esta estructura exacta:
 {
