@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -223,8 +223,11 @@ const AdminDashboard = () => {
     }
   };
 
+  const hasFetchedRef = useRef(false);
+
   useEffect(() => {
-    if (session) {
+    if (session && !hasFetchedRef.current) {
+      hasFetchedRef.current = true;
       fetchData(1);
       fetchReconciliationAlerts();
       fetchAiUsage();
