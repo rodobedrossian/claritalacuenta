@@ -33,7 +33,10 @@ import {
   Receipt,
   PiggyBank,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  FileWarning,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -61,6 +64,31 @@ interface AdminData {
   total_pages: number;
 }
 
+interface ReconciliationAlert {
+  id: string;
+  user_id: string;
+  user_email: string | null;
+  file_name: string;
+  statement_month: string;
+  created_at: string;
+  conciliacion: {
+    estado_ars: string;
+    estado_usd: string;
+    total_calculado_ars: number;
+    total_resumen_ars: number;
+    diferencia_ars: number;
+    total_calculado_usd: number;
+    total_resumen_usd: number;
+    diferencia_usd: number;
+    total_consumos_ars: number;
+    total_impuestos_ars: number;
+    total_ajustes_ars: number;
+    total_consumos_usd: number;
+    total_impuestos_usd: number;
+    total_ajustes_usd: number;
+  };
+}
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
@@ -68,6 +96,9 @@ const AdminDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [reconciliationAlerts, setReconciliationAlerts] = useState<ReconciliationAlert[]>([]);
+  const [reconciliationLoading, setReconciliationLoading] = useState(false);
+  const [expandedAlertId, setExpandedAlertId] = useState<string | null>(null);
 
   const fetchData = async (page: number = 1) => {
     if (!session) {
@@ -107,8 +138,32 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchReconciliationAlerts = async () => {
+    if (!session) return;
+    setReconciliationLoading(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-statement-reconciliation-alerts`,
+        {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }
+      );
+      if (response.ok) {
+        const { alerts } = await response.json();
+        setReconciliationAlerts(alerts || []);
+      }
+    } catch {
+      // Silently fail for reconciliation alerts
+    } finally {
+      setReconciliationLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (session) fetchData(1);
+    if (session) {
+      fetchData(1);
+      fetchReconciliationAlerts();
+    }
   }, [session]);
 
   const handleLogout = async () => {
@@ -342,6 +397,90 @@ const AdminDashboard = () => {
                   </div>
                 )}
               </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Conciliaciones con diferencias */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileWarning className="h-5 w-5 text-amber-500" />
+              Conciliaciones con diferencias
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchReconciliationAlerts}
+              disabled={reconciliationLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${reconciliationLoading ? "animate-spin" : ""}`} />
+              Actualizar
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Importaciones de resúmenes donde la suma de consumos no coincide exactamente con el total del PDF.
+            </p>
+            {reconciliationLoading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : reconciliationAlerts.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground text-sm">
+                No hay importaciones con diferencias de conciliación
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {reconciliationAlerts.map((alert) => (
+                  <div
+                    key={alert.id}
+                    className="border rounded-lg overflow-hidden"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedAlertId((id) => (id === alert.id ? null : alert.id))}
+                      className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium text-sm">
+                          {alert.file_name} · {alert.statement_month}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {alert.user_email || alert.user_id} · {formatRelativeDate(alert.created_at)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(alert.conciliacion.estado_ars.includes("Diferencia") ||
+                          alert.conciliacion.estado_usd.includes("Diferencia")) && (
+                          <Badge variant="secondary" className="text-amber-600 border-amber-500/50">
+                            Revisar
+                          </Badge>
+                        )}
+                        {expandedAlertId === alert.id ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    </button>
+                    {expandedAlertId === alert.id && (
+                      <div className="border-t bg-muted/30 p-4 text-sm space-y-3 font-mono">
+                        <div>
+                          <span className="font-semibold text-foreground">ARS:</span> Consumos + cuotas: {alert.conciliacion.total_consumos_ars.toLocaleString("es-AR")} + Impuestos: {alert.conciliacion.total_impuestos_ars.toLocaleString("es-AR")} + Ajustes: {alert.conciliacion.total_ajustes_ars.toLocaleString("es-AR")} = Calculado: {alert.conciliacion.total_calculado_ars.toLocaleString("es-AR")}. Resumen PDF: {alert.conciliacion.total_resumen_ars.toLocaleString("es-AR")}. Diferencia: {alert.conciliacion.diferencia_ars.toLocaleString("es-AR")}. {alert.conciliacion.estado_ars}
+                        </div>
+                        {(alert.conciliacion.total_resumen_usd !== 0 || alert.conciliacion.total_calculado_usd !== 0) && (
+                          <div>
+                            <span className="font-semibold text-foreground">USD:</span> Calculado: {alert.conciliacion.total_calculado_usd.toLocaleString("en-US")}. Resumen PDF: {alert.conciliacion.total_resumen_usd.toLocaleString("en-US")}. Diferencia: {alert.conciliacion.diferencia_usd.toLocaleString("en-US")}. {alert.conciliacion.estado_usd}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>
