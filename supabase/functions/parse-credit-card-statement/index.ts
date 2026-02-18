@@ -143,6 +143,36 @@ IMPORTANTE: Retorna SOLO el objeto JSON puro, SIN markdown, SIN \`\`\`json, SIN 
 TEXTO DEL RESUMEN:
 `;
 
+// --- Utility functions for fuzzy card matching ---
+
+function normalizeBank(bank: string): string {
+  return bank
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // strip accents
+    .replace(/\b(banco|rio|argentina|sa|sau|s\.a\.?u?\.?|frances|francés)\b/gi, "")
+    .replace(/[^a-z0-9]/g, "")
+    .trim();
+}
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+  }
+  return dp[m][n];
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -379,53 +409,112 @@ Deno.serve(async (req) => {
       console.log("[parse-statement] Card identifier:", cardIdentifier);
 
       if (cardIdentifier && !resolvedCardId) {
-        // Try to find existing card by identifier in this workspace
-        const { data: existingCard } = await supabase
+        // Step 1: Exact match by card_identifier
+        const { data: exactCard } = await supabase
           .from("credit_cards")
           .select("id, name, bank, card_network, account_number, closing_day")
           .eq("workspace_id", workspace_id)
           .eq("card_identifier", cardIdentifier)
           .maybeSingle();
 
-        if (existingCard) {
-          console.log("[parse-statement] Found existing card:", existingCard.id);
-          resolvedCardId = existingCard.id;
-          detectedCard = { ...existingCard, is_new: false };
+        if (exactCard) {
+          console.log("[parse-statement] EXACT match found:", exactCard.id);
+          resolvedCardId = exactCard.id;
+          detectedCard = { ...exactCard, is_new: false };
 
-          // Update closing_day if we now have it and the card didn't
-          if (diaCierre && !existingCard.closing_day) {
+          if (diaCierre && !exactCard.closing_day) {
             await supabase
               .from("credit_cards")
               .update({ closing_day: diaCierre })
-              .eq("id", existingCard.id);
+              .eq("id", exactCard.id);
           }
         } else {
-          // Create a new card automatically
-          const cardName = [network, banco, numeroCuenta ? `****${numeroCuenta}` : ""]
-            .filter(Boolean)
-            .join(" ");
-
-          const { data: newCard, error: cardError } = await supabase
+          // Step 2: Fuzzy match — search all cards in workspace
+          console.log("[parse-statement] No exact match, attempting fuzzy match...");
+          const { data: allCards } = await supabase
             .from("credit_cards")
-            .insert({
-              user_id,
-              workspace_id,
-              name: cardName || "Tarjeta importada",
-              bank: banco || null,
-              card_network: network || null,
-              account_number: numeroCuenta || null,
-              card_identifier: cardIdentifier,
-              closing_day: diaCierre,
-            })
-            .select("id, name, bank, card_network, account_number, closing_day")
-            .single();
+            .select("id, name, bank, card_network, account_number, closing_day, card_identifier")
+            .eq("workspace_id", workspace_id);
 
-          if (cardError) {
-            console.error("[parse-statement] Failed to create card:", cardError);
-          } else if (newCard) {
-            console.log("[parse-statement] Created new card:", newCard.id);
-            resolvedCardId = newCard.id;
-            detectedCard = { ...newCard, is_new: true };
+          const normalizedNewBank = normalizeBank(banco);
+          let fuzzyMatch: typeof allCards extends Array<infer T> ? T : never | null = null;
+
+          if (allCards && allCards.length > 0) {
+            const candidates = allCards.filter((card) => {
+              // Must match network
+              if (network && card.card_network && card.card_network.toUpperCase() !== network) {
+                return false;
+              }
+              // Bank must be similar (normalized)
+              const normalizedExistingBank = normalizeBank(card.bank || "");
+              if (normalizedNewBank && normalizedExistingBank && normalizedNewBank !== normalizedExistingBank) {
+                // Check if one contains the other
+                if (!normalizedNewBank.includes(normalizedExistingBank) && !normalizedExistingBank.includes(normalizedNewBank)) {
+                  return false;
+                }
+              }
+              // Account number: allow Levenshtein distance <= 1
+              if (numeroCuenta && card.account_number) {
+                const dist = levenshtein(numeroCuenta, card.account_number);
+                if (dist > 1) return false;
+              }
+              return true;
+            });
+
+            if (candidates.length === 1) {
+              fuzzyMatch = candidates[0];
+            } else if (candidates.length > 1) {
+              // Pick the one with closest account_number
+              const sorted = candidates.sort((a, b) => {
+                const distA = levenshtein(numeroCuenta || "", a.account_number || "");
+                const distB = levenshtein(numeroCuenta || "", b.account_number || "");
+                return distA - distB;
+              });
+              fuzzyMatch = sorted[0];
+            }
+          }
+
+          if (fuzzyMatch) {
+            console.log("[parse-statement] FUZZY match found:", fuzzyMatch.id, "name:", fuzzyMatch.name);
+            resolvedCardId = fuzzyMatch.id;
+            detectedCard = { id: fuzzyMatch.id, name: fuzzyMatch.name, bank: fuzzyMatch.bank, card_network: fuzzyMatch.card_network, account_number: fuzzyMatch.account_number, closing_day: fuzzyMatch.closing_day, is_new: false };
+
+            // Update card_identifier and closing_day if needed
+            const updates: Record<string, unknown> = {};
+            if (!fuzzyMatch.card_identifier) updates.card_identifier = cardIdentifier;
+            if (diaCierre && !fuzzyMatch.closing_day) updates.closing_day = diaCierre;
+            if (Object.keys(updates).length > 0) {
+              await supabase.from("credit_cards").update(updates).eq("id", fuzzyMatch.id);
+            }
+          } else {
+            // Step 3: Create new card
+            console.log("[parse-statement] No fuzzy match, creating new card");
+            const cardName = [network, banco, numeroCuenta ? `****${numeroCuenta}` : ""]
+              .filter(Boolean)
+              .join(" ");
+
+            const { data: newCard, error: cardError } = await supabase
+              .from("credit_cards")
+              .insert({
+                user_id,
+                workspace_id,
+                name: cardName || "Tarjeta importada",
+                bank: banco || null,
+                card_network: network || null,
+                account_number: numeroCuenta || null,
+                card_identifier: cardIdentifier,
+                closing_day: diaCierre,
+              })
+              .select("id, name, bank, card_network, account_number, closing_day")
+              .single();
+
+            if (cardError) {
+              console.error("[parse-statement] Failed to create card:", cardError);
+            } else if (newCard) {
+              console.log("[parse-statement] Created new card:", newCard.id);
+              resolvedCardId = newCard.id;
+              detectedCard = { ...newCard, is_new: true };
+            }
           }
         }
       } else if (resolvedCardId) {
