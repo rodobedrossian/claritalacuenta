@@ -1,87 +1,88 @@
 
-# Plan: Excluir ajustes del Pie Chart de Categorías
 
-## Problema identificado
+# Plan: Mejorar matching de tarjetas en parse-credit-card-statement
 
-Los **ajustes** son transacciones con montos **negativos** (ej: devoluciones, bonificaciones) que cuando se incluyen en el cálculo del pie chart:
+## Problema raiz
 
-1. Reducen artificialmente el total de una categoría
-2. Generan porcentajes incorrectos (ej: 150%, -20%)
-3. Pueden crear valores negativos que **rompen el pie chart** (Recharts no puede renderizar sectores negativos)
+La funcion `parse-credit-card-statement` genera un `card_identifier` a partir de lo que el AI extrae (red, banco, numero_cuenta) y hace un match exacto. Si el AI devuelve variaciones ("Santander" vs "Santander Rio") o lee mal digitos ("1720" en vez de "8720"), se crean tarjetas duplicadas.
 
-## Solución
+## Solucion propuesta
 
-Excluir transacciones con `transaction_type === "ajuste"` **solo** de los datos que van al pie chart de categorías. 
+### 1. Fuzzy matching antes de crear tarjeta nueva
 
-**NO afectar:**
-- ✅ Lista de transacciones (ajustes siguen visibles)
-- ✅ Totales del resumen (totalArs/totalUsd siguen incluyendo ajustes)
-- ✅ Gráfico de barras por tarjeta (puede manejar valores mixtos)
+Cuando no hay match exacto por `card_identifier`, buscar tarjetas existentes en el workspace con criterios mas flexibles:
 
-## Cambios técnicos
+- Misma red (card_network)
+- Banco similar (containment / normalizacion agresiva: quitar "rio", "argentina", "sa", "sau", etc.)
+- Account number similar (distancia de Levenshtein <= 1 digito, o match parcial)
 
-### 1. StatementDetail.tsx
+Si hay un candidato fuerte, usar esa tarjeta en vez de crear una nueva.
 
-Modificar `chartItems` para excluir ajustes:
+### 2. Normalizacion de nombres de banco
 
-```typescript
-const chartItems = useMemo(() => {
-  return transactions
-    .filter(tx => tx.transaction_type !== "ajuste")
-    .map(tx => ({
-      descripcion: tx.description,
-      monto: tx.amount,
-      moneda: tx.currency,
-    }));
-}, [transactions]);
-```
+Crear una funcion `normalizeBank()` que canonice variaciones comunes:
+- "Santander Rio" / "Santander Río" / "Banco Santander" -> "santander"
+- "BBVA Frances" / "BBVA Argentina" -> "bbva"
+- "Banco Galicia" / "Galicia" -> "galicia"
+- Quitar palabras comunes: "banco", "rio", "río", "argentina", "sa", "sau", "s.a.", "s.a.u."
 
-Modificar `itemCategories` para solo mapear transacciones que van al chart:
+### 3. Log de confianza
+
+Loguear cuando se hace fuzzy match vs exact match para monitorear la calidad.
+
+## Cambios tecnicos
+
+### Archivo: `supabase/functions/parse-credit-card-statement/index.ts`
+
+**Agregar funcion `normalizeBank`:**
 
 ```typescript
-const itemCategories = useMemo(() => {
-  const map: Record<string, string> = {};
-  transactions
-    .filter(tx => tx.transaction_type !== "ajuste")
-    .forEach((tx) => {
-      if (tx.category_id) {
-        map[tx.description] = tx.category_id;
-      }
-    });
-  return map;
-}, [transactions]);
+function normalizeBank(bank: string): string {
+  return bank
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // quitar acentos
+    .replace(/\b(banco|rio|argentina|sa|sau|s\.a\.?u?\.?)\b/g, "")
+    .replace(/[^a-z0-9]/g, "")
+    .trim();
+}
 ```
 
-### 2. MonthlyAnalyticsChart.tsx
+**Modificar el bloque de card matching (lineas 381-430):**
 
-Modificar `categoryData` para excluir ajustes del pie chart:
+Despues de fallar el match exacto por `card_identifier`, antes de crear una tarjeta nueva:
 
-```typescript
-const categoryData = useMemo(() => {
-  const data = new Map<string, number>();
+1. Buscar todas las tarjetas del workspace
+2. Comparar con normalizacion agresiva de banco + misma red
+3. Si el account_number difiere en solo 1 digito, considerar match
+4. Si hay exactamente 1 candidato, usarlo
+5. Solo crear tarjeta nueva si no hay ningun candidato
 
-  transactions
-    .filter((t) => t.currency === currency && t.transaction_type !== "ajuste")
-    .forEach((t) => {
-      // ... resto igual
-    });
-
-  // ... resto igual
-}, [transactions, currency, categoryMap]);
+```
+Flujo:
+1. Match exacto por card_identifier -> usar tarjeta
+2. Si no: buscar por red + banco normalizado + account_number similar -> usar tarjeta
+3. Si no: crear tarjeta nueva
 ```
 
-**El `cardData` NO se modifica** - el gráfico de barras puede manejar valores mixtos correctamente.
+### Limpieza de datos actual
+
+Ademas del fix en el codigo, sera necesario limpiar las tarjetas duplicadas manualmente:
+- Reasignar las transacciones de "VISA Santander ****1720" y "VISA Santander Rio ****8720" a "VISA Santander ****8720"
+- Actualizar los statement_imports correspondientes
+- Eliminar las tarjetas duplicadas
+
+Esto se hara via queries SQL despues de implementar el fix.
 
 ## Archivos a modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/components/credit-cards/StatementDetail.tsx` | Filtrar `chartItems` e `itemCategories` |
-| `src/components/credit-cards/MonthlyAnalyticsChart.tsx` | Filtrar `categoryData` solamente |
+| `supabase/functions/parse-credit-card-statement/index.ts` | Agregar `normalizeBank()`, implementar fuzzy matching antes de crear tarjeta |
 
-## Resultado
+## Resultado esperado
 
-- El pie chart mostrará solo gastos reales (consumos, cuotas, impuestos)
-- Los porcentajes serán precisos y sumarán 100%
-- Los ajustes siguen visibles en la lista y contando para el balance total
-- El gráfico de barras por tarjeta no cambia
+- PDFs del mismo banco con variaciones de nombre no crean tarjetas duplicadas
+- Errores de 1 digito en el numero de cuenta se detectan y matchean a tarjeta existente
+- Solo se crean tarjetas genuinamente nuevas
+- Logs claros de cuando se usa fuzzy vs exact match
+
