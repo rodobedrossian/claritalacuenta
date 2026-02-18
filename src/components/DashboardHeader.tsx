@@ -127,9 +127,9 @@ export const DashboardHeader = ({
           </motion.p>
         </motion.div>
 
-        {/* Income & Expenses row */}
+        {/* Income, Expenses & Savings row */}
         <motion.div
-          className="grid grid-cols-2 gap-2 mb-2"
+          className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25, duration: 0.4 }}
@@ -167,26 +167,19 @@ export const DashboardHeader = ({
               )}
             </div>
           </div>
-        </motion.div>
 
-        {/* Savings row - full width */}
-        <motion.div
-          className="rounded-2xl bg-white/8 backdrop-blur-sm px-3 py-3"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35, duration: 0.4 }}
-        >
-          <div className="flex items-center justify-center gap-1.5 mb-1.5">
-            <div className="p-1 rounded-full bg-white/10">
-              <PiggyBank className="h-3.5 w-3.5 text-white" />
+          {/* Savings */}
+          <div className="col-span-2 md:col-span-1 flex flex-col items-center gap-1.5 px-3 py-3 rounded-2xl bg-white/8 backdrop-blur-sm">
+            <div className="flex items-center gap-1.5">
+              <div className="p-1 rounded-full bg-white/10">
+                <PiggyBank className="h-3.5 w-3.5 text-white" />
+              </div>
+              <p className="text-[11px] font-bold text-white/60 uppercase tracking-wider">Ahorros</p>
             </div>
-            <p className="text-[11px] font-bold text-white/60 uppercase tracking-wider">Ahorros</p>
-          </div>
-          <div className="flex items-center justify-center gap-6 flex-wrap">
-            {hasLiquid && (
-              <div className="text-center">
-                <p className="text-[11px] text-white/50 uppercase tracking-wider font-semibold mb-0.5">Líquidos</p>
-                <div className="flex flex-col items-center">
+            <div className="flex items-center justify-center gap-6 flex-wrap">
+              {hasLiquid && (
+                <div className="text-center">
+                  <p className="text-[11px] text-white/50 uppercase tracking-wider font-semibold mb-0.5">Líquidos</p>
                   {liquidSavings.usd > 0 && (
                     <p className="text-[15px] font-bold text-white">USD {liquidSavings.usd.toLocaleString("en-US")}</p>
                   )}
@@ -194,13 +187,11 @@ export const DashboardHeader = ({
                     <p className="text-[15px] font-bold text-white">ARS {liquidSavings.ars.toLocaleString("en-US")}</p>
                   )}
                 </div>
-              </div>
-            )}
-            {hasLiquid && hasInvestments && <div className="h-8 w-px bg-white/15" />}
-            {hasInvestments && (
-              <div className="text-center">
-                <p className="text-[11px] text-white/50 uppercase tracking-wider font-semibold mb-0.5">Invertidos</p>
-                <div className="flex flex-col items-center">
+              )}
+              {hasLiquid && hasInvestments && <div className="h-8 w-px bg-white/15" />}
+              {hasInvestments && (
+                <div className="text-center">
+                  <p className="text-[11px] text-white/50 uppercase tracking-wider font-semibold mb-0.5">Invertidos</p>
                   {totalInvested.usd > 0 && (
                     <p className="text-[15px] font-bold text-white">USD {totalInvested.usd.toLocaleString("en-US")}</p>
                   )}
@@ -208,9 +199,9 @@ export const DashboardHeader = ({
                     <p className="text-[15px] font-bold text-white">ARS {totalInvested.ars.toLocaleString("en-US")}</p>
                   )}
                 </div>
-              </div>
-            )}
-            {!hasLiquid && !hasInvestments && <p className="text-sm font-bold text-white/50">Sin ahorros</p>}
+              )}
+              {!hasLiquid && !hasInvestments && <p className="text-sm font-bold text-white/50">Sin ahorros</p>}
+            </div>
           </div>
         </motion.div>
       </div>
