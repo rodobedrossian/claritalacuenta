@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.get-admin-users]
 verify_jwt = false
+
+[functions.get-statement-reconciliation-alerts]
+verify_jwt = false
