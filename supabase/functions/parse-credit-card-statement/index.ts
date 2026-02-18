@@ -275,6 +275,21 @@ Deno.serve(async (req) => {
     }
 
     const aiData = await aiResponse.json();
+
+    // Check for error in response body (gateway may return 200 with error payload)
+    if (aiData.error) {
+      console.error("[parse-statement] AI gateway error in response body:", aiData.error);
+      const errMsg = aiData.error.message || "AI gateway error";
+      const errCode = aiData.error.code || 500;
+      if (errCode === 429) {
+        throw new Error("Rate limit exceeded. Please try again in a few minutes.");
+      }
+      if (errCode === 402) {
+        throw new Error("AI credits exhausted. Please add credits to your workspace.");
+      }
+      throw new Error(`AI error: ${errMsg}. Please try again.`);
+    }
+
     const content = aiData.choices?.[0]?.message?.content;
 
     // Log AI usage asynchronously (fire-and-forget)
@@ -296,7 +311,7 @@ Deno.serve(async (req) => {
 
     if (!content) {
       console.error("[parse-statement] No content in AI response:", aiData);
-      throw new Error("AI did not return any content");
+      throw new Error("AI did not return any content. Please try again.");
     }
 
     console.log("[parse-statement] AI response received, parsing JSON...");
