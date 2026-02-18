@@ -17,9 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Upload, FileText, CreditCard, X, AlertTriangle, Sparkles } from "lucide-react";
+import { Loader2, Upload, FileText, CreditCard, X, Sparkles } from "lucide-react";
 import { useStatementImport, ExtractedItem } from "@/hooks/useStatementImport";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format, startOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -330,28 +329,6 @@ export function ImportStatementDialog({
               </Select>
             </div>
           ) : null}
-
-          {/* Conciliación: desglose cuando hay diferencia relevante */}
-          {statementSummary?.conciliacion &&
-            (statementSummary.conciliacion.estadoARS.includes("Diferencia") ||
-              statementSummary.conciliacion.estadoUSD.includes("Diferencia")) && (
-              <Alert className="mb-4 border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-200 shrink-0 [&>svg]:text-amber-600">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Revisá los totales</AlertTitle>
-                <AlertDescription>
-                  <div className="space-y-2 text-sm">
-                    <p>
-                      <strong>ARS:</strong> Consumos + cuotas: {statementSummary.conciliacion.totalConsumosARS.toLocaleString("es-AR")} + Impuestos: {statementSummary.conciliacion.totalImpuestosARS.toLocaleString("es-AR")} + Ajustes: {statementSummary.conciliacion.totalAjustesARS.toLocaleString("es-AR")} = Calculado: {statementSummary.conciliacion.totalCalculadoARS.toLocaleString("es-AR")}. Resumen PDF: {statementSummary.conciliacion.totalResumenARS.toLocaleString("es-AR")}. Diferencia: {statementSummary.conciliacion.diferenciaARS.toLocaleString("es-AR")}. {statementSummary.conciliacion.estadoARS}
-                    </p>
-                    {(statementSummary.conciliacion.totalResumenUSD !== 0 || statementSummary.conciliacion.totalCalculadoUSD !== 0) && (
-                      <p>
-                        <strong>USD:</strong> Calculado: {statementSummary.conciliacion.totalCalculadoUSD.toLocaleString("en-US")}. Resumen PDF: {statementSummary.conciliacion.totalResumenUSD.toLocaleString("en-US")}. Diferencia: {statementSummary.conciliacion.diferenciaUSD.toLocaleString("en-US")}. {statementSummary.conciliacion.estadoUSD}
-                      </p>
-                    )}
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
 
           {/* Summary - responsive stack */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 p-4 bg-muted/50 rounded-xl shrink-0">
