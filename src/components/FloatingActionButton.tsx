@@ -11,15 +11,11 @@ interface FloatingActionButtonProps {
 
 const actions = [
   { key: "import", icon: FileUp, label: "Importar resumen" },
-  { key: "voice", icon: Mic, label: "Por voz" },
-  { key: "manual", icon: PenLine, label: "Manual" },
+  { key: "voice", icon: Mic, label: "Agregar gasto por voz" },
+  { key: "manual", icon: PenLine, label: "Agregar gasto a mano" },
 ] as const;
 
-export const FloatingActionButton = ({
-  onAddManual,
-  onVoiceRecord,
-  onImportStatement,
-}: FloatingActionButtonProps) => {
+export const FloatingActionButton = ({ onAddManual, onVoiceRecord, onImportStatement }: FloatingActionButtonProps) => {
   const [open, setOpen] = useState(false);
 
   const handleAction = (key: string) => {
@@ -75,18 +71,12 @@ export const FloatingActionButton = ({
           onClick={() => setOpen(!open)}
           className={cn(
             "w-14 h-14 rounded-full flex items-center justify-center shadow-stripe-lg transition-colors",
-            open
-              ? "bg-muted-foreground"
-              : "gradient-primary"
+            open ? "bg-muted-foreground" : "gradient-primary",
           )}
           animate={{ rotate: open ? 45 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          {open ? (
-            <X className="h-7 w-7 text-background" />
-          ) : (
-            <Plus className="h-7 w-7 text-primary-foreground" />
-          )}
+          {open ? <X className="h-7 w-7 text-background" /> : <Plus className="h-7 w-7 text-primary-foreground" />}
         </motion.button>
       </div>
     </>
