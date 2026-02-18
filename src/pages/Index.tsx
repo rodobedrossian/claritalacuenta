@@ -298,11 +298,10 @@ const Index = () => {
                   onCurrentMonth={goToCurrentMonth}
                   netBalance={globalNetBalanceARS}
                   formatCurrency={formatCurrency}
-                  miniStats={[
-                    { label: "Ingresos", value: formatCurrency(globalIncomeARS, "ARS"), icon: TrendingUp, variant: "success" },
-                    { label: "Gastos", value: formatCurrency(globalExpensesARS, "ARS"), icon: TrendingDown, variant: "destructive" },
-                    { label: "Ahorros", value: formatCurrency(liquidSavings.usd, "USD"), icon: PiggyBank, variant: "primary" },
-                  ]}
+                  income={{ usd: totals.incomeUSD, ars: totals.incomeARS }}
+                  expenses={{ usd: totals.expensesUSD, ars: totals.expensesARS }}
+                  liquidSavings={liquidSavings}
+                  totalInvested={totalInvested}
                 />
 
                 <main className="container mx-auto px-4 py-3 space-y-4">
@@ -378,11 +377,10 @@ const Index = () => {
                 onCurrentMonth={goToCurrentMonth}
                 netBalance={globalNetBalanceARS}
                 formatCurrency={formatCurrency}
-                miniStats={[
-                  { label: "Ingresos", value: formatCurrency(globalIncomeARS, "ARS"), icon: TrendingUp, variant: "success" },
-                  { label: "Gastos", value: formatCurrency(globalExpensesARS, "ARS"), icon: TrendingDown, variant: "destructive" },
-                  { label: "Ahorros", value: formatCurrency(liquidSavings.usd, "USD"), icon: PiggyBank, variant: "primary" },
-                ]}
+                income={{ usd: totals.incomeUSD, ars: totals.incomeARS }}
+                expenses={{ usd: totals.expensesUSD, ars: totals.expensesARS }}
+                liquidSavings={liquidSavings}
+                totalInvested={totalInvested}
               />
 
               <div className="flex gap-3 justify-end px-6 py-4">

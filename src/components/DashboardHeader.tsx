@@ -4,11 +4,9 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { motion } from "framer-motion";
 
-interface MiniStat {
-  label: string;
-  value: string;
-  icon: typeof TrendingUp;
-  variant: "success" | "destructive" | "primary";
+interface CurrencyBreakdown {
+  usd: number;
+  ars: number;
 }
 
 interface DashboardHeaderProps {
@@ -22,9 +20,11 @@ interface DashboardHeaderProps {
   onNextMonth: () => void;
   onCurrentMonth: () => void;
   netBalance: number;
-  netBalanceBreakdown?: { usd: number; ars: number };
   formatCurrency: (amount: number, currency: "USD" | "ARS") => string;
-  miniStats?: MiniStat[];
+  income: CurrencyBreakdown;
+  expenses: CurrencyBreakdown;
+  liquidSavings: CurrencyBreakdown;
+  totalInvested: CurrencyBreakdown;
 }
 
 export const DashboardHeader = ({
@@ -38,42 +38,29 @@ export const DashboardHeader = ({
   onNextMonth,
   onCurrentMonth,
   netBalance,
-  netBalanceBreakdown,
   formatCurrency,
-  miniStats,
+  income,
+  expenses,
+  liquidSavings,
+  totalInvested,
 }: DashboardHeaderProps) => {
-  const isPositive = netBalance >= 0;
 
-  const getBreakdownText = () => {
-    if (!netBalanceBreakdown) return null;
-    const { usd, ars } = netBalanceBreakdown;
-    const parts: string[] = [];
-    if (usd !== 0) parts.push(`USD ${usd >= 0 ? '' : '-'}${Math.abs(usd).toLocaleString('en-US')}`);
-    if (ars !== 0) parts.push(`ARS ${ars >= 0 ? '' : '-'}${Math.abs(ars).toLocaleString('en-US')}`);
-    return parts.length > 0 ? `${parts.join(' + ')}` : null;
+  const formatCompact = (amount: number, currency: "USD" | "ARS") => {
+    return `${currency} ${new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(amount)}`;
   };
 
-  const breakdownText = getBreakdownText();
+  const incomeTotal = (income.usd * exchangeRate) + income.ars;
+  const expensesTotal = (expenses.usd * exchangeRate) + expenses.ars;
 
-  const variantColors = {
-    success: "text-emerald-300",
-    destructive: "text-red-300",
-    primary: "text-white",
-  };
-
-  const variantBg = {
-    success: "bg-white/10",
-    destructive: "bg-white/10",
-    primary: "bg-white/10",
-  };
+  const hasInvestments = totalInvested.usd > 0 || totalInvested.ars > 0;
+  const hasLiquid = liquidSavings.usd > 0 || liquidSavings.ars > 0;
 
   return (
     <header className="relative overflow-hidden rounded-b-3xl" style={{ background: "var(--gradient-hero)" }}>
-      {/* Subtle decorative glow */}
       <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/5 blur-3xl -translate-y-1/2 translate-x-1/4" />
       
       <div className="relative container mx-auto px-4 pt-3 pb-5">
-        {/* Exchange Rate chip - top right */}
+        {/* Exchange Rate chip */}
         {lastUpdated && (
           <motion.div 
             className="flex items-center justify-end mb-3"
@@ -139,43 +126,84 @@ export const DashboardHeader = ({
           >
             {formatCurrency(netBalance, "ARS")}
           </motion.p>
-          {breakdownText && (
-            <motion.p 
-              className="text-[11px] font-medium text-white/40 mt-1.5"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              {breakdownText}
-            </motion.p>
-          )}
         </motion.div>
 
-        {/* Mini Stats Row */}
-        {miniStats && miniStats.length > 0 && (
-          <motion.div 
-            className="grid grid-cols-3 gap-2"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25, duration: 0.4 }}
-          >
-            {miniStats.map((stat, i) => {
-              const Icon = stat.icon;
-              return (
-                <div 
-                  key={stat.label}
-                  className="flex flex-col items-center gap-1 px-2 py-2.5 rounded-2xl bg-white/8 backdrop-blur-sm"
-                >
-                  <div className={`p-1.5 rounded-full ${variantBg[stat.variant]}`}>
-                    <Icon className={`h-3.5 w-3.5 ${variantColors[stat.variant]}`} />
-                  </div>
-                  <p className="text-[9px] font-bold text-white/40 uppercase tracking-wider">{stat.label}</p>
-                  <p className={`text-sm font-bold ${variantColors[stat.variant]}`}>{stat.value}</p>
+        {/* Income & Expenses row */}
+        <motion.div 
+          className="grid grid-cols-2 gap-2 mb-2"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25, duration: 0.4 }}
+        >
+          {/* Income */}
+          <div className="flex flex-col items-center gap-1 px-2 py-2.5 rounded-2xl bg-white/8 backdrop-blur-sm">
+            <div className="flex items-center gap-1.5">
+              <div className="p-1 rounded-full bg-white/10">
+                <TrendingUp className="h-3 w-3 text-emerald-300" />
+              </div>
+              <p className="text-[9px] font-bold text-white/40 uppercase tracking-wider">Ingresos</p>
+            </div>
+            <p className="text-sm font-bold text-emerald-300">{formatCompact(incomeTotal, "ARS")}</p>
+            <div className="flex flex-col items-center gap-0.5">
+              {income.usd > 0 && <p className="text-[9px] text-white/35">USD {income.usd.toLocaleString('en-US')}</p>}
+              {income.ars > 0 && <p className="text-[9px] text-white/35">ARS {income.ars.toLocaleString('en-US')}</p>}
+            </div>
+          </div>
+
+          {/* Expenses */}
+          <div className="flex flex-col items-center gap-1 px-2 py-2.5 rounded-2xl bg-white/8 backdrop-blur-sm">
+            <div className="flex items-center gap-1.5">
+              <div className="p-1 rounded-full bg-white/10">
+                <TrendingDown className="h-3 w-3 text-red-300" />
+              </div>
+              <p className="text-[9px] font-bold text-white/40 uppercase tracking-wider">Gastos</p>
+            </div>
+            <p className="text-sm font-bold text-red-300">{formatCompact(expensesTotal, "ARS")}</p>
+            <div className="flex flex-col items-center gap-0.5">
+              {expenses.usd > 0 && <p className="text-[9px] text-white/35">USD {expenses.usd.toLocaleString('en-US')}</p>}
+              {expenses.ars > 0 && <p className="text-[9px] text-white/35">ARS {expenses.ars.toLocaleString('en-US')}</p>}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Savings row - full width */}
+        <motion.div 
+          className="rounded-2xl bg-white/8 backdrop-blur-sm px-3 py-2.5"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.4 }}
+        >
+          <div className="flex items-center justify-center gap-1.5 mb-1">
+            <div className="p-1 rounded-full bg-white/10">
+              <PiggyBank className="h-3 w-3 text-white" />
+            </div>
+            <p className="text-[9px] font-bold text-white/40 uppercase tracking-wider">Ahorros</p>
+          </div>
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            {hasLiquid && (
+              <div className="text-center">
+                <p className="text-[9px] text-white/35 uppercase tracking-wider">Líquidos</p>
+                <div className="flex flex-col items-center">
+                  {liquidSavings.usd > 0 && <p className="text-xs font-bold text-white">USD {liquidSavings.usd.toLocaleString('en-US')}</p>}
+                  {liquidSavings.ars > 0 && <p className="text-xs font-bold text-white">ARS {liquidSavings.ars.toLocaleString('en-US')}</p>}
                 </div>
-              );
-            })}
-          </motion.div>
-        )}
+              </div>
+            )}
+            {hasLiquid && hasInvestments && <div className="h-6 w-px bg-white/15" />}
+            {hasInvestments && (
+              <div className="text-center">
+                <p className="text-[9px] text-white/35 uppercase tracking-wider">Invertidos</p>
+                <div className="flex flex-col items-center">
+                  {totalInvested.usd > 0 && <p className="text-xs font-bold text-white">USD {totalInvested.usd.toLocaleString('en-US')}</p>}
+                  {totalInvested.ars > 0 && <p className="text-xs font-bold text-white">ARS {totalInvested.ars.toLocaleString('en-US')}</p>}
+                </div>
+              </div>
+            )}
+            {!hasLiquid && !hasInvestments && (
+              <p className="text-xs font-bold text-white/50">Sin ahorros</p>
+            )}
+          </div>
+        </motion.div>
       </div>
     </header>
   );
