@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
+import { RuculaLogo } from "@/components/RuculaLogo";
 import appStoreBadge from "@/assets/app-store-badge.svg";
 
 export const AppleFooter = () => {
@@ -16,9 +17,7 @@ export const AppleFooter = () => {
         >
           {/* Logo */}
           <div className="flex justify-center">
-            <div className="p-4 rounded-2xl gradient-primary">
-              <img src="/rucula-logo.png" alt="Rucula" className="h-10 w-10 object-contain" />
-            </div>
+            <RuculaLogo size="lg" />
           </div>
           
           {/* CTA */}

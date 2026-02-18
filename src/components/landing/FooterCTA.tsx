@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { RuculaLogo } from "@/components/RuculaLogo";
 
 const features = [{
   icon: Shield,
@@ -101,10 +102,7 @@ export const FooterCTA = () => {
       }} className="mt-20 pt-8 border-t border-border/50">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-xl gradient-primary">
-                <img src="/rucula-logo.png" alt="Rucula" className="h-5 w-5 object-contain" />
-              </div>
-              <span className="font-bold text-foreground">Rucula</span>
+              <RuculaLogo size="sm" />
             </div>
             
             <Link 

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Check, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { RuculaLogo } from "@/components/RuculaLogo";
 
 const getWeakPasswordMessage = (error: { code?: string; weak_password?: { reasons?: string[] } }) => {
   if (error.code === "weak_password" && error.weak_password?.reasons?.includes("pwned")) {
@@ -122,9 +123,7 @@ const ResetPassword = () => {
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="w-full max-w-md text-center">
           <div className="flex justify-center mb-6">
-            <div className="p-3 rounded-2xl gradient-primary shadow-stripe-lg">
-              <img src="/rucula-logo.png" alt="Rucula" className="h-10 w-10 object-contain" />
-            </div>
+            <RuculaLogo size="xl" />
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">Enlace inválido o expirado</h1>
           <p className="text-muted-foreground mb-6">
@@ -160,10 +159,7 @@ const ResetPassword = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="p-2 rounded-xl gradient-primary shadow-stripe">
-            <img src="/rucula-logo.png" alt="Rucula" className="h-8 w-8 object-contain" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">Rucula</h1>
+          <RuculaLogo size="lg" />
         </div>
 
         <div className="mb-8">

@@ -927,6 +927,7 @@ export type Database = {
         Returns: {
           email: string
           expires_at: string
+          has_account: boolean
           id: string
           invited_by_user_id: string
           inviter_email: string

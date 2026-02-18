@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/pagination";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RuculaLogo } from "@/components/RuculaLogo";
 import { 
   LogOut, 
   Users, 
@@ -140,9 +141,7 @@ const AdminDashboard = () => {
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-2 rounded-xl gradient-primary">
-              <img src="/rucula-logo.png" alt="Rucula" className="h-5 w-5 object-contain" />
-            </div>
+            <RuculaLogo size="sm" />
             <div className="h-6 w-px bg-border" />
             <h1 className="text-xl font-semibold">Backoffice</h1>
           </div>
