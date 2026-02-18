@@ -91,7 +91,7 @@ Retorna un JSON válido con esta estructura exacta:
   "tarjeta": {
     "red": "VISA" | "MASTERCARD" | "AMEX" | "CABAL" | "NARANJA" | "OTRA",
     "banco": "Nombre del banco emisor (ej: Galicia, Santander, BBVA, HSBC, etc.)",
-    "numero_cuenta": "Últimos 4 dígitos de la tarjeta o número de cuenta visible en el resumen",
+    "numero_cuenta": "Número de CUENTA (NO de tarjeta individual). Buscar 'cuenta XXXXXXXXXX' en el encabezado del resumen. Si no hay número de cuenta explícito, usar los últimos 4 dígitos del número de cuenta. NUNCA usar números de tarjeta individuales (ej: 'Tarjeta 1758', 'Tarjeta 6153').",
     "titular": "Nombre del titular tal como aparece en el resumen",
     "dia_cierre": 15
   },
@@ -140,7 +140,11 @@ Retorna un JSON válido con esta estructura exacta:
 INSTRUCCIONES PARA "tarjeta":
 - "red": La red de la tarjeta. Buscá logos, textos como "VISA", "MASTERCARD", "AMERICAN EXPRESS", "AMEX", "CABAL", "NARANJA X". Si no está claro, usá "OTRA".
 - "banco": El nombre del banco emisor. Aparece en el encabezado del resumen. Extraé solo el nombre comercial (ej: "Galicia" no "Banco de Galicia y Buenos Aires S.A.U.").
-- "numero_cuenta": Los últimos 4 dígitos visibles del número de tarjeta, o el número de cuenta/socio si es lo único disponible. Si no hay ninguno, usá null.
+- "numero_cuenta": El NÚMERO DE CUENTA del resumen, NO el número de tarjeta individual. 
+  * Buscar texto como "cuenta 0626945107" o "Nro. de cuenta: XXXX" en el encabezado del resumen.
+  * Si hay múltiples tarjetas dentro del mismo resumen (ej: "Tarjeta 1758", "Tarjeta 6153"), esas son tarjetas adicionales de la MISMA cuenta. Usar el número de CUENTA general, no los números de tarjeta.
+  * Si solo hay últimos 4 dígitos de cuenta, usar esos 4 dígitos.
+  * NUNCA usar números como "1758" o "6153" que son números de tarjeta individual.
 - "titular": El nombre completo del titular de la tarjeta como aparece en el resumen. Si no está visible, usá null.
 - "dia_cierre": El día del mes en que cierra el resumen (1-31). Extraelo de la fecha de cierre. Si la fecha de cierre es "15/01/2026", el dia_cierre es 15.
 
