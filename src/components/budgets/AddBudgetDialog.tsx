@@ -98,12 +98,14 @@ export const AddBudgetDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" className="gradient-primary gap-2">
-          <Plus className="h-4 w-4" />
-          Nuevo Presupuesto
-        </Button>
-      </DialogTrigger>
+      {!controlledOpen && (
+        <DialogTrigger asChild>
+          <Button size="sm" className="gradient-primary gap-2">
+            <Plus className="h-4 w-4" />
+            Nuevo Presupuesto
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Crear Presupuesto</DialogTitle>

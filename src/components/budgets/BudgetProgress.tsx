@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 
-import { AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { AlertTriangle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { BudgetWithSpending } from "@/hooks/useBudgetsData";
 import { motion } from "framer-motion";
+import { getIconForCategory, getCategoryColor } from "@/lib/categoryIcons";
 
 interface BudgetProgressProps {
   budgets: BudgetWithSpending[];
@@ -65,10 +66,12 @@ export const BudgetProgress = ({ budgets, projectedExpensesUSD = 0, projectedExp
     return "bg-primary";
   };
 
-  const getStatusIcon = (percentage: number) => {
+  const getStatusIcon = (percentage: number, categoryName: string) => {
     if (percentage >= 100) return <XCircle className="h-4 w-4 text-destructive" />;
     if (percentage >= 80) return <AlertTriangle className="h-4 w-4 text-warning" />;
-    return <CheckCircle className="h-4 w-4 text-primary" />;
+    const IconComponent = getIconForCategory(categoryName);
+    const color = getCategoryColor(categoryName);
+    return <IconComponent className="h-4 w-4" style={{ color }} />;
   };
 
   const hasProjectedExpenses = projectedExpensesUSD > 0 || projectedExpensesARS > 0;
@@ -109,15 +112,17 @@ export const BudgetProgress = ({ budgets, projectedExpensesUSD = 0, projectedExp
             >
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
-                  {getStatusIcon(budget.percentage)}
+                  {getStatusIcon(budget.percentage, budget.category)}
                   <span className="font-medium">{budget.category}</span>
                   <span className="text-muted-foreground text-xs">
                     ({budget.currency})
                   </span>
                 </div>
-                <span className="text-muted-foreground">
-                  {formatCurrency(budget.spent, budget.currency)} /{" "}
-                  {formatCurrency(budget.monthly_limit, budget.currency)}
+                <span className="text-sm font-medium">
+                  Disp: {formatCurrency(
+                    Math.max(0, budget.monthly_limit - budget.spent),
+                    budget.currency
+                  )}
                 </span>
               </div>
               <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -128,13 +133,6 @@ export const BudgetProgress = ({ budgets, projectedExpensesUSD = 0, projectedExp
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{budget.percentage.toFixed(0)}% usado</span>
-                <span>
-                  Disponible:{" "}
-                  {formatCurrency(
-                    Math.max(0, budget.monthly_limit - budget.spent),
-                    budget.currency
-                  )}
-                </span>
               </div>
             </motion.div>
           ))}

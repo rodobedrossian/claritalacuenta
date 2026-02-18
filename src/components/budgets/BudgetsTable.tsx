@@ -20,9 +20,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Pencil, Trash2, Check, X, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { Pencil, Trash2, Check, X, AlertTriangle, XCircle } from "lucide-react";
 import { BudgetWithSpending } from "@/hooks/useBudgetsData";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getIconForCategory, getCategoryColor } from "@/lib/categoryIcons";
 
 interface BudgetsTableProps {
   budgets: BudgetWithSpending[];
@@ -37,10 +38,12 @@ const formatCurrency = (amount: number, currency: string) => {
   }).format(amount)}`;
 };
 
-const getStatusIcon = (percentage: number) => {
+const getCategoryStatusIcon = (percentage: number, categoryName: string) => {
   if (percentage >= 100) return <XCircle className="h-4 w-4 text-destructive" />;
   if (percentage >= 80) return <AlertTriangle className="h-4 w-4 text-warning" />;
-  return <CheckCircle className="h-4 w-4 text-primary" />;
+  const IconComponent = getIconForCategory(categoryName);
+  const color = getCategoryColor(categoryName);
+  return <IconComponent className="h-4 w-4" style={{ color }} />;
 };
 
 const getProgressColor = (percentage: number) => {
@@ -117,47 +120,40 @@ export const BudgetsTable = ({ budgets, onUpdate, onDelete }: BudgetsTableProps)
               {/* Row 1: Category + Currency */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  {getStatusIcon(budget.percentage)}
+                  {getCategoryStatusIcon(budget.percentage, budget.category)}
                   <span className="font-semibold text-sm">{budget.category}</span>
                 </div>
                 <span className="text-xs text-muted-foreground font-medium">{budget.currency}</span>
               </div>
 
               {/* Progress bar */}
-              <div className="mb-3">
+              <div className="mb-2">
                 <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all ${getProgressColor(budget.percentage)}`}
                     style={{ width: `${Math.min(budget.percentage, 100)}%` }}
                   />
                 </div>
-                <div className="flex justify-between mt-1.5">
-                  <span className="text-xs text-muted-foreground">{budget.percentage.toFixed(0)}%</span>
-                </div>
               </div>
 
-              {/* Amounts */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-xs text-muted-foreground">
-                  {editingId === budget.id ? (
-                    <div className="flex items-center gap-1.5">
-                      <Input
-                        type="number"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        className="w-24 h-7 text-xs"
-                        autoFocus
-                      />
-                    </div>
-                  ) : (
-                    <span>
-                      {formatCurrency(budget.spent, budget.currency)} / {formatCurrency(budget.monthly_limit, budget.currency)}
-                    </span>
-                  )}
-                </div>
-                <span className={`text-xs font-medium ${budget.monthly_limit - budget.spent < 0 ? 'text-destructive' : 'text-foreground'}`}>
-                  Disp: {formatCurrency(Math.max(0, budget.monthly_limit - budget.spent), budget.currency)}
-                </span>
+              {/* Simplified: % used + Available */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">{budget.percentage.toFixed(0)}% usado</span>
+                {editingId === budget.id ? (
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      type="number"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-24 h-7 text-xs"
+                      autoFocus
+                    />
+                  </div>
+                ) : (
+                  <span className={`text-xs font-medium ${budget.monthly_limit - budget.spent < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                    Disp: {formatCurrency(Math.max(0, budget.monthly_limit - budget.spent), budget.currency)}
+                  </span>
+                )}
               </div>
 
               {/* Actions */}
@@ -210,7 +206,7 @@ export const BudgetsTable = ({ budgets, onUpdate, onDelete }: BudgetsTableProps)
           <TableBody>
             {budgets.map((budget) => (
               <TableRow key={budget.id}>
-                <TableCell>{getStatusIcon(budget.percentage)}</TableCell>
+                <TableCell>{getCategoryStatusIcon(budget.percentage, budget.category)}</TableCell>
                 <TableCell className="font-medium">{budget.category}</TableCell>
                 <TableCell>{budget.currency}</TableCell>
                 <TableCell className="text-right">
