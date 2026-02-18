@@ -135,35 +135,35 @@ export const DashboardHeader = ({
           transition={{ delay: 0.25, duration: 0.4 }}
         >
           {/* Income */}
-          <div className="flex flex-col items-center gap-1 px-2 py-2.5 rounded-2xl bg-white/8 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-1.5 px-3 py-3 rounded-2xl bg-white/8 backdrop-blur-sm">
             <div className="flex items-center gap-1.5">
               <div className="p-1 rounded-full bg-white/10">
-                <TrendingUp className="h-3 w-3 text-emerald-300" />
+                <TrendingUp className="h-3.5 w-3.5 text-emerald-300" />
               </div>
-              <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">Ingresos</p>
+              <p className="text-[11px] font-bold text-white/60 uppercase tracking-wider">Ingresos</p>
             </div>
-            <p className="text-base font-bold text-emerald-300">{formatCompact(incomeTotal, "ARS")}</p>
+            <p className="text-lg font-bold text-emerald-300">{formatCompact(incomeTotal, "ARS")}</p>
             <div className="flex flex-col items-center gap-0.5">
-              {income.usd > 0 && <p className="text-[11px] text-white/70">USD {income.usd.toLocaleString("en-US")}</p>}
-              {income.ars > 0 && <p className="text-[11px] text-white/70">ARS {income.ars.toLocaleString("en-US")}</p>}
+              {income.ars > 0 && <p className="text-[13px] font-semibold text-white/80">ARS {income.ars.toLocaleString("en-US")}</p>}
+              {income.usd > 0 && <p className="text-[13px] font-semibold text-white/80">USD {income.usd.toLocaleString("en-US")}</p>}
             </div>
           </div>
 
           {/* Expenses */}
-          <div className="flex flex-col items-center gap-1 px-2 py-2.5 rounded-2xl bg-white/8 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-1.5 px-3 py-3 rounded-2xl bg-white/8 backdrop-blur-sm">
             <div className="flex items-center gap-1.5">
               <div className="p-1 rounded-full bg-white/10">
-                <TrendingDown className="h-3 w-3 text-red-300" />
+                <TrendingDown className="h-3.5 w-3.5 text-red-300" />
               </div>
-              <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">Gastos</p>
+              <p className="text-[11px] font-bold text-white/60 uppercase tracking-wider">Gastos</p>
             </div>
-            <p className="text-base font-bold text-red-300">{formatCompact(expensesTotal, "ARS")}</p>
+            <p className="text-lg font-bold text-red-300">{formatCompact(expensesTotal, "ARS")}</p>
             <div className="flex flex-col items-center gap-0.5">
               {expenses.usd > 0 && (
-                <p className="text-[11px] text-white/70">USD {expenses.usd.toLocaleString("en-US")}</p>
+                <p className="text-[13px] font-semibold text-white/80">USD {expenses.usd.toLocaleString("en-US")}</p>
               )}
               {expenses.ars > 0 && (
-                <p className="text-[11px] text-white/70">ARS {expenses.ars.toLocaleString("en-US")}</p>
+                <p className="text-[13px] font-semibold text-white/80">ARS {expenses.ars.toLocaleString("en-US")}</p>
               )}
             </div>
           </div>
@@ -171,46 +171,46 @@ export const DashboardHeader = ({
 
         {/* Savings row - full width */}
         <motion.div
-          className="rounded-2xl bg-white/8 backdrop-blur-sm px-3 py-2.5"
+          className="rounded-2xl bg-white/8 backdrop-blur-sm px-3 py-3"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.4 }}
         >
-          <div className="flex items-center justify-center gap-1.5 mb-1">
+          <div className="flex items-center justify-center gap-1.5 mb-1.5">
             <div className="p-1 rounded-full bg-white/10">
-              <PiggyBank className="h-3 w-3 text-white" />
+              <PiggyBank className="h-3.5 w-3.5 text-white" />
             </div>
-            <p className="text-[10px] font-bold text-white/60 uppercase tracking-wider">Ahorros</p>
+            <p className="text-[11px] font-bold text-white/60 uppercase tracking-wider">Ahorros</p>
           </div>
-          <div className="flex items-center justify-center gap-4 flex-wrap">
+          <div className="flex items-center justify-center gap-6 flex-wrap">
             {hasLiquid && (
               <div className="text-center">
-                <p className="text-[10px] text-white/60 uppercase tracking-wider">Líquidos</p>
+                <p className="text-[11px] text-white/50 uppercase tracking-wider font-semibold mb-0.5">Líquidos</p>
                 <div className="flex flex-col items-center">
                   {liquidSavings.usd > 0 && (
-                    <p className="text-sm font-bold text-white">USD {liquidSavings.usd.toLocaleString("en-US")}</p>
+                    <p className="text-[15px] font-bold text-white">USD {liquidSavings.usd.toLocaleString("en-US")}</p>
                   )}
                   {liquidSavings.ars > 0 && (
-                    <p className="text-sm font-bold text-white">ARS {liquidSavings.ars.toLocaleString("en-US")}</p>
+                    <p className="text-[15px] font-bold text-white">ARS {liquidSavings.ars.toLocaleString("en-US")}</p>
                   )}
                 </div>
               </div>
             )}
-            {hasLiquid && hasInvestments && <div className="h-6 w-px bg-white/15" />}
+            {hasLiquid && hasInvestments && <div className="h-8 w-px bg-white/15" />}
             {hasInvestments && (
               <div className="text-center">
-                <p className="text-[10px] text-white/60 uppercase tracking-wider">Invertidos</p>
+                <p className="text-[11px] text-white/50 uppercase tracking-wider font-semibold mb-0.5">Invertidos</p>
                 <div className="flex flex-col items-center">
                   {totalInvested.usd > 0 && (
-                    <p className="text-sm font-bold text-white">USD {totalInvested.usd.toLocaleString("en-US")}</p>
+                    <p className="text-[15px] font-bold text-white">USD {totalInvested.usd.toLocaleString("en-US")}</p>
                   )}
                   {totalInvested.ars > 0 && (
-                    <p className="text-sm font-bold text-white">ARS {totalInvested.ars.toLocaleString("en-US")}</p>
+                    <p className="text-[15px] font-bold text-white">ARS {totalInvested.ars.toLocaleString("en-US")}</p>
                   )}
                 </div>
               </div>
             )}
-            {!hasLiquid && !hasInvestments && <p className="text-xs font-bold text-white/50">Sin ahorros</p>}
+            {!hasLiquid && !hasInvestments && <p className="text-sm font-bold text-white/50">Sin ahorros</p>}
           </div>
         </motion.div>
       </div>
