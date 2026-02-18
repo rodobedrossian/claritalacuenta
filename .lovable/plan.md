@@ -1,92 +1,128 @@
-# Plan: Tracking de tokens y costos de AI
+# Rediseno del Dashboard: Estilo Fintech Nativo iOS
 
-## Contexto
+## Vision
 
-Hay 4 edge functions que llaman al AI gateway: `parse-credit-card-statement`, `auto-categorize-transactions`, `parse-voice-transaction`, y `transcribe-audio`. La funcion `generate-insights` NO usa AI (es analisis estadistico puro), asi que no tiene tokens para trackear.
+Transformar el dashboard de una "web responsive" a una experiencia que se sienta como una app nativa de fintech premium. Inspiracion directa en Revolut (hero card oscuro con gradiente), Wise (jerarquia clara, espacios generosos), y la estetica de Apple Wallet.
 
-Tener en cuenta: Esto no deberia causar ningun delay en la experiencia del usuario final, deberia pasar por detras sin generar ningun tiempo de espera por el guardado. 
+## Cambios principales
 
-## Solucion
+### 1. Hero Balance Card con gradiente oscuro
 
-### 1. Nueva tabla `ai_usage_logs`
+Reemplazar el header actual (fondo blanco plano con texto verde) por un **hero card** prominente con gradiente oscuro que ocupe el tope de la pantalla. Este es el cambio de mayor impacto visual.
 
-Crear una tabla centralizada para registrar cada llamada a la AI gateway:
-
-```
-ai_usage_logs
-- id (uuid, PK)
-- user_id (uuid, NOT NULL)
-- workspace_id (uuid, NOT NULL)
-- function_name (text) -- ej: "parse-credit-card-statement"
-- model (text) -- ej: "google/gemini-3-flash-preview"
-- prompt_tokens (integer)
-- completion_tokens (integer)
-- total_tokens (integer)
-- reference_id (uuid, nullable) -- statement_import_id u otro ID de referencia
-- created_at (timestamptz, default now())
-```
-
-RLS: solo lectura via service role (las edge functions escriben con service role). Sin politicas para usuarios normales.
-
-### 2. Modificar edge functions para guardar tokens
-
-En cada funcion que llama al AI gateway, despues de recibir la respuesta, extraer `usage` del response y hacer un INSERT en `ai_usage_logs`:
-
-```typescript
-const usage = aiData.usage;
-if (usage) {
-  await supabase.from("ai_usage_logs").insert({
-    user_id,
-    workspace_id,
-    function_name: "parse-credit-card-statement",
-    model: "google/gemini-3-flash-preview",
-    prompt_tokens: usage.prompt_tokens,
-    completion_tokens: usage.completion_tokens,
-    total_tokens: usage.total_tokens,
-    reference_id: statement_import_id,
-  });
-}
+```text
++------------------------------------------+
+|  [gradiente oscuro verde/esmeralda]      |
+|  [Enero 2026]  < >        (month picker) |
+|                                          |
+|  Balance Neto                            |
+|  $847.520                  (grande, bold)|
+|                                          |
+|                                          |
+|  +----------+ +----------+ +----------+ |
+|  | Ingresos | | Gastos   | | Ahorros  | |
+|  | $1.2M    | | $402K    | | USD 320  | |
+|  +----------+ +----------+ +----------+ |
++------------------------------------------+
 ```
 
-Funciones a modificar:
+- Gradiente: de `hsl(152 55% 28%)` a `hsl(165 50% 22%)` (verde esmeralda oscuro)
+- Texto del balance en blanco, grande (text-4xl), font-black
+- Los 3 mini-stats (ingresos/gastos/ahorros) como pills semi-transparentes dentro del hero
+- Bordes redondeados inferiores (rounded-b-3xl) para un look de "card flotante"
+- El selector de mes integrado dentro del hero, no separado
 
-- `parse-credit-card-statement` (modelo: gemini-3-flash-preview)
-- `auto-categorize-transactions` (modelo: gemini-2.5-flash-lite)
-- `parse-voice-transaction`
-- `transcribe-audio`
+### 2. MobileHeader simplificado
 
-### 3. Nueva edge function `get-ai-usage-stats`
+El header "Hola, nombre" se mantiene pero se integra visualmente con el hero:
 
-Edge function para el admin que devuelve:
+- Fondo transparente sobre el hero card
+- Tipo de cambio como chip discreto en la esquina superior derecha
+- Sin borde inferior (el hero fluye desde el header)
 
-- Total de tokens por funcion (agrupado)
-- Total de tokens por usuario
-- Detalle por dia/semana
-- Costo estimado (basado en pricing del modelo)
+### 3. Quick Actions rediseñados
 
-### 4. Seccion en Admin Dashboard
+Los 3 botones de accion rapida (Agregar, Por voz, Ahorrar) pasan de ser botones outline cuadrados a **circulos con iconos** estilo iOS, sin texto visible en reposo:
 
-Agregar una nueva card "Uso de AI" en el admin dashboard con:
+```text
+   (o)  Agregar     (o)  Por voz     (o)  Ahorrar
+```
 
-- Tabla resumen: funcion, llamadas totales, tokens totales, costo estimado
-- Desglose por usuario (quien consume mas)
-- Filtro por rango de fechas
-- Nota: `generate-insights` no aparece porque no usa AI
+- Circulos de 56px con fondo semi-transparente
+- Labels debajo en texto pequeno (text-[10px])
+- Animacion de escala al tocar (whileTap)
+
+### 4. Secciones con scroll horizontal nativo
+
+Las StatCards individuales de ingresos/gastos/ahorros se mueven **dentro** del hero card como mini-stats, eliminando las cards separadas que ocupan mucho espacio vertical. Esto libera espacio para el contenido real (presupuestos, insights, chart).
+
+### 5. Cards con bordes mas suaves
+
+- Eliminar `shadow-stripe` de las cards internas
+- Usar bordes ultra-sutiles (`border-border/30`)
+- Agregar `backdrop-blur` sutil en cards sobre scroll
+- Border radius mas grande (rounded-2xl)
+
+### 6. Transacciones recientes con estilo nativo
+
+La lista de transacciones se muestra sin card wrapper, directamente como filas tipo lista nativa iOS con separadores finos, y un header "sticky" con "Ver todas".
 
 ## Archivos a modificar
 
 
-| Archivo                                                    | Cambio                                         |
-| ---------------------------------------------------------- | ---------------------------------------------- |
-| Nueva migracion SQL                                        | Crear tabla `ai_usage_logs`                    |
-| `supabase/functions/parse-credit-card-statement/index.ts`  | Guardar usage tokens post-AI call              |
-| `supabase/functions/auto-categorize-transactions/index.ts` | Guardar usage tokens post-AI call              |
-| `supabase/functions/parse-voice-transaction/index.ts`      | Guardar usage tokens post-AI call              |
-| `supabase/functions/transcribe-audio/index.ts`             | Guardar usage tokens post-AI call              |
-| Nuevo: `supabase/functions/get-ai-usage-stats/index.ts`    | Edge function admin para consultar stats       |
-| `src/pages/admin/AdminDashboard.tsx`                       | Nueva seccion "Uso de AI" con tabla y metricas |
+| Archivo                                     | Cambio                                                                                                 |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `src/index.css`                             | Agregar variables CSS para hero gradient, nuevas sombras, y utilidades                                 |
+| `src/components/DashboardHeader.tsx`        | Rediseno completo: hero card con gradiente oscuro, mini-stats integrados, month picker dentro del hero |
+| `src/components/MobileHeader.tsx`           | Hacerlo transparente/overlay sobre el hero, mover exchange rate a chip                                 |
+| `src/components/QuickActions.tsx`           | Rediseno a circulos con iconos estilo iOS                                                              |
+| `src/pages/Index.tsx`                       | Reestructurar layout mobile: eliminar StatCards separados (se mueven al hero), ajustar spacing         |
+| `src/components/StatCard.tsx`               | Ajustes menores de styling (border radius, shadows mas suaves)                                         |
+| `src/components/budgets/BudgetProgress.tsx` | Simplificar bordes y shadows para consistencia                                                         |
+| `src/components/SpendingChart.tsx`          | Simplificar card wrapper                                                                               |
+| `src/components/insights/InsightsCard.tsx`  | Ajuste de spacing                                                                                      |
 
 
-## Nota sobre Insights
+## Seccion tecnica
 
-La funcion `generate-insights` es 100% estadistica (mediana, MAD, comparaciones mes a mes). No llama a ningun modelo de AI, por lo que no genera tokens ni costos. Solo las 4 funciones listadas arriba usan la AI gateway.
+### Nuevas variables CSS
+
+- `--gradient-hero`: gradiente oscuro verde esmeralda para el hero
+- `--hero-foreground`: color de texto sobre el hero (blanco)
+- `--hero-muted`: color de texto secundario sobre el hero (blanco/60%)
+
+### DashboardHeader (cambio principal)
+
+El componente recibira las props de ingresos/gastos/ahorros ademas del balance neto, para renderizar los mini-stats dentro del hero. Se elimina la dependencia de StatCard en el layout mobile del dashboard.
+
+### Estructura mobile resultante
+
+```text
+MobileHeader (transparente, sobre hero)
+  |
+HeroCard (gradiente oscuro)
+  |- Month picker
+  |- Balance neto (grande, blanco)
+  |- Mini stats row (ingresos | gastos | ahorros)
+  |
+QuickActions (circulos)
+  |
+BudgetProgress (card suave)
+  |
+InsightsCard
+  |
+SpendingChart
+  |
+TransactionsList (sin wrapper card)
+```
+
+### Desktop
+
+El hero se aplica igualmente en desktop, ocupando el ancho completo del area de contenido, con los mini-stats en una fila de 3 columnas dentro del gradiente.
+
+## Lo que NO cambia
+
+- Bottom navigation (ya esta bien)
+- Logica de datos, hooks, dialogs
+- Flujo de voz, importacion de resumenes
+- Paginas secundarias (Tarjetas, Ahorros, etc)
