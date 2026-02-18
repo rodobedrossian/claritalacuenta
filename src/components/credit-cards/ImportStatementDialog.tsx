@@ -15,10 +15,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Upload, FileText, CreditCard, X, Sparkles } from "lucide-react";
-import { useStatementImport, ExtractedItem } from "@/hooks/useStatementImport";
+import { Loader2, Upload, FileText, CreditCard, X, Sparkles, Info, Calendar, Receipt, DollarSign } from "lucide-react";
+import { useStatementImport } from "@/hooks/useStatementImport";
 import { format, startOfMonth, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -80,8 +79,6 @@ export function ImportStatementDialog({
     detectedCard,
     resolvedCardId,
     uploadAndParse,
-    toggleItemSelection,
-    toggleAllSelection,
     importTransactions,
     reset,
   } = useStatementImport(workspaceId);
@@ -151,19 +148,22 @@ export function ImportStatementDialog({
     }
   };
 
-  const selectedCount = extractedItems.filter((item) => item.selected).length;
-  const totalARS = extractedItems
-    .filter((item) => item.selected && item.moneda === "ARS")
+  const totalCount = extractedItems.length;
+  const totalARS = statementSummary?.totalARS || extractedItems
+    .filter((item) => item.moneda === "ARS")
     .reduce((sum, item) => sum + item.monto, 0);
-  const totalUSD = extractedItems
-    .filter((item) => item.selected && item.moneda === "USD")
+  const totalUSD = statementSummary?.totalUSD || extractedItems
+    .filter((item) => item.moneda === "USD")
     .reduce((sum, item) => sum + item.monto, 0);
 
   const selectedCard = creditCards.find((c) => c.id === selectedCardId);
 
+  const fechaVencimiento = statementSummary?.fechaVencimiento || null;
+  const fechaCierre = statementSummary?.fechaCierre || null;
+
   const stepDescriptions: Record<string, string> = {
     upload: "Subí el PDF y la tarjeta se detecta automáticamente.",
-    preview: "Revisá los consumos. Las categorías se asignarán automáticamente.",
+    preview: "Resumen del archivo procesado.",
     importing: "",
   };
 
@@ -288,7 +288,7 @@ export function ImportStatementDialog({
       )}
 
       {step === "preview" && (
-        <div className="flex-1 flex flex-col min-h-0 py-4 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 py-4 overflow-auto">
           {/* Detected card banner OR fallback card picker */}
           {detectedCard ? (
             <div className="mb-4 p-3 bg-muted/50 rounded-xl shrink-0">
@@ -299,7 +299,7 @@ export function ImportStatementDialog({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{detectedCard.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {[detectedCard.card_network, detectedCard.bank, detectedCard.account_number ? `****${detectedCard.account_number}` : null].filter(Boolean).join(" · ")}
+                    {[detectedCard.card_network, detectedCard.bank, detectedCard.account_number ? `Cuenta ${detectedCard.account_number}` : null].filter(Boolean).join(" · ")}
                   </p>
                 </div>
                 {detectedCard.is_new && (
@@ -330,59 +330,67 @@ export function ImportStatementDialog({
             </div>
           ) : null}
 
-          {/* Summary - responsive stack */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 p-4 bg-muted/50 rounded-xl shrink-0">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={selectedCount === extractedItems.length}
-                onCheckedChange={(checked) => toggleAllSelection(!!checked)}
-              />
-              <span className="text-sm font-medium">
-                {selectedCount} de {extractedItems.length} seleccionados
-              </span>
+          {/* Summary cards */}
+          <div className="grid grid-cols-2 gap-3 mb-4 shrink-0">
+            <div className="p-4 bg-muted/50 rounded-xl space-y-1">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Receipt className="h-3.5 w-3.5" />
+                <span className="text-xs">Transacciones</span>
+              </div>
+              <p className="text-xl font-semibold">{totalCount}</p>
             </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-              {totalARS > 0 && (
-                <span>
-                  Total ARS: <strong>${totalARS.toLocaleString("es-AR")}</strong>
-                </span>
-              )}
-              {totalUSD > 0 && (
-                <span>
-                  Total USD: <strong>${totalUSD.toLocaleString("en-US")}</strong>
-                </span>
-              )}
-            </div>
+            {totalARS > 0 && (
+              <div className="p-4 bg-muted/50 rounded-xl space-y-1">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <DollarSign className="h-3.5 w-3.5" />
+                  <span className="text-xs">Total ARS</span>
+                </div>
+                <p className="text-xl font-semibold">${totalARS.toLocaleString("es-AR", { maximumFractionDigits: 2 })}</p>
+              </div>
+            )}
+            {totalUSD > 0 && (
+              <div className="p-4 bg-muted/50 rounded-xl space-y-1">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <DollarSign className="h-3.5 w-3.5" />
+                  <span className="text-xs">Total USD</span>
+                </div>
+                <p className="text-xl font-semibold">U$D {totalUSD.toLocaleString("en-US", { maximumFractionDigits: 2 })}</p>
+              </div>
+            )}
+            {(fechaVencimiento || fechaCierre) && (
+              <div className="p-4 bg-muted/50 rounded-xl space-y-1">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span className="text-xs">Fechas</span>
+                </div>
+                <div className="text-sm space-y-0.5">
+                  {fechaCierre && <p>Cierre: <strong>{fechaCierre}</strong></p>}
+                  {fechaVencimiento && <p>Vto: <strong>{fechaVencimiento}</strong></p>}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Tip */}
+          {/* Auto-categorization tip */}
           <div className="mb-4 p-3 bg-primary/5 border border-primary/10 rounded-xl text-sm text-foreground shrink-0">
+            <Sparkles className="h-4 w-4 inline mr-1.5 text-primary" />
             <span className="font-medium">Las categorías se asignarán automáticamente</span> después de importar, basándose en tu historial.
           </div>
 
-          {/* Items list - only this scrolls; buttons stay fixed below */}
-          <div
-            className="flex-1 min-h-[180px] overflow-y-auto overflow-x-hidden no-scrollbar -mx-1 px-1 -webkit-overflow-scrolling-touch"
-          >
-            <div className="space-y-2 pr-2">
-              {extractedItems.map((item) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  onToggle={() => toggleItemSelection(item.id)}
-                />
-              ))}
-            </div>
+          {/* Payment transaction info */}
+          <div className="mb-4 p-3 bg-muted/50 border border-border rounded-xl text-sm text-muted-foreground shrink-0">
+            <Info className="h-4 w-4 inline mr-1.5 text-muted-foreground" />
+            Se generará automáticamente una transacción de pago de tarjeta en la fecha de vencimiento del resumen{fechaVencimiento ? ` (${fechaVencimiento})` : ""}, reflejando el impacto en tu flujo de caja.
           </div>
 
-          {/* Actions - always visible at bottom */}
-          <div className="flex gap-3 mt-4 pt-4 border-t shrink-0">
+          {/* Actions */}
+          <div className="flex gap-3 mt-auto pt-4 border-t shrink-0">
             <Button variant="outline" onClick={() => setStep("upload")} className="flex-1">
               Volver
             </Button>
             <Button
               onClick={handleImport}
-              disabled={selectedCount === 0 || importing || (!resolvedCardId && !selectedCardId)}
+              disabled={totalCount === 0 || importing || (!resolvedCardId && !selectedCardId)}
               className="flex-1"
             >
               {importing ? (
@@ -391,7 +399,7 @@ export function ImportStatementDialog({
                   Importando...
                 </>
               ) : (
-                `Importar ${selectedCount}`
+                `Importar ${totalCount} transacciones`
               )}
             </Button>
           </div>
@@ -448,76 +456,5 @@ export function ImportStatementDialog({
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-interface ItemRowProps {
-  item: ExtractedItem;
-  onToggle: () => void;
-}
-
-function ItemRow({ item, onToggle }: ItemRowProps) {
-  const getBadgeVariant = (tipo: string) => {
-    switch (tipo) {
-      case "consumo":
-        return "default";
-      case "cuota":
-        return "secondary";
-      case "impuesto":
-        return "destructive";
-      case "ajuste":
-        return "outline";
-      default:
-        return "outline";
-    }
-  };
-
-  const tipoLabel: Record<string, string> = {
-    consumo: "Consumo",
-    cuota: "Cuota",
-    impuesto: "Impuesto",
-    ajuste: "Ajuste / Crédito",
-  };
-
-  return (
-    <div
-      className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
-        item.selected ? "bg-background border-border" : "bg-muted/50 border-transparent opacity-60"
-      }`}
-    >
-      <Checkbox checked={item.selected} onCheckedChange={onToggle} className="shrink-0" />
-
-      <div className="flex-1 min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium truncate">{item.descripcion}</span>
-          <Badge variant={getBadgeVariant(item.tipo)} className="shrink-0 text-[10px]">
-            {tipoLabel[item.tipo] ?? item.tipo}
-          </Badge>
-          {item.cuota_actual && item.total_cuotas && (
-            <Badge variant="outline" className="shrink-0 text-[10px]">
-              {item.cuota_actual}/{item.total_cuotas}
-            </Badge>
-          )}
-        </div>
-        {item.fecha && (
-          <span className="text-xs text-muted-foreground">{item.fecha}</span>
-        )}
-      </div>
-
-      <div className="w-24 text-right font-mono text-sm shrink-0">
-        <span
-          className={
-            item.tipo === "ajuste" && item.monto < 0
-              ? "text-green-600 dark:text-green-500"
-              : item.moneda === "USD"
-                ? "text-green-600 dark:text-green-500"
-                : ""
-          }
-        >
-          {item.moneda === "USD" ? "US$" : "$"}
-          {item.monto.toLocaleString(item.moneda === "USD" ? "en-US" : "es-AR")}
-        </span>
-      </div>
-    </div>
   );
 }
