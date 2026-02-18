@@ -404,7 +404,7 @@ const Index = () => {
               <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
                 <div>
                   <p className="text-sm text-muted-foreground">Bienvenido, {user?.user_metadata?.full_name || user?.email}</p>
-                  {lastUpdated && <p className="text-xs text-muted-foreground">USD/ARS: {exchangeRate.toFixed(2)}</p>}
+                  {lastUpdated && <p className="text-xs text-muted-foreground">USD cripto/ARS: {exchangeRate.toFixed(2)}</p>}
                 </div>
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={() => setImportDialogOpen(true)}>Importar</Button>

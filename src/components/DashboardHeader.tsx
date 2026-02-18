@@ -63,7 +63,7 @@ export const DashboardHeader = ({
               disabled={isRefreshingRate}
               className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             >
-              <span className="font-semibold">USD {exchangeRate.toFixed(0)}</span>
+              <span className="font-semibold">USD cripto {exchangeRate.toFixed(0)}</span>
               <RefreshCw className={`h-2.5 w-2.5 ${isRefreshingRate ? 'animate-spin' : ''}`} />
             </button>
           </motion.div>
