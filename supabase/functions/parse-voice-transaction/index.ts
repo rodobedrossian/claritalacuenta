@@ -139,6 +139,35 @@ Debes retornar un JSON válido con esta estructura exacta:
     const result = await response.json();
     console.log('AI response:', JSON.stringify(result, null, 2));
 
+    // Log AI usage asynchronously (fire-and-forget)
+    const usage = result.usage;
+    if (usage) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      // We don't have user_id/workspace_id here directly, but we can extract from auth
+      const authHeader = req.headers.get('Authorization') || '';
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      const { data: { user } } = await userClient.auth.getUser();
+      if (user) {
+        supabase.from("ai_usage_logs").insert({
+          user_id: user.id,
+          workspace_id: '00000000-0000-0000-0000-000000000000',
+          function_name: "parse-voice-transaction",
+          model: "google/gemini-3-flash-preview",
+          prompt_tokens: usage.prompt_tokens || 0,
+          completion_tokens: usage.completion_tokens || 0,
+          total_tokens: usage.total_tokens || 0,
+        }).then(({ error: logErr }) => {
+          if (logErr) console.error('[parse-voice] Failed to log AI usage:', logErr);
+        });
+      }
+    }
+
     // Extract the function call result
     const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall || toolCall.function.name !== 'extract_transaction') {

@@ -133,6 +133,34 @@ Deno.serve(async (req) => {
     
     console.log('Transcription result:', transcribedText);
 
+    // Log AI usage asynchronously (fire-and-forget)
+    const usage = result.usage;
+    if (usage) {
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supa = createClient(supabaseUrl, supabaseServiceKey);
+      const authHeader = req.headers.get('Authorization') || '';
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      const { data: { user } } = await userClient.auth.getUser();
+      if (user) {
+        supa.from("ai_usage_logs").insert({
+          user_id: user.id,
+          workspace_id: '00000000-0000-0000-0000-000000000000',
+          function_name: "transcribe-audio",
+          model: "google/gemini-2.5-flash",
+          prompt_tokens: usage.prompt_tokens || 0,
+          completion_tokens: usage.completion_tokens || 0,
+          total_tokens: usage.total_tokens || 0,
+        }).then(({ error: logErr }) => {
+          if (logErr) console.error('[transcribe] Failed to log AI usage:', logErr);
+        });
+      }
+    }
+
     if (transcribedText.startsWith('ERROR:')) {
       throw new Error(transcribedText);
     }

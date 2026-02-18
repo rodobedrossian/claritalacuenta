@@ -36,8 +36,11 @@ import {
   AlertCircle,
   FileWarning,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Bot,
+  Calendar
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -89,6 +92,39 @@ interface ReconciliationAlert {
   };
 }
 
+interface AIUsageStats {
+  summary: {
+    total_calls: number;
+    total_prompt_tokens: number;
+    total_completion_tokens: number;
+    total_tokens: number;
+    estimated_cost_usd: number;
+  };
+  by_function: Array<{
+    function_name: string;
+    calls: number;
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+    model: string;
+    estimated_cost_usd: number;
+  }>;
+  by_user: Array<{
+    user_id: string;
+    email: string;
+    calls: number;
+    total_tokens: number;
+    estimated_cost_usd: number;
+  }>;
+  by_day: Array<{
+    date: string;
+    calls: number;
+    total_tokens: number;
+    estimated_cost_usd: number;
+  }>;
+  filters: { start_date: string; end_date: string };
+}
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
@@ -99,7 +135,14 @@ const AdminDashboard = () => {
   const [reconciliationAlerts, setReconciliationAlerts] = useState<ReconciliationAlert[]>([]);
   const [reconciliationLoading, setReconciliationLoading] = useState(false);
   const [expandedAlertId, setExpandedAlertId] = useState<string | null>(null);
-
+  const [aiUsage, setAiUsage] = useState<AIUsageStats | null>(null);
+  const [aiUsageLoading, setAiUsageLoading] = useState(false);
+  const [aiStartDate, setAiStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split("T")[0];
+  });
+  const [aiEndDate, setAiEndDate] = useState(() => new Date().toISOString().split("T")[0]);
   const fetchData = async (page: number = 1) => {
     if (!session) {
       navigate(getAdminLoginPath());
@@ -159,10 +202,32 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchAiUsage = async (start?: string, end?: string) => {
+    if (!session) return;
+    setAiUsageLoading(true);
+    try {
+      const s = start || aiStartDate;
+      const e = end || aiEndDate;
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-ai-usage-stats?start_date=${s}&end_date=${e}`,
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setAiUsage(data);
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setAiUsageLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (session) {
       fetchData(1);
       fetchReconciliationAlerts();
+      fetchAiUsage();
     }
   }, [session]);
 
@@ -481,6 +546,134 @@ const AdminDashboard = () => {
                   </div>
                 ))}
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* AI Usage */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-primary" />
+              Uso de AI
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="date"
+                  value={aiStartDate}
+                  onChange={(e) => setAiStartDate(e.target.value)}
+                  className="h-8 w-36 text-xs"
+                />
+                <span className="text-xs text-muted-foreground">a</span>
+                <Input
+                  type="date"
+                  value={aiEndDate}
+                  onChange={(e) => setAiEndDate(e.target.value)}
+                  className="h-8 w-36 text-xs"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchAiUsage()}
+                disabled={aiUsageLoading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${aiUsageLoading ? "animate-spin" : ""}`} />
+                Actualizar
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {aiUsageLoading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : !aiUsage ? (
+              <div className="py-8 text-center text-muted-foreground text-sm">
+                No hay datos de uso de AI
+              </div>
+            ) : (
+              <>
+                {/* Summary cards */}
+                <div className="grid gap-4 md:grid-cols-4">
+                  <div className="border rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Total llamadas</p>
+                    <p className="text-xl font-bold">{aiUsage.summary.total_calls}</p>
+                  </div>
+                  <div className="border rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Tokens input</p>
+                    <p className="text-xl font-bold">{aiUsage.summary.total_prompt_tokens.toLocaleString()}</p>
+                  </div>
+                  <div className="border rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Tokens output</p>
+                    <p className="text-xl font-bold">{aiUsage.summary.total_completion_tokens.toLocaleString()}</p>
+                  </div>
+                  <div className="border rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Costo estimado</p>
+                    <p className="text-xl font-bold text-primary">${aiUsage.summary.estimated_cost_usd.toFixed(4)}</p>
+                  </div>
+                </div>
+
+                {/* By function */}
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">Por función</h4>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Función</TableHead>
+                        <TableHead>Modelo</TableHead>
+                        <TableHead className="text-right">Llamadas</TableHead>
+                        <TableHead className="text-right">Input tokens</TableHead>
+                        <TableHead className="text-right">Output tokens</TableHead>
+                        <TableHead className="text-right">Costo (USD)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {aiUsage.by_function.map((fn) => (
+                        <TableRow key={fn.function_name}>
+                          <TableCell className="font-medium text-xs">{fn.function_name}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{fn.model}</TableCell>
+                          <TableCell className="text-right">{fn.calls}</TableCell>
+                          <TableCell className="text-right">{fn.prompt_tokens.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">{fn.completion_tokens.toLocaleString()}</TableCell>
+                          <TableCell className="text-right font-mono">${fn.estimated_cost_usd.toFixed(4)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* By user */}
+                {aiUsage.by_user.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Por usuario</h4>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Usuario</TableHead>
+                          <TableHead className="text-right">Llamadas</TableHead>
+                          <TableHead className="text-right">Tokens totales</TableHead>
+                          <TableHead className="text-right">Costo (USD)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {aiUsage.by_user.map((u) => (
+                          <TableRow key={u.user_id}>
+                            <TableCell className="font-medium text-xs">{u.email}</TableCell>
+                            <TableCell className="text-right">{u.calls}</TableCell>
+                            <TableCell className="text-right">{u.total_tokens.toLocaleString()}</TableCell>
+                            <TableCell className="text-right font-mono">${u.estimated_cost_usd.toFixed(4)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
