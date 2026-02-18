@@ -1,88 +1,92 @@
+# Plan: Tracking de tokens y costos de AI
 
+## Contexto
 
-# Plan: Mejorar matching de tarjetas en parse-credit-card-statement
+Hay 4 edge functions que llaman al AI gateway: `parse-credit-card-statement`, `auto-categorize-transactions`, `parse-voice-transaction`, y `transcribe-audio`. La funcion `generate-insights` NO usa AI (es analisis estadistico puro), asi que no tiene tokens para trackear.
 
-## Problema raiz
+Tener en cuenta: Esto no deberia causar ningun delay en la experiencia del usuario final, deberia pasar por detras sin generar ningun tiempo de espera por el guardado. 
 
-La funcion `parse-credit-card-statement` genera un `card_identifier` a partir de lo que el AI extrae (red, banco, numero_cuenta) y hace un match exacto. Si el AI devuelve variaciones ("Santander" vs "Santander Rio") o lee mal digitos ("1720" en vez de "8720"), se crean tarjetas duplicadas.
+## Solucion
 
-## Solucion propuesta
+### 1. Nueva tabla `ai_usage_logs`
 
-### 1. Fuzzy matching antes de crear tarjeta nueva
+Crear una tabla centralizada para registrar cada llamada a la AI gateway:
 
-Cuando no hay match exacto por `card_identifier`, buscar tarjetas existentes en el workspace con criterios mas flexibles:
+```
+ai_usage_logs
+- id (uuid, PK)
+- user_id (uuid, NOT NULL)
+- workspace_id (uuid, NOT NULL)
+- function_name (text) -- ej: "parse-credit-card-statement"
+- model (text) -- ej: "google/gemini-3-flash-preview"
+- prompt_tokens (integer)
+- completion_tokens (integer)
+- total_tokens (integer)
+- reference_id (uuid, nullable) -- statement_import_id u otro ID de referencia
+- created_at (timestamptz, default now())
+```
 
-- Misma red (card_network)
-- Banco similar (containment / normalizacion agresiva: quitar "rio", "argentina", "sa", "sau", etc.)
-- Account number similar (distancia de Levenshtein <= 1 digito, o match parcial)
+RLS: solo lectura via service role (las edge functions escriben con service role). Sin politicas para usuarios normales.
 
-Si hay un candidato fuerte, usar esa tarjeta en vez de crear una nueva.
+### 2. Modificar edge functions para guardar tokens
 
-### 2. Normalizacion de nombres de banco
-
-Crear una funcion `normalizeBank()` que canonice variaciones comunes:
-- "Santander Rio" / "Santander Río" / "Banco Santander" -> "santander"
-- "BBVA Frances" / "BBVA Argentina" -> "bbva"
-- "Banco Galicia" / "Galicia" -> "galicia"
-- Quitar palabras comunes: "banco", "rio", "río", "argentina", "sa", "sau", "s.a.", "s.a.u."
-
-### 3. Log de confianza
-
-Loguear cuando se hace fuzzy match vs exact match para monitorear la calidad.
-
-## Cambios tecnicos
-
-### Archivo: `supabase/functions/parse-credit-card-statement/index.ts`
-
-**Agregar funcion `normalizeBank`:**
+En cada funcion que llama al AI gateway, despues de recibir la respuesta, extraer `usage` del response y hacer un INSERT en `ai_usage_logs`:
 
 ```typescript
-function normalizeBank(bank: string): string {
-  return bank
-    .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // quitar acentos
-    .replace(/\b(banco|rio|argentina|sa|sau|s\.a\.?u?\.?)\b/g, "")
-    .replace(/[^a-z0-9]/g, "")
-    .trim();
+const usage = aiData.usage;
+if (usage) {
+  await supabase.from("ai_usage_logs").insert({
+    user_id,
+    workspace_id,
+    function_name: "parse-credit-card-statement",
+    model: "google/gemini-3-flash-preview",
+    prompt_tokens: usage.prompt_tokens,
+    completion_tokens: usage.completion_tokens,
+    total_tokens: usage.total_tokens,
+    reference_id: statement_import_id,
+  });
 }
 ```
 
-**Modificar el bloque de card matching (lineas 381-430):**
+Funciones a modificar:
 
-Despues de fallar el match exacto por `card_identifier`, antes de crear una tarjeta nueva:
+- `parse-credit-card-statement` (modelo: gemini-3-flash-preview)
+- `auto-categorize-transactions` (modelo: gemini-2.5-flash-lite)
+- `parse-voice-transaction`
+- `transcribe-audio`
 
-1. Buscar todas las tarjetas del workspace
-2. Comparar con normalizacion agresiva de banco + misma red
-3. Si el account_number difiere en solo 1 digito, considerar match
-4. Si hay exactamente 1 candidato, usarlo
-5. Solo crear tarjeta nueva si no hay ningun candidato
+### 3. Nueva edge function `get-ai-usage-stats`
 
-```
-Flujo:
-1. Match exacto por card_identifier -> usar tarjeta
-2. Si no: buscar por red + banco normalizado + account_number similar -> usar tarjeta
-3. Si no: crear tarjeta nueva
-```
+Edge function para el admin que devuelve:
 
-### Limpieza de datos actual
+- Total de tokens por funcion (agrupado)
+- Total de tokens por usuario
+- Detalle por dia/semana
+- Costo estimado (basado en pricing del modelo)
 
-Ademas del fix en el codigo, sera necesario limpiar las tarjetas duplicadas manualmente:
-- Reasignar las transacciones de "VISA Santander ****1720" y "VISA Santander Rio ****8720" a "VISA Santander ****8720"
-- Actualizar los statement_imports correspondientes
-- Eliminar las tarjetas duplicadas
+### 4. Seccion en Admin Dashboard
 
-Esto se hara via queries SQL despues de implementar el fix.
+Agregar una nueva card "Uso de AI" en el admin dashboard con:
+
+- Tabla resumen: funcion, llamadas totales, tokens totales, costo estimado
+- Desglose por usuario (quien consume mas)
+- Filtro por rango de fechas
+- Nota: `generate-insights` no aparece porque no usa AI
 
 ## Archivos a modificar
 
-| Archivo | Cambio |
-|---------|--------|
-| `supabase/functions/parse-credit-card-statement/index.ts` | Agregar `normalizeBank()`, implementar fuzzy matching antes de crear tarjeta |
 
-## Resultado esperado
+| Archivo                                                    | Cambio                                         |
+| ---------------------------------------------------------- | ---------------------------------------------- |
+| Nueva migracion SQL                                        | Crear tabla `ai_usage_logs`                    |
+| `supabase/functions/parse-credit-card-statement/index.ts`  | Guardar usage tokens post-AI call              |
+| `supabase/functions/auto-categorize-transactions/index.ts` | Guardar usage tokens post-AI call              |
+| `supabase/functions/parse-voice-transaction/index.ts`      | Guardar usage tokens post-AI call              |
+| `supabase/functions/transcribe-audio/index.ts`             | Guardar usage tokens post-AI call              |
+| Nuevo: `supabase/functions/get-ai-usage-stats/index.ts`    | Edge function admin para consultar stats       |
+| `src/pages/admin/AdminDashboard.tsx`                       | Nueva seccion "Uso de AI" con tabla y metricas |
 
-- PDFs del mismo banco con variaciones de nombre no crean tarjetas duplicadas
-- Errores de 1 digito en el numero de cuenta se detectan y matchean a tarjeta existente
-- Solo se crean tarjetas genuinamente nuevas
-- Logs claros de cuando se usa fuzzy vs exact match
 
+## Nota sobre Insights
+
+La funcion `generate-insights` es 100% estadistica (mediana, MAD, comparaciones mes a mes). No llama a ningun modelo de AI, por lo que no genera tokens ni costos. Solo las 4 funciones listadas arriba usan la AI gateway.
