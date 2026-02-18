@@ -201,6 +201,9 @@ const Index = () => {
     } else if (action === "voice-record") {
       voiceTransaction.startRecording();
       navigate("/", { replace: true });
+    } else if (action === "import-statement") {
+      setImportDialogOpen(true);
+      navigate("/", { replace: true });
     }
   }, [location.search, navigate, voiceTransaction]);
 
