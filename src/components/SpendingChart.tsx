@@ -49,7 +49,7 @@ export const SpendingChart = ({ data }: SpendingChartProps) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.4 }}
     >
-      <Card className="p-6 bg-card border-border shadow-stripe">
+      <Card className="p-6 bg-card border-border/30 rounded-2xl">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Gastos por categoría</h3>
           <div className="flex gap-2">
