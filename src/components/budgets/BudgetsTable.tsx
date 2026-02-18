@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -23,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Pencil, Trash2, Check, X, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { BudgetWithSpending } from "@/hooks/useBudgetsData";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface BudgetsTableProps {
   budgets: BudgetWithSpending[];
@@ -30,10 +30,30 @@ interface BudgetsTableProps {
   onDelete: (id: string) => Promise<void>;
 }
 
+const formatCurrency = (amount: number, currency: string) => {
+  return `${currency} ${new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount)}`;
+};
+
+const getStatusIcon = (percentage: number) => {
+  if (percentage >= 100) return <XCircle className="h-4 w-4 text-destructive" />;
+  if (percentage >= 80) return <AlertTriangle className="h-4 w-4 text-warning" />;
+  return <CheckCircle className="h-4 w-4 text-primary" />;
+};
+
+const getProgressColor = (percentage: number) => {
+  if (percentage >= 100) return "bg-destructive";
+  if (percentage >= 80) return "bg-warning";
+  return "bg-primary";
+};
+
 export const BudgetsTable = ({ budgets, onUpdate, onDelete }: BudgetsTableProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const handleEdit = (budget: BudgetWithSpending) => {
     setEditingId(budget.id);
@@ -53,28 +73,9 @@ export const BudgetsTable = ({ budgets, onUpdate, onDelete }: BudgetsTableProps)
     setEditValue("");
   };
 
-  const formatCurrency = (amount: number, currency: string) => {
-    return `${currency} ${new Intl.NumberFormat("en-US", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)}`;
-  };
-
-  const getStatusIcon = (percentage: number) => {
-    if (percentage >= 100) return <XCircle className="h-4 w-4 text-destructive" />;
-    if (percentage >= 80) return <AlertTriangle className="h-4 w-4 text-warning" />;
-    return <CheckCircle className="h-4 w-4 text-success" />;
-  };
-
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 100) return "bg-destructive";
-    if (percentage >= 80) return "bg-warning";
-    return "bg-primary";
-  };
-
   if (budgets.length === 0) {
     return (
-      <Card className="p-8 gradient-card border-border/50">
+      <Card className="p-8 border-border/30 rounded-2xl">
         <p className="text-center text-muted-foreground">
           No hay presupuestos configurados. Crea uno para comenzar a controlar tus gastos.
         </p>
@@ -82,9 +83,117 @@ export const BudgetsTable = ({ budgets, onUpdate, onDelete }: BudgetsTableProps)
     );
   }
 
+  const deleteDialog = (
+    <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Eliminar presupuesto?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Esta acción no se puede deshacer. El presupuesto será eliminado permanentemente.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              if (deleteId) onDelete(deleteId);
+              setDeleteId(null);
+            }}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Eliminar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <div className="space-y-3">
+          {budgets.map((budget) => (
+            <Card key={budget.id} className="p-4 rounded-2xl border-border/30 bg-card">
+              {/* Row 1: Category + Currency */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  {getStatusIcon(budget.percentage)}
+                  <span className="font-semibold text-sm">{budget.category}</span>
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">{budget.currency}</span>
+              </div>
+
+              {/* Progress bar */}
+              <div className="mb-3">
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${getProgressColor(budget.percentage)}`}
+                    style={{ width: `${Math.min(budget.percentage, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between mt-1.5">
+                  <span className="text-xs text-muted-foreground">{budget.percentage.toFixed(0)}%</span>
+                </div>
+              </div>
+
+              {/* Amounts */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-xs text-muted-foreground">
+                  {editingId === budget.id ? (
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        type="number"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-24 h-7 text-xs"
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <span>
+                      {formatCurrency(budget.spent, budget.currency)} / {formatCurrency(budget.monthly_limit, budget.currency)}
+                    </span>
+                  )}
+                </div>
+                <span className={`text-xs font-medium ${budget.monthly_limit - budget.spent < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                  Disp: {formatCurrency(Math.max(0, budget.monthly_limit - budget.spent), budget.currency)}
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-1">
+                {editingId === budget.id ? (
+                  <>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleSave(budget.id)}>
+                      <Check className="h-4 w-4 text-primary" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleCancel}>
+                      <X className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEdit(budget)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setDeleteId(budget.id)}>
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </Button>
+                  </>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+        {deleteDialog}
+      </>
+    );
+  }
+
+  // Desktop table
   return (
     <>
-      <Card className="gradient-card border-border/50 overflow-hidden">
+      <Card className="border-border/30 rounded-2xl overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -141,35 +250,19 @@ export const BudgetsTable = ({ budgets, onUpdate, onDelete }: BudgetsTableProps)
                 <TableCell className="text-right">
                   {editingId === budget.id ? (
                     <div className="flex justify-end gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleSave(budget.id)}
-                      >
+                      <Button size="icon" variant="ghost" onClick={() => handleSave(budget.id)}>
                         <Check className="h-4 w-4 text-primary" />
                       </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={handleCancel}
-                      >
+                      <Button size="icon" variant="ghost" onClick={handleCancel}>
                         <X className="h-4 w-4 text-muted-foreground" />
                       </Button>
                     </div>
                   ) : (
                     <div className="flex justify-end gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleEdit(budget)}
-                      >
+                      <Button size="icon" variant="ghost" onClick={() => handleEdit(budget)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => setDeleteId(budget.id)}
-                      >
+                      <Button size="icon" variant="ghost" onClick={() => setDeleteId(budget.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
@@ -180,29 +273,7 @@ export const BudgetsTable = ({ budgets, onUpdate, onDelete }: BudgetsTableProps)
           </TableBody>
         </Table>
       </Card>
-
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar presupuesto?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. El presupuesto será eliminado permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deleteId) onDelete(deleteId);
-                setDeleteId(null);
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {deleteDialog}
     </>
   );
 };

@@ -33,14 +33,20 @@ interface AddBudgetDialogProps {
   }) => Promise<void>;
   categories: Category[];
   existingBudgets: Array<{ category: string; currency: string }>;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export const AddBudgetDialog = ({
   onAdd,
   categories,
   existingBudgets,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: AddBudgetDialogProps) => {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const [category, setCategory] = useState("");
   const [currency, setCurrency] = useState<"USD" | "ARS">("ARS");
   const [monthlyLimit, setMonthlyLimit] = useState("");
