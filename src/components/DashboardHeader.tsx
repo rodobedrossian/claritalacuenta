@@ -44,13 +44,12 @@ export const DashboardHeader = ({
   liquidSavings,
   totalInvested,
 }: DashboardHeaderProps) => {
-
   const formatCompact = (amount: number, currency: "USD" | "ARS") => {
     return `${currency} ${new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(amount)}`;
   };
 
-  const incomeTotal = (income.usd * exchangeRate) + income.ars;
-  const expensesTotal = (expenses.usd * exchangeRate) + expenses.ars;
+  const incomeTotal = income.usd * exchangeRate + income.ars;
+  const expensesTotal = expenses.usd * exchangeRate + expenses.ars;
 
   const hasInvestments = totalInvested.usd > 0 || totalInvested.ars > 0;
   const hasLiquid = liquidSavings.usd > 0 || liquidSavings.ars > 0;
@@ -58,11 +57,11 @@ export const DashboardHeader = ({
   return (
     <header className="relative overflow-hidden rounded-b-3xl" style={{ background: "var(--gradient-hero)" }}>
       <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/5 blur-3xl -translate-y-1/2 translate-x-1/4" />
-      
+
       <div className="relative container mx-auto px-4 pt-3 pb-5">
         {/* Exchange Rate chip */}
         {lastUpdated && (
-          <motion.div 
+          <motion.div
             className="flex items-center justify-end mb-3"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -73,23 +72,23 @@ export const DashboardHeader = ({
               disabled={isRefreshingRate}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 text-[10px] text-white/70 hover:text-white hover:bg-white/15 transition-colors disabled:opacity-50"
             >
-              <span className="font-semibold">USD {exchangeRate.toFixed(0)}</span>
-              <RefreshCw className={`h-2.5 w-2.5 ${isRefreshingRate ? 'animate-spin' : ''}`} />
+              <span className="font-semibold">Cotización estimada USDT {exchangeRate.toFixed(0)}</span>
+              <RefreshCw className={`h-2.5 w-2.5 ${isRefreshingRate ? "animate-spin" : ""}`} />
             </button>
           </motion.div>
         )}
 
         {/* Month Selector */}
-        <motion.div 
+        <motion.div
           className="flex items-center justify-center gap-2 mb-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
         >
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 rounded-full text-white/60 hover:text-white hover:bg-white/10" 
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full text-white/60 hover:text-white hover:bg-white/10"
             onClick={onPreviousMonth}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -100,10 +99,10 @@ export const DashboardHeader = ({
           >
             {format(activeMonth, "MMMM yyyy", { locale: es })}
           </button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 rounded-full text-white/60 hover:text-white hover:bg-white/10" 
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full text-white/60 hover:text-white hover:bg-white/10"
             onClick={onNextMonth}
           >
             <ChevronRight className="h-4 w-4" />
@@ -111,14 +110,14 @@ export const DashboardHeader = ({
         </motion.div>
 
         {/* Main Balance */}
-        <motion.div 
+        <motion.div
           className="text-center mb-5"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
           <p className="text-[11px] text-white/60 mb-1 uppercase tracking-[0.2em] font-bold">Balance Neto</p>
-          <motion.p 
+          <motion.p
             className="text-4xl font-black tracking-tight text-white"
             initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
@@ -129,7 +128,7 @@ export const DashboardHeader = ({
         </motion.div>
 
         {/* Income & Expenses row */}
-        <motion.div 
+        <motion.div
           className="grid grid-cols-2 gap-2 mb-2"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -137,7 +136,7 @@ export const DashboardHeader = ({
         >
           {/* Income */}
           <div className="flex flex-col items-center gap-1 px-2 py-2.5 rounded-2xl bg-white/8 backdrop-blur-sm">
-          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5">
               <div className="p-1 rounded-full bg-white/10">
                 <TrendingUp className="h-3 w-3 text-emerald-300" />
               </div>
@@ -145,14 +144,14 @@ export const DashboardHeader = ({
             </div>
             <p className="text-base font-bold text-emerald-300">{formatCompact(incomeTotal, "ARS")}</p>
             <div className="flex flex-col items-center gap-0.5">
-              {income.usd > 0 && <p className="text-[11px] text-white/70">USD {income.usd.toLocaleString('en-US')}</p>}
-              {income.ars > 0 && <p className="text-[11px] text-white/70">ARS {income.ars.toLocaleString('en-US')}</p>}
+              {income.usd > 0 && <p className="text-[11px] text-white/70">USD {income.usd.toLocaleString("en-US")}</p>}
+              {income.ars > 0 && <p className="text-[11px] text-white/70">ARS {income.ars.toLocaleString("en-US")}</p>}
             </div>
           </div>
 
           {/* Expenses */}
           <div className="flex flex-col items-center gap-1 px-2 py-2.5 rounded-2xl bg-white/8 backdrop-blur-sm">
-          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5">
               <div className="p-1 rounded-full bg-white/10">
                 <TrendingDown className="h-3 w-3 text-red-300" />
               </div>
@@ -160,14 +159,18 @@ export const DashboardHeader = ({
             </div>
             <p className="text-base font-bold text-red-300">{formatCompact(expensesTotal, "ARS")}</p>
             <div className="flex flex-col items-center gap-0.5">
-              {expenses.usd > 0 && <p className="text-[11px] text-white/70">USD {expenses.usd.toLocaleString('en-US')}</p>}
-              {expenses.ars > 0 && <p className="text-[11px] text-white/70">ARS {expenses.ars.toLocaleString('en-US')}</p>}
+              {expenses.usd > 0 && (
+                <p className="text-[11px] text-white/70">USD {expenses.usd.toLocaleString("en-US")}</p>
+              )}
+              {expenses.ars > 0 && (
+                <p className="text-[11px] text-white/70">ARS {expenses.ars.toLocaleString("en-US")}</p>
+              )}
             </div>
           </div>
         </motion.div>
 
         {/* Savings row - full width */}
-        <motion.div 
+        <motion.div
           className="rounded-2xl bg-white/8 backdrop-blur-sm px-3 py-2.5"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -184,8 +187,12 @@ export const DashboardHeader = ({
               <div className="text-center">
                 <p className="text-[10px] text-white/60 uppercase tracking-wider">Líquidos</p>
                 <div className="flex flex-col items-center">
-                  {liquidSavings.usd > 0 && <p className="text-sm font-bold text-white">USD {liquidSavings.usd.toLocaleString('en-US')}</p>}
-                  {liquidSavings.ars > 0 && <p className="text-sm font-bold text-white">ARS {liquidSavings.ars.toLocaleString('en-US')}</p>}
+                  {liquidSavings.usd > 0 && (
+                    <p className="text-sm font-bold text-white">USD {liquidSavings.usd.toLocaleString("en-US")}</p>
+                  )}
+                  {liquidSavings.ars > 0 && (
+                    <p className="text-sm font-bold text-white">ARS {liquidSavings.ars.toLocaleString("en-US")}</p>
+                  )}
                 </div>
               </div>
             )}
@@ -194,14 +201,16 @@ export const DashboardHeader = ({
               <div className="text-center">
                 <p className="text-[10px] text-white/60 uppercase tracking-wider">Invertidos</p>
                 <div className="flex flex-col items-center">
-                  {totalInvested.usd > 0 && <p className="text-sm font-bold text-white">USD {totalInvested.usd.toLocaleString('en-US')}</p>}
-                  {totalInvested.ars > 0 && <p className="text-sm font-bold text-white">ARS {totalInvested.ars.toLocaleString('en-US')}</p>}
+                  {totalInvested.usd > 0 && (
+                    <p className="text-sm font-bold text-white">USD {totalInvested.usd.toLocaleString("en-US")}</p>
+                  )}
+                  {totalInvested.ars > 0 && (
+                    <p className="text-sm font-bold text-white">ARS {totalInvested.ars.toLocaleString("en-US")}</p>
+                  )}
                 </div>
               </div>
             )}
-            {!hasLiquid && !hasInvestments && (
-              <p className="text-xs font-bold text-white/50">Sin ahorros</p>
-            )}
+            {!hasLiquid && !hasInvestments && <p className="text-xs font-bold text-white/50">Sin ahorros</p>}
           </div>
         </motion.div>
       </div>
