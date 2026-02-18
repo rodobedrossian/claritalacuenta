@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+
 import { AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { BudgetWithSpending } from "@/hooks/useBudgetsData";
@@ -98,11 +98,11 @@ export const BudgetProgress = ({ budgets, projectedExpensesUSD = 0, projectedExp
             </button>
           )}
         </div>
-        <div className="space-y-4">
+        <div className="space-y-5">
           {budgets.map((budget, index) => (
             <motion.div 
               key={budget.id} 
-              className="space-y-2"
+              className="space-y-2.5"
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.3 + index * 0.08 }}
@@ -120,15 +120,9 @@ export const BudgetProgress = ({ budgets, projectedExpensesUSD = 0, projectedExp
                   {formatCurrency(budget.monthly_limit, budget.currency)}
                 </span>
               </div>
-              <div className="relative">
-                <Progress
-                  value={Math.min(budget.percentage, 100)}
-                  className="h-2"
-                />
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
                 <div
-                  className={`absolute inset-0 h-2 rounded-full ${getProgressColor(
-                    budget.percentage
-                  )} transition-all`}
+                  className={`h-full rounded-full ${getProgressColor(budget.percentage)} transition-all`}
                   style={{ width: `${Math.min(budget.percentage, 100)}%` }}
                 />
               </div>
