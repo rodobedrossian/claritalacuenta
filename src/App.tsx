@@ -20,6 +20,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Landing from "./pages/Landing";
 import LandingApple from "./pages/LandingApple";
+import LandingGenZ from "./pages/LandingGenZ";
 import AdminAuth from "./pages/admin/AdminAuth";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import Transactions from "./pages/Transactions";
@@ -140,6 +141,7 @@ function AppRoutes({
     <Routes>
       <Route path="/landing" element={<Landing />} />
       <Route path="/landing-apple" element={<LandingApple />} />
+      <Route path="/landing-genz" element={<LandingGenZ />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
