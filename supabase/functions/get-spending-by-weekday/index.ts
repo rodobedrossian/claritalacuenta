@@ -132,7 +132,8 @@ Deno.serve(async (req) => {
           if (workspace_id) q = q.eq("workspace_id", workspace_id);
           return q;
         })();
-        const data = [...(consumos.data || []), ...(firstCuotas.data || [])];
+        const data = [...(consumos.data || []), ...(firstCuotas.data || [])]
+          .filter((t) => !t.category_id || !tarjetaCatIds.has(t.category_id));
         return { data, error: consumos.error || firstCuotas.error };
       })(),
     ]);
