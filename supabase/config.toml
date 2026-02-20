@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.get-transactions-data]
 verify_jwt = false
 
+[functions.get-spending-by-weekday]
+verify_jwt = false
+
 [functions.gmail-oauth]
 verify_jwt = false
 
