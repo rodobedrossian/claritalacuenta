@@ -73,9 +73,17 @@ Deno.serve(async (req) => {
     const startStr = start.toISOString().split("T")[0];
     const endStr = end.toISOString().split("T")[0];
 
+    // Fetch categories first so we can identify "Tarjeta" category
+    const categoriesResult = await supabase.from("categories").select("id, name").order("name");
+    const categoryMap = new Map<string, string>();
+    const tarjetaCatIds = new Set<string>();
+    for (const c of categoriesResult.data || []) {
+      categoryMap.set(c.id, c.name);
+      if (c.name.toLowerCase() === "tarjeta") tarjetaCatIds.add(c.id);
+    }
+
     const [
       exchangeRateResult,
-      categoriesResult,
       transactionsResult,
       ccTransactionsResult,
     ] = await Promise.all([
@@ -85,17 +93,22 @@ Deno.serve(async (req) => {
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabase.from("categories").select("id, name").order("name"),
       (async () => {
+        // Exclude credit card payment transactions (category "Tarjeta")
+        // since those amounts are already broken down in credit_card_transactions
         let query = supabase
           .from("transactions")
-          .select("date, category, amount, currency, payment_method")
+          .select("date, category, amount, currency")
           .eq("type", "expense")
           .neq("payment_method", "credit_card")
           .gte("date", startStr)
           .lte("date", endStr);
         if (workspace_id) query = query.eq("workspace_id", workspace_id);
-        return query;
+        const result = await query;
+        return {
+          ...result,
+          data: (result.data || []).filter((t) => !tarjetaCatIds.has(t.category)),
+        };
       })(),
       (async () => {
         const consumos = await (() => {
@@ -123,11 +136,6 @@ Deno.serve(async (req) => {
         return { data, error: consumos.error || firstCuotas.error };
       })(),
     ]);
-
-    const categoryMap = new Map<string, string>();
-    for (const c of categoriesResult.data || []) {
-      categoryMap.set(c.id, c.name);
-    }
 
     const rate = exchangeRateResult.data?.rate != null
       ? (typeof exchangeRateResult.data.rate === "string"
