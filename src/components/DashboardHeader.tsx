@@ -1,8 +1,9 @@
-import { RefreshCw, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, PiggyBank } from "lucide-react";
+import { RefreshCw, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, PiggyBank, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { motion } from "framer-motion";
+import { useInviteDrawer } from "@/contexts/InviteDrawerContext";
 
 interface CurrencyBreakdown {
   usd: number;
@@ -25,6 +26,8 @@ interface DashboardHeaderProps {
   expenses: CurrencyBreakdown;
   liquidSavings: CurrencyBreakdown;
   totalInvested: CurrencyBreakdown;
+  /** En mobile el saludo "Hola" + invite ya va en MobileHeader; si true, no mostrar esta fila para no duplicar */
+  hideGreetingRow?: boolean;
 }
 
 export const DashboardHeader = ({
@@ -43,7 +46,11 @@ export const DashboardHeader = ({
   expenses,
   liquidSavings,
   totalInvested,
+  hideGreetingRow,
 }: DashboardHeaderProps) => {
+  const { openDrawer } = useInviteDrawer();
+  const displayName = userName?.split(" ")[0] || userName?.split("@")[0] || "Usuario";
+
   const formatCompact = (amount: number, currency: "USD" | "ARS") => {
     return `${currency} ${new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(amount)}`;
   };
@@ -59,6 +66,29 @@ export const DashboardHeader = ({
       <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/5 blur-3xl -translate-y-1/2 translate-x-1/4" />
 
       <div className="relative container mx-auto px-4 pt-3 pb-5">
+        {/* Fila: Hola + botón invitar (solo desktop; en mobile va en MobileHeader) */}
+        {!hideGreetingRow && (
+          <motion.div
+            className="flex items-center justify-between mb-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <h1 className="text-base font-bold tracking-tight text-white/90">
+              Hola, <span className="text-white">{displayName}</span>
+            </h1>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={openDrawer}
+              title="Invitar al espacio"
+              className="h-9 w-9 rounded-full text-white/80 hover:text-white hover:bg-white/15"
+            >
+              <UserPlus className="h-5 w-5" />
+            </Button>
+          </motion.div>
+        )}
+
         {/* Exchange Rate chip */}
         {lastUpdated && (
           <motion.div

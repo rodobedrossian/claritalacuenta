@@ -305,6 +305,7 @@ const Index = () => {
                   expenses={{ usd: totals.expensesUSD, ars: totals.expensesARS }}
                   liquidSavings={liquidSavings}
                   totalInvested={totalInvested}
+                  hideGreetingRow
                 />
 
                 <main className="container mx-auto px-4 py-3 space-y-4">
@@ -366,30 +367,28 @@ const Index = () => {
         ) : (
           /* Desktop View */
           <div className="flex-1 overflow-y-auto">
-            <div className="max-w-5xl mx-auto">
-              {/* Desktop Hero */}
-              <DashboardHeader
-                userName={user?.user_metadata?.full_name || user?.email}
-                exchangeRate={exchangeRate}
-                lastUpdated={lastUpdated}
-                isRefreshingRate={isRefreshingRate}
-                onRefreshRate={fetchExchangeRate}
-                activeMonth={activeMonth}
-                onPreviousMonth={goToPreviousMonth}
-                onNextMonth={goToNextMonth}
-                onCurrentMonth={goToCurrentMonth}
-                netBalance={globalNetBalanceARS}
-                formatCurrency={formatCurrency}
-                income={{ usd: totals.incomeUSD, ars: totals.incomeARS }}
-                expenses={{ usd: totals.expensesUSD, ars: totals.expensesARS }}
-                liquidSavings={liquidSavings}
-                totalInvested={totalInvested}
-              />
+            {/* Hero a ancho completo en desktop */}
+            <DashboardHeader
+              userName={user?.user_metadata?.full_name || user?.email}
+              exchangeRate={exchangeRate}
+              lastUpdated={lastUpdated}
+              isRefreshingRate={isRefreshingRate}
+              onRefreshRate={fetchExchangeRate}
+              activeMonth={activeMonth}
+              onPreviousMonth={goToPreviousMonth}
+              onNextMonth={goToNextMonth}
+              onCurrentMonth={goToCurrentMonth}
+              netBalance={globalNetBalanceARS}
+              formatCurrency={formatCurrency}
+              income={{ usd: totals.incomeUSD, ars: totals.incomeARS }}
+              expenses={{ usd: totals.expensesUSD, ars: totals.expensesARS }}
+              liquidSavings={liquidSavings}
+              totalInvested={totalInvested}
+            />
 
-              <div className="flex gap-3 justify-end px-6 py-4">
-                <Button variant="outline" onClick={() => setImportDialogOpen(true)}>Importar</Button>
-                <Button onClick={() => setAddTransactionDialogOpen(true)}>Nueva transacción</Button>
-              </div>
+            <div className="max-w-5xl mx-auto flex gap-3 justify-end px-6 py-4">
+              <Button variant="outline" onClick={() => setImportDialogOpen(true)}>Importar</Button>
+              <Button onClick={() => setAddTransactionDialogOpen(true)}>Nueva transacción</Button>
             </div>
 
             <main className="max-w-5xl mx-auto px-6 pb-8 space-y-8">

@@ -21,6 +21,8 @@ import { RuculaLogo } from "@/components/RuculaLogo";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
+import { InviteDrawerProvider } from "@/contexts/InviteDrawerContext";
+import { InviteToWorkspaceDrawer } from "@/components/workspace/InviteToWorkspaceDrawer";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -67,102 +69,105 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
   // For mobile, we use bottom navigation + floating FAB
   if (isMobile) {
     return (
-      <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
-        {/* Main content area */}
-        <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
-          {children}
-        </main>
-
-        <BottomNavigation />
-
-        <FloatingActionButton
-          onAddManual={() => navigate("/?action=add-transaction", { replace: true })}
-          onVoiceRecord={() => navigate("/?action=voice-record", { replace: true })}
-          onImportStatement={() => navigate("/?action=import-statement", { replace: true })}
-        />
-      </div>
+      <InviteDrawerProvider>
+        <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
+          <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
+            {children}
+          </main>
+          <BottomNavigation />
+          <FloatingActionButton
+            onAddManual={() => navigate("/?action=add-transaction", { replace: true })}
+            onVoiceRecord={() => navigate("/?action=voice-record", { replace: true })}
+            onImportStatement={() => navigate("/?action=import-statement", { replace: true })}
+          />
+        </div>
+        <InviteToWorkspaceDrawer />
+      </InviteDrawerProvider>
     );
   }
 
   // Desktop/Tablet layout with sidebar
   return (
-    <div className="min-h-screen bg-muted/30 flex">
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "sticky top-0 left-0 z-40 h-screen border-r border-border bg-background shadow-stripe transition-all duration-300",
-          sidebarWidth
-        )}
-      >
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className={cn("border-b border-border", !showExpanded ? "px-2 py-4" : "p-6")}>
-            <div className="flex items-center gap-3 min-w-0">
-              {showExpanded ? <RuculaLogo size="md" className="truncate" /> : <RuculaLogo size="md" iconOnly />}
+    <InviteDrawerProvider>
+      <div className="min-h-screen bg-muted/30 flex">
+        {/* Sidebar */}
+        <aside
+          className={cn(
+            "sticky top-0 left-0 z-40 h-screen border-r border-border bg-background shadow-stripe transition-all duration-300",
+            sidebarWidth
+          )}
+        >
+          <div className="flex flex-col h-full">
+            {/* Logo */}
+            <div className={cn("border-b border-border", !showExpanded ? "px-2 py-4" : "p-6")}>
+              <div className="flex items-center gap-3 min-w-0">
+                {showExpanded ? <RuculaLogo size="md" className="truncate" /> : <RuculaLogo size="md" iconOnly />}
+              </div>
+            </div>
+
+            {/* Navigation */}
+            <nav className={cn("flex-1 space-y-1", !showExpanded ? "p-2" : "p-4")}>
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    title={!showExpanded ? item.title : undefined}
+                    className={cn(
+                      "w-full flex items-center gap-3 rounded-xl text-left transition-all duration-150",
+                      !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
+                      isActive(item.path)
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" />
+                    {showExpanded && <span className="font-medium">{item.title}</span>}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Footer */}
+            <div className={cn("border-t border-border", !showExpanded ? "p-2" : "p-4")}>
+              {/* Collapse toggle */}
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className={cn(
+                  "w-full flex items-center gap-3 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-all mb-2",
+                  !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
+                )}
+                title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+              >
+                {isCollapsed ? (
+                  <PanelLeft className="h-5 w-5 shrink-0" />
+                ) : (
+                  <>
+                    <PanelLeftClose className="h-5 w-5 shrink-0" />
+                    <span className="font-medium">Colapsar</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleSignOut}
+                title={!showExpanded ? "Cerrar Sesión" : undefined}
+                className={cn(
+                  "w-full flex items-center gap-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all",
+                  !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
+                )}
+              >
+                <LogOut className="h-5 w-5 shrink-0" />
+                {showExpanded && <span className="font-medium">Cerrar Sesión</span>}
+              </button>
             </div>
           </div>
+        </aside>
 
-          {/* Navigation */}
-          <nav className={cn("flex-1 space-y-1", !showExpanded ? "p-2" : "p-4")}>
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.path}
-                  onClick={() => navigate(item.path)}
-                  title={!showExpanded ? item.title : undefined}
-                  className={cn(
-                    "w-full flex items-center gap-3 rounded-xl text-left transition-all duration-150",
-                    !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
-                    isActive(item.path)
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  {showExpanded && <span className="font-medium">{item.title}</span>}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Footer */}
-          <div className={cn("border-t border-border", !showExpanded ? "p-2" : "p-4")}>
-            {/* Collapse toggle */}
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className={cn(
-                "w-full flex items-center gap-3 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-all mb-2",
-                !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
-              )}
-              title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
-            >
-              {isCollapsed ? (
-                <PanelLeft className="h-5 w-5 shrink-0" />
-              ) : (
-                <>
-                  <PanelLeftClose className="h-5 w-5 shrink-0" />
-                  <span className="font-medium">Colapsar</span>
-                </>
-              )}
-            </button>
-            <button
-              onClick={handleSignOut}
-              title={!showExpanded ? "Cerrar Sesión" : undefined}
-              className={cn(
-                "w-full flex items-center gap-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all",
-                !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
-              )}
-            >
-              <LogOut className="h-5 w-5 shrink-0" />
-              {showExpanded && <span className="font-medium">Cerrar Sesión</span>}
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <main className="flex-1 min-w-0">{children}</main>
-    </div>
+        {/* Main content */}
+        <main className="flex-1 min-w-0">{children}</main>
+      </div>
+      <InviteToWorkspaceDrawer />
+    </InviteDrawerProvider>
   );
 };
