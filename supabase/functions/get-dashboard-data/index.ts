@@ -199,7 +199,7 @@ Deno.serve(async (req) => {
       if (t.type === "income") {
         if (t.currency === "USD") totals.incomeUSD += t.amount;
         else totals.incomeARS += t.amount;
-      } else if (t.type === "expense" && !t.from_savings) {
+      } else if (t.type === "expense") {
         if (t.currency === "USD") totals.expensesUSD += t.amount;
         else totals.expensesARS += t.amount;
       }
