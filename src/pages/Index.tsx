@@ -20,6 +20,7 @@ import { VoiceConfirmationStep } from "@/components/voice/VoiceConfirmationStep"
 import { TransactionInitialData } from "@/components/AddTransactionDialog";
 import { SuccessConfetti } from "@/components/animations/SuccessConfetti";
 import { InsightsCard } from "@/components/insights/InsightsCard";
+import { SpendingByWeekdayCard } from "@/components/spending-by-weekday/SpendingByWeekdayCard";
 import { MobileHeader } from "@/components/MobileHeader";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -351,6 +352,8 @@ const Index = () => {
 
                   <InsightsCard insights={insightsData?.insights || []} loading={insightsLoading} onRefresh={refetchInsights} />
 
+                  <SpendingByWeekdayCard workspaceId={workspaceId} />
+
                   <div className="space-y-6 animate-slide-up pb-8">
                     <SpendingChart data={spendingByCategory} />
                     <TransactionsList 
@@ -409,6 +412,8 @@ const Index = () => {
                   onRefresh={refetchInsights} 
                 />
               </div>
+
+              <SpendingByWeekdayCard workspaceId={workspaceId} />
 
               <div className="animate-fade-in">
                 {budgetsWithSpending.length > 0 ? (
