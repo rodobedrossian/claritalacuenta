@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCategoriesData, Category } from "@/hooks/useCategoriesData";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { CategoryDialog } from "@/components/categories/CategoryDialog";
 import { 
   ChevronLeft, 
@@ -24,7 +25,8 @@ import { cn } from "@/lib/utils";
 const Categories = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { categories, loading, addCategory, updateCategory, deleteCategory } = useCategoriesData(user?.id ?? null);
+  const { workspaceId } = useWorkspace(user?.id ?? null);
+  const { categories, loading, addCategory, updateCategory, deleteCategory } = useCategoriesData(user?.id ?? null, workspaceId);
 
   const systemCategories = categories.filter(c => !c.user_id);
   const myCategories = categories.filter(c => c.user_id);

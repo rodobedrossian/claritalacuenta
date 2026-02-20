@@ -21,7 +21,10 @@ interface UseCategoriesDataReturn {
   deleteCategory: (id: string) => Promise<void>;
 }
 
-export const useCategoriesData = (userId?: string | null): UseCategoriesDataReturn => {
+export const useCategoriesData = (
+  userId?: string | null,
+  workspaceId?: string | null
+): UseCategoriesDataReturn => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -76,9 +79,13 @@ export const useCategoriesData = (userId?: string | null): UseCategoriesDataRetu
         return;
       }
 
+      const row = {
+        ...category,
+        ...(workspaceId ? { workspace_id: workspaceId } : {}),
+      };
       const { data, error } = await supabase
         .from("categories")
-        .insert([category])
+        .insert([row])
         .select()
         .single();
 

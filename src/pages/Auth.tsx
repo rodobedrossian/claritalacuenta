@@ -62,13 +62,13 @@ const Auth = () => {
   const showReturningUser = !isSignUp && lastUser && !showFullForm;
   const [checkingBiometric, setCheckingBiometric] = useState(true);
 
-  // Check if already logged in
+  // Check if already logged in (don't redirect when in post-login biometric flow)
   const { session } = useAuth();
   useEffect(() => {
-    if (session) {
+    if (session && !biometricModalOpen && !pendingSession) {
       navigate(redirectTo, { replace: true });
     }
-  }, [session, navigate, redirectTo]);
+  }, [session, biometricModalOpen, pendingSession, navigate, redirectTo]);
 
   // When showing returning user, try Face ID first if biometric is configured
   useEffect(() => {

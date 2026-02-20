@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
 import { BudgetsTable } from "@/components/budgets/BudgetsTable";
-import { AddBudgetDialog } from "@/components/budgets/AddBudgetDialog";
+import { AddBudgetWizard } from "@/components/budgets/AddBudgetWizard";
 import { BudgetsSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useBudgetsData } from "@/hooks/useBudgetsData";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -138,7 +138,7 @@ const Budgets = () => {
         <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden" />
       </div>
 
-      <AddBudgetDialog
+      <AddBudgetWizard
         onAdd={addBudget}
         categories={categories}
         existingBudgets={budgets.map(b => ({ category: b.category, currency: b.currency }))}
