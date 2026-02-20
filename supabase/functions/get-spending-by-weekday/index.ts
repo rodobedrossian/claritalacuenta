@@ -89,8 +89,9 @@ Deno.serve(async (req) => {
       (async () => {
         let query = supabase
           .from("transactions")
-          .select("date, category, amount, currency")
+          .select("date, category, amount, currency, payment_method")
           .eq("type", "expense")
+          .neq("payment_method", "credit_card")
           .gte("date", startStr)
           .lte("date", endStr);
         if (workspace_id) query = query.eq("workspace_id", workspace_id);
