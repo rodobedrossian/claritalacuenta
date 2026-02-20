@@ -10,7 +10,9 @@ const WEEKDAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
 /** Monday = 0, Tuesday = 1, ... Sunday = 6 (for display order Lun–Dom) */
 function getWeekdayIndex(dateStr: string): number {
-  const d = new Date(dateStr + "T12:00:00");
+  // dateStr may be a full ISO timestamp or a plain YYYY-MM-DD
+  const datePart = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
+  const d = new Date(datePart + "T12:00:00");
   const jsDay = d.getDay(); // 0 = Sun, 1 = Mon, ...
   return (jsDay + 6) % 7;
 }
