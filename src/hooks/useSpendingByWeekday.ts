@@ -6,6 +6,7 @@ export interface CategoryAmount {
   categoryName: string;
   amount: number;
   currency: string;
+  amountARS: number;
 }
 
 export interface WeekdayData {

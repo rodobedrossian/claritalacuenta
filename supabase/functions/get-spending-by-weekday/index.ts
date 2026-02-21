@@ -26,6 +26,7 @@ interface CategoryAmount {
   categoryName: string;
   amount: number;
   currency: string;
+  amountARS: number; // ARS-equivalent for sorting
 }
 
 interface WeekdayData {
@@ -76,13 +77,15 @@ Deno.serve(async (req) => {
     // Fetch categories first so we can identify "Tarjeta" category
     const categoriesResult = await supabase.from("categories").select("id, name").order("name");
     const categoryMap = new Map<string, string>();
-    // Hard-code the known Tarjeta UUID as safety net + dynamically detect others
+    // Hard-code known UUIDs as safety net + dynamically detect others
     const TARJETA_UUID = "2eee47f0-252a-4580-8672-0ec0bdd6f11d";
-    const TARJETA_TEXT = "Tarjeta"; // Some transactions use text instead of UUID
-    const tarjetaCatIds = new Set<string>([TARJETA_UUID, TARJETA_TEXT]);
+    const TARJETA_TEXT = "Tarjeta";
+    const ALQUILER_UUID = "0c1645cf-bf73-4702-bde9-e4d04b5300ef";
+    const excludedCatIds = new Set<string>([TARJETA_UUID, TARJETA_TEXT, ALQUILER_UUID]);
     for (const c of categoriesResult.data || []) {
       categoryMap.set(c.id, c.name);
-      if (c.name.toLowerCase() === "tarjeta") tarjetaCatIds.add(c.id);
+      const lower = c.name.toLowerCase();
+      if (lower === "tarjeta" || lower === "alquiler") excludedCatIds.add(c.id);
     }
     
 
@@ -107,6 +110,7 @@ Deno.serve(async (req) => {
           .neq("payment_method", "credit_card")
           .neq("category", TARJETA_UUID)
           .neq("category", TARJETA_TEXT)
+          .neq("category", ALQUILER_UUID)
           .gte("date", startStr)
           .lte("date", endStr);
         if (workspace_id) query = query.eq("workspace_id", workspace_id);
@@ -115,9 +119,11 @@ Deno.serve(async (req) => {
         return {
           ...result,
           data: (result.data || []).filter((t) => {
-            if (tarjetaCatIds.has(t.category)) return false;
-            // Also catch case-insensitive text matches
-            if (typeof t.category === "string" && t.category.toLowerCase() === "tarjeta") return false;
+            if (excludedCatIds.has(t.category)) return false;
+            if (typeof t.category === "string") {
+              const lower = t.category.toLowerCase();
+              if (lower === "tarjeta" || lower === "alquiler") return false;
+            }
             return true;
           }),
         };
@@ -147,7 +153,7 @@ Deno.serve(async (req) => {
           return q;
         })();
         const data = [...(consumos.data || []), ...(firstCuotas.data || [])]
-          .filter((t) => !t.category_id || !tarjetaCatIds.has(t.category_id));
+          .filter((t) => !t.category_id || !excludedCatIds.has(t.category_id));
         return { data, error: consumos.error || firstCuotas.error };
       })(),
     ]);
@@ -165,7 +171,7 @@ Deno.serve(async (req) => {
       byCategory: [] as CategoryAmount[],
     }));
 
-    const categorySumsByWeekday: Map<number, Map<string, { amount: number; currency: string }>> = new Map();
+    const categorySumsByWeekday: Map<number, Map<string, { amount: number; currency: string; amountARS: number }>> = new Map();
     for (let i = 0; i < 7; i++) {
       categorySumsByWeekday.set(i, new Map());
     }
@@ -186,8 +192,9 @@ Deno.serve(async (req) => {
       const existing = catMap.get(key);
       if (existing) {
         existing.amount += amount;
+        existing.amountARS += totalInARS;
       } else {
-        catMap.set(key, { amount, currency });
+        catMap.set(key, { amount, currency, amountARS: totalInARS });
       }
     }
 
@@ -207,19 +214,20 @@ Deno.serve(async (req) => {
       const existing = catMap.get(key);
       if (existing) {
         existing.amount += amount;
+        existing.amountARS += totalInARS;
       } else {
-        catMap.set(key, { amount, currency });
+        catMap.set(key, { amount, currency, amountARS: totalInARS });
       }
     }
 
     for (let i = 0; i < 7; i++) {
       const catMap = categorySumsByWeekday.get(i)!;
       byWeekday[i].byCategory = Array.from(catMap.entries())
-        .map(([key, { amount, currency }]) => {
+        .map(([key, { amount, currency, amountARS }]) => {
           const categoryName = key.split("|")[0];
-          return { categoryName, amount, currency };
+          return { categoryName, amount, currency, amountARS };
         })
-        .sort((a, b) => b.amount - a.amount);
+        .sort((a, b) => b.amountARS - a.amountARS);
     }
 
     return new Response(

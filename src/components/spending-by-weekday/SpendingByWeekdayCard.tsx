@@ -185,7 +185,7 @@ export function SpendingByWeekdayCard({ workspaceId }: SpendingByWeekdayCardProp
                   <ul className="space-y-1.5" role="list">
                     {selectedData.byCategory.slice(0, 5).map((item: CategoryAmount) => {
                       const pct = selectedData.total > 0
-                        ? (item.amount / (item.currency === "USD" ? 1 : selectedData.total)) * 100
+                        ? ((item.amountARS ?? (item.currency === "USD" ? 0 : item.amount)) / selectedData.total) * 100
                         : 0;
                       return (
                         <li
@@ -194,19 +194,22 @@ export function SpendingByWeekdayCard({ workspaceId }: SpendingByWeekdayCardProp
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm truncate">{item.categoryName}</span>
+                              <span className="text-sm truncate">
+                                {item.categoryName}
+                                {item.currency === "USD" && (
+                                  <span className="ml-1 text-xs text-muted-foreground">(USD)</span>
+                                )}
+                              </span>
                               <span className="text-sm font-medium tabular-nums shrink-0 ml-2">
                                 {formatAmount(item.amount, item.currency)}
                               </span>
                             </div>
-                            {item.currency !== "USD" && (
-                              <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
-                                <div
-                                  className="h-full rounded-full bg-primary/50"
-                                  style={{ width: `${Math.min(100, pct)}%` }}
-                                />
-                              </div>
-                            )}
+                            <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-primary/50"
+                                style={{ width: `${Math.min(100, pct)}%` }}
+                              />
+                            </div>
                           </div>
                         </li>
                       );
