@@ -6,22 +6,13 @@ import { useInviteDrawer } from "@/contexts/InviteDrawerContext";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { SettingsSkeleton } from "@/components/skeletons/DashboardSkeleton";
-import { Bell, Fingerprint, User, Trash2, Loader2, UserPlus } from "lucide-react";
-import {
-  isBiometricSupported,
-  isBiometricEnabled,
-  setBiometricEnabled,
-  storeSession,
-  clearStoredSession,
-} from "@/lib/biometricAuth";
-import { isIOSNativeApp } from "@/lib/iosAppPin";
+import { Bell, User, Trash2, Loader2, UserPlus } from "lucide-react";
 import { showIOSBanner } from "@/hooks/use-ios-banner";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
-import { performLogout } from "@/lib/biometricAuth";
+import { performLogout } from "@/lib/logout";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,17 +29,10 @@ import { toast } from "sonner";
 export default function Settings() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { user, session, loading: authLoading } = useAuth();
-  const [biometricOn, setBiometricOn] = useState(false);
-  const [biometricToggling, setBiometricToggling] = useState(false);
+  const { user, loading: authLoading } = useAuth();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const { openDrawer: openInviteDrawer } = useInviteDrawer();
-  const showBiometric = isBiometricSupported() && !isIOSNativeApp();
-
-  useEffect(() => {
-    if (showBiometric) setBiometricOn(isBiometricEnabled());
-  }, [showBiometric]);
 
   const pushNotifications = usePushNotifications(user?.id ?? null);
 
@@ -96,55 +80,6 @@ export default function Settings() {
         </header>
 
         <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
-          {showBiometric && (
-            <Card className="mb-6 gradient-card border-border/50">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Fingerprint className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">Desbloquear con Face ID o código</CardTitle>
-                      <CardDescription>
-                        La próxima vez que abras la app, usá Face ID o el código del teléfono en lugar de la contraseña.
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={biometricOn}
-                    disabled={biometricToggling}
-                    onCheckedChange={async (checked) => {
-                      setBiometricToggling(true);
-                      try {
-                        if (checked) {
-                          if (!session) {
-                            showIOSBanner("Tenés que estar conectado para activar Face ID.", "error");
-                            return;
-                          }
-                          await storeSession(session);
-                          setBiometricEnabled(true);
-                          setBiometricOn(true);
-                          showIOSBanner("Face ID o código activado", "success");
-                        } else {
-                          await clearStoredSession();
-                          setBiometricEnabled(false);
-                          setBiometricOn(false);
-                          showIOSBanner("Face ID o código desactivado", "success");
-                        }
-                      } catch (e) {
-                        console.warn("[Settings] biometric toggle:", e);
-                        showIOSBanner("No se pudo activar. ¿Tenés Face ID o código configurado?", "error");
-                      } finally {
-                        setBiometricToggling(false);
-                      }
-                    }}
-                  />
-                </div>
-              </CardHeader>
-            </Card>
-          )}
-
           <Tabs defaultValue="account" className="space-y-6">
             <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="account" className="gap-2">

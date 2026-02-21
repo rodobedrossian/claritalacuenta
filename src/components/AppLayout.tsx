@@ -15,7 +15,7 @@ import {
   Repeat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { performLogout } from "@/lib/biometricAuth";
+import { performLogout } from "@/lib/logout";
 import { cn } from "@/lib/utils";
 import { RuculaLogo } from "@/components/RuculaLogo";
 import { useIsMobile } from "@/hooks/use-mobile";

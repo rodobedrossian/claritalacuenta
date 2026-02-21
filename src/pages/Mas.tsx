@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { Target, Sparkles, Settings, LogOut, Tag, Repeat, PiggyBank, ChevronDown, Info } from "lucide-react";
-import { performLogout } from "@/lib/biometricAuth";
+import { performLogout } from "@/lib/logout";
 import { cn } from "@/lib/utils";
 
 const APP_VERSION = "1.0.0";

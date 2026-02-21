@@ -1,35 +1,20 @@
 import { useEffect } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import {
-  isBiometricSupported,
-  isBiometricEnabled,
-} from "@/lib/biometricAuth";
-import { isIOSNativeApp } from "@/lib/iosAppPin";
-import { BiometricGate } from "@/components/BiometricGate";
 import { useAuth } from "@/contexts/AuthContext";
 
 /**
- * Layout that wraps all protected routes. Shows BiometricGate only when the
- * session is lost (no valid session) and Face ID is enabled; otherwise
- * renders the app without asking for Face ID.
+ * Layout that wraps all protected routes. If no session, redirects to /auth.
  */
 const ProtectedLayout = () => {
   const { session, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  const noSession = !session && !authLoading;
-  const showBiometricGate =
-    noSession &&
-    isBiometricSupported() &&
-    isBiometricEnabled() &&
-    !isIOSNativeApp();
-
   useEffect(() => {
-    if (noSession && !showBiometricGate) {
+    if (!authLoading && !session) {
       navigate("/auth", { replace: true });
     }
-  }, [noSession, showBiometricGate, navigate]);
+  }, [authLoading, session, navigate]);
 
   if (authLoading) {
     return (
@@ -43,14 +28,6 @@ const ProtectedLayout = () => {
   }
 
   if (session) return <Outlet />;
-
-  if (showBiometricGate) {
-    return (
-      <BiometricGate>
-        <Outlet />
-      </BiometricGate>
-    );
-  }
 
   return null;
 };

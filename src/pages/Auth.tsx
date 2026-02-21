@@ -10,189 +10,34 @@ import ForgotPasswordDialog from "@/components/auth/ForgotPasswordDialog";
 import { RuculaLogo } from "@/components/RuculaLogo";
 
 import { toast } from "sonner";
-import type { Session } from "@supabase/supabase-js";
-import {
-  isBiometricAvailable,
-  isBiometricSupported,
-  isBiometricEnabled,
-  hasStoredCredentials,
-  getStoredSession,
-  storeSession,
-  setBiometricEnabled,
-  hasBiometricPromptBeenShown,
-  setBiometricPromptShown,
-} from "@/lib/biometricAuth";
 import { getLastUser, setLastUser } from "@/lib/authStorage";
-import { isIOSNativeApp, hasPinConfigured } from "@/lib/iosAppPin";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-  DrawerFooter,
-} from "@/components/ui/drawer";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirect") ? decodeURIComponent(searchParams.get("redirect")!) : "/";
-  const isMobile = useIsMobile();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [showFullForm, setShowFullForm] = useState(false);
-  const [biometricModalOpen, setBiometricModalOpen] = useState(false);
-  const [pendingSession, setPendingSession] = useState<Session | null>(null);
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const lastUser = getLastUser();
   const showReturningUser = !isSignUp && lastUser && !showFullForm;
-  const [checkingBiometric, setCheckingBiometric] = useState(true);
 
-  // Check if already logged in (don't redirect when in post-login biometric flow)
   const { session } = useAuth();
   useEffect(() => {
-    if (session && !biometricModalOpen && !pendingSession) {
-      if (isIOSNativeApp()) {
-        navigate("/", { replace: true });
-      } else {
-        navigate(redirectTo, { replace: true });
-      }
+    if (session) {
+      navigate(redirectTo, { replace: true });
     }
-  }, [session, biometricModalOpen, pendingSession, navigate, redirectTo]);
+  }, [session, navigate, redirectTo]);
 
-  // On iOS, if returning user has PIN configured, go to gate so they only see PIN (not password)
-  useEffect(() => {
-    if (!isIOSNativeApp() || !showReturningUser) return;
-    hasPinConfigured().then((configured) => {
-      if (configured) navigate("/", { replace: true });
-    });
-  }, [showReturningUser, navigate]);
-
-  // When showing returning user, try Face ID first if biometric is configured (skip on iOS - use app PIN instead)
-  useEffect(() => {
-    if (!showReturningUser) {
-      setCheckingBiometric(false);
-      return;
-    }
-    if (isIOSNativeApp()) {
-      setCheckingBiometric(false);
-      return;
-    }
-    let mounted = true;
-    (async () => {
-      const supported = isBiometricSupported();
-      const enabled = isBiometricEnabled();
-      if (!supported || !enabled) {
-        if (mounted) setCheckingBiometric(false);
-        return;
-      }
-      const stored = await hasStoredCredentials();
-      if (!mounted) return;
-      if (!stored) {
-        setCheckingBiometric(false);
-        return;
-      }
-      try {
-        const session = await getStoredSession();
-        if (!mounted) return;
-        if (session) {
-          await supabase.auth.setSession({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-          });
-          navigate(redirectTo, { replace: true });
-          return;
-        }
-      } catch {
-        // User cancelled or failed - show password form
-      }
-      if (mounted) setCheckingBiometric(false);
-    })();
-    return () => { mounted = false; };
-  }, [showReturningUser, navigate]);
-
-  const saveLastUserAndMaybeShowBiometric = async (
-    userEmail: string,
-    userName: string,
-    session: Session
-  ) => {
+  const saveLastUserAndRedirect = (userEmail: string, userName: string) => {
     setLastUser({ email: userEmail, full_name: userName });
-
-    if (isIOSNativeApp()) {
-      const reenter = await hasPinConfigured();
-      navigate("/set-pin", { replace: true, state: { session, reenter } });
-      return;
-    }
-
-    // Si Face ID ya está habilitado, guardar sesión para que BiometricGate pueda pedir Face ID
-    if (isBiometricSupported() && isBiometricEnabled()) {
-      try {
-        await storeSession(session);
-      } catch (err) {
-        console.warn("[Auth] storeSession on login:", err);
-      }
-    }
-
-    const canShowBiometric =
-      isBiometricSupported() &&
-      !hasBiometricPromptBeenShown();
-
-    if (canShowBiometric) {
-      isBiometricAvailable().then((available) => {
-        if (available) {
-          setPendingSession(session);
-          setBiometricModalOpen(true);
-          return;
-        }
-        navigate(redirectTo);
-      }).catch(() => navigate(redirectTo));
-    } else {
-      navigate(redirectTo);
-    }
-  };
-
-  const handleBiometricYes = async () => {
-    if (!pendingSession) {
-      setBiometricModalOpen(false);
-      navigate(redirectTo);
-      return;
-    }
-    try {
-      await storeSession(pendingSession);
-      setBiometricEnabled(true);
-      setBiometricPromptShown();
-      setPendingSession(null);
-      setBiometricModalOpen(false);
-      navigate(redirectTo);
-    } catch (err) {
-      console.warn("[Auth] storeSession:", err);
-      setBiometricPromptShown();
-      setPendingSession(null);
-      setBiometricModalOpen(false);
-      navigate(redirectTo);
-    }
-  };
-
-  const handleBiometricNo = () => {
-    setBiometricPromptShown();
-    setPendingSession(null);
-    setBiometricModalOpen(false);
-    navigate(redirectTo);
+    navigate(redirectTo, { replace: true });
   };
 
   const getAuthErrorMessage = (error: { code?: string; message?: string; weak_password?: { reasons?: string[] } }) => {
@@ -230,11 +75,7 @@ const Auth = () => {
         return;
       }
       if (data.session) {
-        saveLastUserAndMaybeShowBiometric(
-          email,
-          fullName || email.split("@")[0],
-          data.session
-        );
+        saveLastUserAndRedirect(email, fullName || email.split("@")[0]);
       } else {
         toast.success("¡Cuenta creada! Revisá tu email para confirmar.");
         navigate(redirectTo);
@@ -268,11 +109,7 @@ const Auth = () => {
         data.user.user_metadata?.full_name ||
         data.user.email?.split("@")[0] ||
         "Usuario";
-      saveLastUserAndMaybeShowBiometric(
-        data.user.email!,
-        userName,
-        data.session
-      );
+      saveLastUserAndRedirect(data.user.email!, userName);
     } catch (error: any) {
       toast.error(error.message);
     } finally {
@@ -288,14 +125,6 @@ const Auth = () => {
 
   const renderForm = () => {
     if (showReturningUser) {
-      if (checkingBiometric && !isIOSNativeApp()) {
-        return (
-          <div className="flex flex-col items-center justify-center py-12 space-y-4">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Verificando identidad...</p>
-          </div>
-        );
-      }
       return (
         <form onSubmit={handleSignIn} className="space-y-5" autoComplete="off">
           <div className="mb-6">
@@ -542,53 +371,6 @@ const Auth = () => {
           )}
         </div>
       </div>
-
-      {/* Biometric setup - Drawer on mobile (iOS-native feel), AlertDialog on desktop */}
-      {isMobile ? (
-        <Drawer
-          open={biometricModalOpen}
-          onOpenChange={(open) => {
-            if (!open) handleBiometricNo();
-            setBiometricModalOpen(open);
-          }}
-        >
-          <DrawerContent className="px-6 pb-safe">
-            <DrawerHeader className="text-left px-0">
-              <DrawerTitle>Desbloquear con Face ID</DrawerTitle>
-              <DrawerDescription className="text-left">
-                ¿Querés desbloquear la app con Face ID o código del teléfono la próxima vez? Podés cambiarlo después en Configuración.
-              </DrawerDescription>
-            </DrawerHeader>
-            <DrawerFooter className="flex-col gap-2 px-0 pb-0">
-              <Button onClick={handleBiometricYes} className="w-full h-12 gradient-primary">
-                Sí, configurar
-              </Button>
-              <Button variant="outline" onClick={handleBiometricNo} className="w-full h-12">
-                Ahora no
-              </Button>
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer>
-      ) : (
-        <AlertDialog open={biometricModalOpen} onOpenChange={setBiometricModalOpen}>
-          <AlertDialogContent className="max-w-sm mx-4 rounded-2xl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Desbloquear con Face ID</AlertDialogTitle>
-              <AlertDialogDescription>
-                ¿Querés desbloquear la app con Face ID o código del teléfono la próxima vez? Podés cambiarlo después en Configuración.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-              <AlertDialogCancel onClick={handleBiometricNo} className="w-full sm:flex-1">
-                Ahora no
-              </AlertDialogCancel>
-              <Button onClick={handleBiometricYes} className="w-full sm:flex-1 gradient-primary">
-                Sí, configurar
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
 
       {/* Forgot Password Dialog */}
       <ForgotPasswordDialog

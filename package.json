@@ -13,8 +13,6 @@
   "dependencies": {
     "@capacitor/core": "^8.0.2",
     "@capacitor/haptics": "^8.0.0",
-    "@capacitor/preferences": "^8.0.1",
-    "@capgo/capacitor-native-biometric": "^8.3.3",
     "@hookform/resolvers": "^3.10.0",
     "@lovable.dev/cloud-auth-js": "^0.0.2",
     "@radix-ui/react-accordion": "^1.2.11",
