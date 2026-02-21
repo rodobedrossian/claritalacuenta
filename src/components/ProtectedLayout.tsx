@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import {
@@ -9,37 +9,23 @@ import { BiometricGate } from "@/components/BiometricGate";
 import { useAuth } from "@/contexts/AuthContext";
 
 /**
- * Layout that wraps all protected routes. Shows BiometricGate once per app session
- * when Face ID is enabled; uses Outlet so child routes don't remount the gate.
+ * Layout that wraps all protected routes. Shows BiometricGate only when the
+ * session is lost (no valid session) and Face ID is enabled; otherwise
+ * renders the app without asking for Face ID.
  */
 const ProtectedLayout = () => {
   const { session, loading: authLoading } = useAuth();
-  const [useBiometricGate, setUseBiometricGate] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (isBiometricSupported() && isBiometricEnabled()) {
-      setUseBiometricGate(true);
-    }
-  }, []);
+  const noSession = !session && !authLoading;
+  const showBiometricGate =
+    noSession && isBiometricSupported() && isBiometricEnabled();
 
   useEffect(() => {
-    if (useBiometricGate) return;
-    if (authLoading) return;
-    if (!session) {
+    if (noSession && !showBiometricGate) {
       navigate("/auth", { replace: true });
     }
-  }, [session, authLoading, useBiometricGate, navigate]);
-
-  if (useBiometricGate) {
-    return (
-      <BiometricGate>
-        <Outlet />
-      </BiometricGate>
-    );
-  }
-
-  if (session) return <Outlet />;
+  }, [noSession, showBiometricGate, navigate]);
 
   if (authLoading) {
     return (
@@ -52,9 +38,17 @@ const ProtectedLayout = () => {
     );
   }
 
-  if (!session) return null;
+  if (session) return <Outlet />;
 
-  return <Outlet />;
+  if (showBiometricGate) {
+    return (
+      <BiometricGate>
+        <Outlet />
+      </BiometricGate>
+    );
+  }
+
+  return null;
 };
 
 export default ProtectedLayout;

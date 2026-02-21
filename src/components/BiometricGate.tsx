@@ -16,16 +16,13 @@ interface BiometricGateProps {
 }
 
 /**
- * When biometric unlock is enabled (iOS), requires Face ID / passcode once per
- * app session. Once unlocked, stays unlocked until the app is closed or logout.
+ * Shown only when session is lost and Face ID is enabled. Prompts Face ID once
+ * to restore the session from Keychain; after restore, parent re-renders with
+ * session and the gate is no longer shown.
  */
 export function BiometricGate({ children }: BiometricGateProps) {
   const navigate = useNavigate();
-  const [status, setStatus] = useState<"checking" | "gate" | "unlocked">(() =>
-    typeof sessionStorage !== "undefined" && sessionStorage.getItem(BIOMETRIC_SESSION_UNLOCKED_KEY) === "1"
-      ? "unlocked"
-      : "checking"
-  );
+  const [status, setStatus] = useState<"checking" | "gate" | "unlocked">("checking");
   const [loading, setLoading] = useState(false);
   const hasCheckedRef = useRef(false);
 
