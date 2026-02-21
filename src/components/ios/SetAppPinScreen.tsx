@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { setPin, saveEncryptedSession, verifyPin, isIOSNativeApp } from "@/lib/iosAppPin";
@@ -79,6 +79,7 @@ export function SetAppPinScreen() {
   const [confirmPin, setConfirmPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const savingConfirmRef = useRef(false);
 
   if (!isIOSNativeApp()) {
     navigate("/", { replace: true });
@@ -133,6 +134,23 @@ export function SetAppPinScreen() {
     navigate("/auth", { replace: true });
   };
 
+  const savePinAndNavigate = async (pinValue: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await setPin(pinValue);
+      await saveEncryptedSession(pinValue, session.refresh_token);
+      toast.success("PIN configurado");
+      navigate("/", { replace: true });
+    } catch (e) {
+      console.error("[SetAppPin]", e);
+      setError("No se pudo guardar el PIN. Intentá de nuevo.");
+      toast.error("Error al guardar el PIN");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleContinue = async () => {
     if (reenter) {
       setLoading(true);
@@ -157,32 +175,26 @@ export function SetAppPinScreen() {
       }
       return;
     }
-    if (step === "create") {
-      setStep("confirm");
-      setConfirmPin("");
-      setError(null);
-      return;
-    }
+    if (step === "create") return;
     if (pin !== confirmPin) {
       setError("Los PIN no coinciden. Intentá de nuevo.");
       setConfirmPin("");
       return;
     }
-    setLoading(true);
-    setError(null);
-    try {
-      await setPin(pin);
-      await saveEncryptedSession(pin, session.refresh_token);
-      toast.success("PIN configurado");
-      navigate("/", { replace: true });
-    } catch (e) {
-      console.error("[SetAppPin]", e);
-      setError("No se pudo guardar el PIN. Intentá de nuevo.");
-      toast.error("Error al guardar el PIN");
-    } finally {
-      setLoading(false);
-    }
+    await savePinAndNavigate(pin);
   };
+
+  // Al completar 6 dígitos en confirmación, guardar PIN y entrar (sin botón "Crear PIN")
+  useEffect(() => {
+    if (reenter || step !== "confirm" || confirmPin.length !== PIN_LENGTH || savingConfirmRef.current) return;
+    if (pin !== confirmPin) {
+      setError("Los PIN no coinciden. Intentá de nuevo.");
+      setConfirmPin("");
+      return;
+    }
+    savingConfirmRef.current = true;
+    savePinAndNavigate(pin);
+  }, [step, confirmPin, pin, reenter]);
 
   const title = reenter
     ? "Ingresá tu PIN"
@@ -194,8 +206,7 @@ export function SetAppPinScreen() {
     : step === "create"
       ? "Usá 6 dígitos para desbloquear la app en este dispositivo."
       : "Ingresá el mismo PIN de nuevo.";
-  const buttonLabel = reenter ? "Continuar" : "Crear PIN";
-  const showContinueButton = (step === "confirm" || reenter) && isComplete;
+  const showContinueButton = reenter && isComplete;
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 safe-area-pb relative">
@@ -213,6 +224,11 @@ export function SetAppPinScreen() {
         <p className="text-sm text-muted-foreground text-center mb-4">{subtitle}</p>
         <PinDots length={currentPin.length} />
         {error && <p className="text-sm text-destructive text-center mb-2">{error}</p>}
+        {loading && !reenter && (
+          <div className="flex justify-center my-2">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        )}
         <NumPad onDigit={handleDigit} onBackspace={handleBackspace} disabled={loading} />
         {showContinueButton && (
           <Button

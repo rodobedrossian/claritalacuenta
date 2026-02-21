@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isIOSNativeApp } from "@/lib/iosAppPin";
 import { hasPinConfigured } from "@/lib/iosAppPin";
@@ -36,17 +37,21 @@ export function IOSAppGate() {
     hasPinConfigured().then(setHasPin);
   }, [isProtectedPath, hasPin]);
 
-  // When auth is ready and we have hasPin, show splash (or we're already showing it during authLoading)
+  // Splash solo al abrir la app (sin sesión). Con sesión ir directo a contenido o set-pin.
   useEffect(() => {
     if (!isIOSNativeApp() || !isProtectedPath) return;
     if (authLoading) {
       setStage("loading");
       return;
     }
-    if (hasPin !== null) {
+    if (hasPin === null) return;
+    if (session) {
+      if (hasPin === true) setStage("content");
+      // hasPin === false → ya se maneja más abajo (redirect set-pin)
+    } else {
       setStage("splash");
     }
-  }, [isProtectedPath, authLoading, hasPin]);
+  }, [isProtectedPath, authLoading, session, hasPin]);
 
   const handleSplashFinish = () => {
     if (session && hasPin === true) {
@@ -68,8 +73,8 @@ export function IOSAppGate() {
     return <Outlet />;
   }
 
-  // Show logo splash (not spinner) during initial load and during splash phase
-  if (authLoading || (session && hasPin === null) || stage === "loading") {
+  // Splash con logo solo al abrir la app (auth cargando o sin sesión en etapa splash)
+  if (authLoading || stage === "loading") {
     return (
       <IOSSplashScreen
         onFinish={handleSplashFinish}
@@ -79,7 +84,17 @@ export function IOSAppGate() {
     );
   }
 
+  // Con sesión pero hasPin aún no resuelto (ej. volviendo de set-pin): spinner breve, sin splash
+  if (session && hasPin === null) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (session && hasPin === false) {
+    navigate("/set-pin", { replace: true, state: { session } });
     return null;
   }
 
