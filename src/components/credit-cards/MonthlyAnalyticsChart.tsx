@@ -3,6 +3,10 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreditCardTransaction } from "@/hooks/useCreditCardStatements";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronDown } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface Category {
   id: string;
@@ -42,6 +46,7 @@ export const MonthlyAnalyticsChart = ({
   creditCards,
 }: MonthlyAnalyticsChartProps) => {
   const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   // Build category name map
   const categoryMap = useMemo(() => {
@@ -73,6 +78,23 @@ export const MonthlyAnalyticsChart = ({
     return Array.from(data.entries())
       .map(([category, amount]) => ({ category, amount }))
       .sort((a, b) => b.amount - a.amount);
+  }, [transactions, currency, categoryMap]);
+
+  // Transactions grouped by category name for drill-down
+  const transactionsByCategory = useMemo(() => {
+    const map = new Map<string, CreditCardTransaction[]>();
+    transactions
+      .filter((t) => t.currency === currency && t.transaction_type !== "ajuste")
+      .forEach((t) => {
+        const categoryName = t.category_id
+          ? categoryMap.get(t.category_id) || "Sin categoría"
+          : "Sin categoría";
+        if (!map.has(categoryName)) map.set(categoryName, []);
+        map.get(categoryName)!.push(t);
+      });
+    // Sort each group by date desc
+    map.forEach((txs) => txs.sort((a, b) => b.date.localeCompare(a.date)));
+    return map;
   }, [transactions, currency, categoryMap]);
 
   // Calculate data by card
@@ -200,32 +222,76 @@ export const MonthlyAnalyticsChart = ({
                 <p className="text-2xl font-bold">{formatAmount(total)}</p>
               </div>
 
-              {/* Categories */}
-              <div className="space-y-2 overflow-y-auto max-h-[180px]">
+              {/* Categories - clickable */}
+              <div className="space-y-1 overflow-y-auto max-h-[300px]">
                 {categoryData.map((item, index) => {
                   const percentage = ((item.amount / total) * 100).toFixed(1);
+                  const isExpanded = expandedCategory === item.category;
+                  const categoryTxs = transactionsByCategory.get(item.category) || [];
+
                   return (
-                    <div
-                      key={item.category}
-                      className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                        />
-                        <span className="text-sm truncate" title={item.category}>
-                          {item.category}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className="text-sm font-medium">
-                          {formatAmount(item.amount)}
-                        </span>
-                        <span className="text-xs text-muted-foreground w-12 text-right">
-                          {percentage}%
-                        </span>
-                      </div>
+                    <div key={item.category}>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedCategory(isExpanded ? null : item.category)}
+                        className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors w-full text-left group"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          />
+                          <span className="text-sm truncate" title={item.category}>
+                            {item.category}
+                          </span>
+                          <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <span className="text-sm font-medium">
+                            {formatAmount(item.amount)}
+                          </span>
+                          <span className="text-xs text-muted-foreground w-12 text-right">
+                            {percentage}%
+                          </span>
+                        </div>
+                      </button>
+
+                      <AnimatePresence initial={false}>
+                        {isExpanded && categoryTxs.length > 0 && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.25, ease: "easeInOut" }}
+                            className="overflow-hidden"
+                          >
+                            <div className="ml-5 pl-3 border-l-2 border-border/50 space-y-0.5 py-1.5">
+                              {categoryTxs.map((tx) => (
+                                <div
+                                  key={tx.id}
+                                  className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-md hover:bg-muted/30 transition-colors"
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs truncate">{tx.description}</p>
+                                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                      <span>{format(parseISO(tx.date), "dd MMM", { locale: es })}</span>
+                                      {tx.credit_card_id && cardMap.get(tx.credit_card_id) && (
+                                        <span>· {cardMap.get(tx.credit_card_id)}</span>
+                                      )}
+                                      {tx.installment_current && tx.installment_total && (
+                                        <span>· {tx.installment_current}/{tx.installment_total}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <span className="text-xs font-medium tabular-nums flex-shrink-0">
+                                    {formatAmount(tx.amount)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   );
                 })}
