@@ -198,7 +198,12 @@ export async function getSessionWithPin(pin: string): Promise<{ refresh_token: s
   }
 }
 
-/** Remove PIN hash, salt and encrypted session. Call on logout and "Olvidé mi PIN". */
+/** Remove only the encrypted session (refresh token). Keeps PIN so user does not have to create it again after re-login. Call on logout. */
+export async function clearEncryptedSessionOnly(): Promise<void> {
+  await removePref(PIN_ENCRYPTED_KEY);
+}
+
+/** Remove PIN hash, salt and encrypted session. Call on "Olvidé mi PIN". */
 export async function clearPinData(): Promise<void> {
   await removePref(PIN_SALT_KEY);
   await removePref(PIN_HASH_KEY);

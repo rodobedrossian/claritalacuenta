@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { setPin, saveEncryptedSession, isIOSNativeApp } from "@/lib/iosAppPin";
+import { setPin, saveEncryptedSession, verifyPin, isIOSNativeApp } from "@/lib/iosAppPin";
 import { toast } from "sonner";
-import { Loader2, Delete } from "lucide-react";
+import { Loader2, Delete, ArrowLeft } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 
 const PIN_LENGTH = 6;
 
@@ -34,7 +35,7 @@ function NumPad({
 }) {
   const digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"];
   return (
-    <div className="grid grid-cols-3 gap-3 max-w-[280px] mx-auto">
+    <div className="grid grid-cols-3 gap-4 max-w-[320px] mx-auto">
       {digits.map((d) =>
         d === "" ? (
           <div key="empty" />
@@ -43,7 +44,7 @@ function NumPad({
             key="back"
             variant="outline"
             size="lg"
-            className="h-14"
+            className="h-16 min-h-16 text-lg"
             onClick={onBackspace}
             disabled={disabled}
           >
@@ -54,7 +55,7 @@ function NumPad({
             key={d}
             variant="outline"
             size="lg"
-            className="h-14 text-xl"
+            className="h-16 min-h-16 text-2xl"
             onClick={() => onDigit(d)}
             disabled={disabled}
           >
@@ -69,7 +70,9 @@ function NumPad({
 export function SetAppPinScreen() {
   const navigate = useNavigate();
   const location = useLocation();
-  const session = (location.state as { session?: Session })?.session;
+  const state = location.state as { session?: Session; reenter?: boolean } | undefined;
+  const session = state?.session;
+  const reenter = !!state?.reenter;
 
   const [step, setStep] = useState<"create" | "confirm">("create");
   const [pin, setPinInput] = useState("");
@@ -89,7 +92,9 @@ export function SetAppPinScreen() {
 
   const handleDigit = (d: string) => {
     setError(null);
-    if (step === "create") {
+    if (reenter) {
+      if (pin.length < PIN_LENGTH) setPinInput((p) => p + d);
+    } else if (step === "create") {
       if (pin.length < PIN_LENGTH) setPinInput((p) => p + d);
     } else {
       if (confirmPin.length < PIN_LENGTH) setConfirmPin((p) => p + d);
@@ -98,17 +103,60 @@ export function SetAppPinScreen() {
 
   const handleBackspace = () => {
     setError(null);
-    if (step === "create") {
+    if (reenter) {
+      setPinInput((p) => p.slice(0, -1));
+    } else if (step === "create") {
       setPinInput((p) => p.slice(0, -1));
     } else {
       setConfirmPin((p) => p.slice(0, -1));
     }
   };
 
-  const currentPin = step === "create" ? pin : confirmPin;
+  const currentPin = reenter ? pin : step === "create" ? pin : confirmPin;
   const isComplete = currentPin.length === PIN_LENGTH;
 
+  // Auto-advance to confirm step when 6 digits entered in create step (no Continuar tap)
+  useEffect(() => {
+    if (reenter || step !== "create") return;
+    if (pin.length === PIN_LENGTH) {
+      const t = setTimeout(() => {
+        setStep("confirm");
+        setConfirmPin("");
+        setError(null);
+      }, 200);
+      return () => clearTimeout(t);
+    }
+  }, [reenter, step, pin.length]);
+
+  const handleVolver = () => {
+    supabase.auth.signOut();
+    navigate("/auth", { replace: true });
+  };
+
   const handleContinue = async () => {
+    if (reenter) {
+      setLoading(true);
+      setError(null);
+      try {
+        const ok = await verifyPin(pin);
+        if (!ok) {
+          setError("PIN incorrecto. Intentá de nuevo.");
+          setPinInput("");
+          setLoading(false);
+          return;
+        }
+        await saveEncryptedSession(pin, session.refresh_token);
+        toast.success("Sesión asegurada");
+        navigate("/", { replace: true });
+      } catch (e) {
+        console.error("[SetAppPin]", e);
+        setError("No se pudo guardar. Intentá de nuevo.");
+        toast.error("Error al guardar");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
     if (step === "create") {
       setStep("confirm");
       setConfirmPin("");
@@ -136,28 +184,44 @@ export function SetAppPinScreen() {
     }
   };
 
+  const title = reenter
+    ? "Ingresá tu PIN"
+    : step === "create"
+      ? "Creá tu PIN de Rucula"
+      : "Confirmá tu PIN";
+  const subtitle = reenter
+    ? "Ingresá tu PIN para asegurar esta sesión en el dispositivo."
+    : step === "create"
+      ? "Usá 6 dígitos para desbloquear la app en este dispositivo."
+      : "Ingresá el mismo PIN de nuevo.";
+  const buttonLabel = reenter ? "Asegurar sesión" : "Crear PIN";
+  const showContinueButton = (step === "confirm" || reenter) && isComplete;
+
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 safe-area-pb">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 safe-area-pb relative">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="absolute top-4 left-4 gap-1.5 text-muted-foreground"
+        onClick={handleVolver}
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Volver
+      </Button>
       <div className="w-full max-w-sm">
-        <h1 className="text-xl font-bold text-center mb-1">
-          {step === "create" ? "Creá tu PIN de Rucula" : "Confirmá tu PIN"}
-        </h1>
-        <p className="text-sm text-muted-foreground text-center mb-4">
-          {step === "create"
-            ? "Usá 6 dígitos para desbloquear la app en este dispositivo."
-            : "Ingresá el mismo PIN de nuevo."}
-        </p>
+        <h1 className="text-xl font-bold text-center mb-1">{title}</h1>
+        <p className="text-sm text-muted-foreground text-center mb-4">{subtitle}</p>
         <PinDots length={currentPin.length} />
         {error && <p className="text-sm text-destructive text-center mb-2">{error}</p>}
         <NumPad onDigit={handleDigit} onBackspace={handleBackspace} disabled={loading} />
-        {isComplete && (
+        {showContinueButton && (
           <Button
             className="w-full mt-6"
             size="lg"
             onClick={handleContinue}
             disabled={loading}
           >
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : step === "create" ? "Continuar" : "Crear PIN"}
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : buttonLabel}
           </Button>
         )}
       </div>

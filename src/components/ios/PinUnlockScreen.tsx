@@ -40,7 +40,7 @@ function NumPad({
 }) {
   const digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"];
   return (
-    <div className="grid grid-cols-3 gap-3 max-w-[280px] mx-auto">
+    <div className="grid grid-cols-3 gap-4 max-w-[320px] mx-auto">
       {digits.map((d) =>
         d === "" ? (
           <div key="empty" />
@@ -49,7 +49,7 @@ function NumPad({
             key="back"
             variant="outline"
             size="lg"
-            className="h-14"
+            className="h-16 min-h-16 text-lg"
             onClick={onBackspace}
             disabled={disabled}
           >
@@ -60,7 +60,7 @@ function NumPad({
             key={d}
             variant="outline"
             size="lg"
-            className="h-14 text-xl"
+            className="h-16 min-h-16 text-2xl"
             onClick={() => onDigit(d)}
             disabled={disabled}
           >

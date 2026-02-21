@@ -31,6 +31,7 @@ export function IOSAppGate() {
     location.pathname.startsWith("/mas") ||
     location.pathname.startsWith("/legales");
 
+  // Always show splash first when entering the gate, then decide: PIN / Auth / Content / SetPin
   useEffect(() => {
     if (!isIOSNativeApp()) return;
     if (!isProtectedPath) return;
@@ -38,28 +39,22 @@ export function IOSAppGate() {
       setStage("loading");
       return;
     }
-    if (session) {
-      hasPinConfigured().then((configured) => {
-        setHasPin(configured);
-        if (configured) {
-          setStage("content");
-        } else {
-          navigate("/set-pin", { replace: true, state: { session } });
-        }
-      });
-      return;
-    }
-    // No session - need hasPin to decide pin vs auth
     if (hasPin === null) {
       hasPinConfigured().then((configured) => {
         setHasPin(configured);
         setStage("splash");
       });
+      return;
     }
+    // Already have hasPin and we might have skipped splash (e.g. return from set-pin); keep current stage
   }, [isProtectedPath, authLoading, session, hasPin, navigate]);
 
   const handleSplashFinish = () => {
-    if (hasPin === true) {
+    if (session && hasPin === true) {
+      setStage("content");
+    } else if (session && hasPin === false) {
+      navigate("/set-pin", { replace: true, state: { session } });
+    } else if (!session && hasPin === true) {
       setStage("pin");
     } else {
       navigate("/auth", { replace: true });

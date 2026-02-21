@@ -23,7 +23,7 @@ import {
   setBiometricPromptShown,
 } from "@/lib/biometricAuth";
 import { getLastUser, setLastUser } from "@/lib/authStorage";
-import { isIOSNativeApp } from "@/lib/iosAppPin";
+import { isIOSNativeApp, hasPinConfigured } from "@/lib/iosAppPin";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -126,7 +126,8 @@ const Auth = () => {
     setLastUser({ email: userEmail, full_name: userName });
 
     if (isIOSNativeApp()) {
-      navigate("/set-pin", { replace: true, state: { session } });
+      const reenter = await hasPinConfigured();
+      navigate("/set-pin", { replace: true, state: { session, reenter } });
       return;
     }
 
