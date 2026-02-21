@@ -5,6 +5,12 @@ const PIN_SALT_KEY = "clarita_pin_salt";
 const PIN_HASH_KEY = "clarita_pin_hash";
 const PIN_ENCRYPTED_KEY = "clarita_pin_encrypted";
 
+const PREFS_LOCALSTORAGE_PREFIX = "clarita_pin_prefs_";
+
+function isUnimplementedError(e: unknown): boolean {
+  return (e as { code?: string })?.code === "UNIMPLEMENTED";
+}
+
 const PBKDF2_ITERATIONS = 100000;
 const SALT_LENGTH = 16;
 const IV_LENGTH = 12;
@@ -24,19 +30,42 @@ async function getPref(key: string): Promise<string | null> {
   try {
     const { value } = await Preferences.get({ key });
     return value;
-  } catch {
+  } catch (e) {
+    if (isUnimplementedError(e)) {
+      try {
+        return localStorage.getItem(PREFS_LOCALSTORAGE_PREFIX + key);
+      } catch {
+        return null;
+      }
+    }
     return null;
   }
 }
 
 async function setPref(key: string, value: string): Promise<void> {
   if (!isIOSNativeApp()) return;
-  await Preferences.set({ key, value });
+  try {
+    await Preferences.set({ key, value });
+  } catch (e) {
+    if (isUnimplementedError(e)) {
+      localStorage.setItem(PREFS_LOCALSTORAGE_PREFIX + key, value);
+      return;
+    }
+    throw e;
+  }
 }
 
 async function removePref(key: string): Promise<void> {
   if (!isIOSNativeApp()) return;
-  await Preferences.remove({ key });
+  try {
+    await Preferences.remove({ key });
+  } catch (e) {
+    if (isUnimplementedError(e)) {
+      localStorage.removeItem(PREFS_LOCALSTORAGE_PREFIX + key);
+      return;
+    }
+    throw e;
+  }
 }
 
 function bufferToBase64(buf: ArrayBuffer): string {

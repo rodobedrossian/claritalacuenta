@@ -288,7 +288,7 @@ const Auth = () => {
         );
       }
       return (
-        <form onSubmit={handleSignIn} className="space-y-5">
+        <form onSubmit={handleSignIn} className="space-y-5" autoComplete="off">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-foreground mb-1">
               Hola, {lastUser!.full_name || lastUser!.email.split("@")[0]}!
@@ -307,6 +307,7 @@ const Auth = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
+              autoComplete="off"
               className="h-12 bg-background border-border focus:border-primary focus:ring-primary/20"
             />
           </div>
@@ -355,7 +356,7 @@ const Auth = () => {
     }
 
     return (
-      <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-5">
+      <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-5" autoComplete="off">
         {isSignUp && (
           <div className="space-y-2">
             <Label htmlFor="fullName">Nombre completo</Label>
@@ -379,6 +380,7 @@ const Auth = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            autoComplete="off"
             className="h-12 bg-background border-border focus:border-primary focus:ring-primary/20"
           />
         </div>
@@ -395,6 +397,7 @@ const Auth = () => {
             }}
             required
             minLength={6}
+            autoComplete="off"
             className={`h-12 bg-background border-border focus:border-primary focus:ring-primary/20 ${
               passwordError ? "border-destructive focus:border-destructive" : ""
             }`}
