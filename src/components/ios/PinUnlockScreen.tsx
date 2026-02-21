@@ -113,15 +113,20 @@ export function PinUnlockScreen() {
     setLoading(true);
     setError(null);
     try {
-      const sessionData = await getSessionWithPin(pinValue);
-      if (!sessionData?.refresh_token) {
+      const result = await getSessionWithPin(pinValue);
+      if (result === null) {
         setPin("");
         setError("PIN incorrecto. Intentá de nuevo.");
         setShake(true);
         setTimeout(() => setShake(false), 400);
         return;
       }
-      await supabase.auth.setSession({ refresh_token: sessionData.refresh_token });
+      if ("needPassword" in result) {
+        toast.info("Tu sesión se cerró. Ingresá tu contraseña para continuar.");
+        navigate("/auth", { replace: true });
+        return;
+      }
+      await supabase.auth.setSession({ refresh_token: result.refresh_token });
       toast.success("Bienvenido");
       navigate("/", { replace: true });
     } catch (e) {

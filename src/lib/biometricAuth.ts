@@ -155,7 +155,9 @@ export async function clearStoredSession(): Promise<void> {
 
 /** Sign out and clear any stored biometric credentials. Use for logout. */
 export async function performLogout(): Promise<void> {
-  await clearStoredSession();
+  if (!isIOSNativeApp()) {
+    await clearStoredSession();
+  }
   if (isIOSNativeApp()) {
     await clearEncryptedSessionOnly();
   }

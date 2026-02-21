@@ -25,16 +25,22 @@ export function isIOSNativeApp(): boolean {
   }
 }
 
+function localStorageKey(key: string): string {
+  return PREFS_LOCALSTORAGE_PREFIX + key;
+}
+
 async function getPref(key: string): Promise<string | null> {
   if (!isIOSNativeApp()) return null;
+  let value: string | null = null;
   try {
-    const { value } = await Preferences.get({ key });
-    if (value != null && value !== "") return value;
+    const { value: prefsValue } = await Preferences.get({ key });
+    if (prefsValue != null && prefsValue !== "") value = prefsValue;
   } catch (e) {
-    if (!isUnimplementedError(e)) return null;
+    if (!isUnimplementedError(e)) { /* ignore */ }
   }
+  if (value != null && value !== "") return value;
   try {
-    return localStorage.getItem(PREFS_LOCALSTORAGE_PREFIX + key);
+    return localStorage.getItem(localStorageKey(key));
   } catch {
     return null;
   }
@@ -45,11 +51,12 @@ async function setPref(key: string, value: string): Promise<void> {
   try {
     await Preferences.set({ key, value });
   } catch (e) {
-    if (isUnimplementedError(e)) {
-      localStorage.setItem(PREFS_LOCALSTORAGE_PREFIX + key, value);
-      return;
-    }
-    throw e;
+    if (!isUnimplementedError(e)) throw e;
+  }
+  try {
+    localStorage.setItem(localStorageKey(key), value);
+  } catch {
+    /* ignore */
   }
 }
 
@@ -58,11 +65,12 @@ async function removePref(key: string): Promise<void> {
   try {
     await Preferences.remove({ key });
   } catch (e) {
-    if (isUnimplementedError(e)) {
-      localStorage.removeItem(PREFS_LOCALSTORAGE_PREFIX + key);
-      return;
-    }
-    throw e;
+    if (!isUnimplementedError(e)) throw e;
+  }
+  try {
+    localStorage.removeItem(localStorageKey(key));
+  } catch {
+    /* ignore */
   }
 }
 
@@ -169,17 +177,25 @@ export async function saveEncryptedSession(pin: string, refreshToken: string): P
   await setPref(PIN_ENCRYPTED_KEY, payload);
 }
 
-/** Verify PIN, decrypt and return refresh_token. */
-export async function getSessionWithPin(pin: string): Promise<{ refresh_token: string } | null> {
+export type SessionWithPinResult =
+  | { refresh_token: string }
+  | { needPassword: true }
+  | null;
+
+/**
+ * Verify PIN and return session. Returns needPassword when PIN is correct but
+ * encrypted session was cleared (e.g. after logout) so user must enter password.
+ */
+export async function getSessionWithPin(pin: string): Promise<SessionWithPinResult> {
   if (!isIOSNativeApp()) return null;
   const ok = await verifyPin(pin);
   if (!ok) return null;
   const payloadStr = await getPref(PIN_ENCRYPTED_KEY);
-  if (!payloadStr) return null;
+  if (!payloadStr) return { needPassword: true };
   try {
     const parsed = JSON.parse(payloadStr) as { iv: string; data: string };
     const saltB64 = await getPref(PIN_SALT_KEY);
-    if (!saltB64) return null;
+    if (!saltB64) return { needPassword: true };
     const salt = new Uint8Array(base64ToBuffer(saltB64));
     const key = await deriveKey(salt, pin);
     const iv = base64ToBuffer(parsed.iv);
@@ -190,7 +206,7 @@ export async function getSessionWithPin(pin: string): Promise<{ refresh_token: s
       data
     );
     const refresh_token = new TextDecoder().decode(decrypted);
-    return refresh_token ? { refresh_token } : null;
+    return refresh_token ? { refresh_token } : { needPassword: true };
   } catch {
     return null;
   }
