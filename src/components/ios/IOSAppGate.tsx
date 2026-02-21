@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isIOSNativeApp } from "@/lib/iosAppPin";
 import { hasPinConfigured } from "@/lib/iosAppPin";
@@ -31,23 +30,23 @@ export function IOSAppGate() {
     location.pathname.startsWith("/mas") ||
     location.pathname.startsWith("/legales");
 
-  // Always show splash first when entering the gate, then decide: PIN / Auth / Content / SetPin
+  // Fetch hasPin as soon as we're on the gate (so splash can finish when auth is ready)
   useEffect(() => {
-    if (!isIOSNativeApp()) return;
-    if (!isProtectedPath) return;
+    if (!isIOSNativeApp() || !isProtectedPath || hasPin !== null) return;
+    hasPinConfigured().then(setHasPin);
+  }, [isProtectedPath, hasPin]);
+
+  // When auth is ready and we have hasPin, show splash (or we're already showing it during authLoading)
+  useEffect(() => {
+    if (!isIOSNativeApp() || !isProtectedPath) return;
     if (authLoading) {
       setStage("loading");
       return;
     }
-    if (hasPin === null) {
-      hasPinConfigured().then((configured) => {
-        setHasPin(configured);
-        setStage("splash");
-      });
-      return;
+    if (hasPin !== null) {
+      setStage("splash");
     }
-    // Already have hasPin and we might have skipped splash (e.g. return from set-pin); keep current stage
-  }, [isProtectedPath, authLoading, session, hasPin, navigate]);
+  }, [isProtectedPath, authLoading, hasPin]);
 
   const handleSplashFinish = () => {
     if (session && hasPin === true) {
@@ -69,11 +68,14 @@ export function IOSAppGate() {
     return <Outlet />;
   }
 
-  if (authLoading || (session && hasPin === null)) {
+  // Show logo splash (not spinner) during initial load and during splash phase
+  if (authLoading || (session && hasPin === null) || stage === "loading") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <IOSSplashScreen
+        onFinish={handleSplashFinish}
+        minDurationMs={2200}
+        ready={!authLoading && hasPin !== null}
+      />
     );
   }
 
@@ -86,7 +88,13 @@ export function IOSAppGate() {
   }
 
   if (stage === "splash") {
-    return <IOSSplashScreen onFinish={handleSplashFinish} />;
+    return (
+      <IOSSplashScreen
+        onFinish={handleSplashFinish}
+        minDurationMs={2200}
+        ready
+      />
+    );
   }
 
   if (stage === "pin") {

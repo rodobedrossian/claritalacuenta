@@ -1,22 +1,36 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-const SPLASH_DURATION_MS = 1000;
+const DEFAULT_MIN_DURATION_MS = 2200;
 
 interface IOSSplashScreenProps {
   onFinish: () => void;
+  /** Minimum time to show splash (ms). */
+  minDurationMs?: number;
+  /** When false, splash stays until this becomes true and minDurationMs has passed. Use e.g. ready={!authLoading}. */
+  ready?: boolean;
 }
 
 /**
- * Full-screen splash with app brand color and logo. Calls onFinish after ~1s.
- * iOS only; used by IOSAppGate before showing PIN or Auth.
+ * Full-screen splash with app brand color and logo (R). Calls onFinish after minDurationMs
+ * and optionally after ready is true. iOS only; used by IOSAppGate.
  */
-export function IOSSplashScreen({ onFinish }: IOSSplashScreenProps) {
+export function IOSSplashScreen({
+  onFinish,
+  minDurationMs = DEFAULT_MIN_DURATION_MS,
+  ready = true,
+}: IOSSplashScreenProps) {
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+
   useEffect(() => {
-    const t = setTimeout(() => {
-      onFinish();
-    }, SPLASH_DURATION_MS);
+    const t = setTimeout(() => setMinTimeElapsed(true), minDurationMs);
     return () => clearTimeout(t);
-  }, [onFinish]);
+  }, [minDurationMs]);
+
+  useEffect(() => {
+    if (minTimeElapsed && ready) {
+      onFinish();
+    }
+  }, [minTimeElapsed, ready, onFinish]);
 
   return (
     <div
@@ -26,7 +40,7 @@ export function IOSSplashScreen({ onFinish }: IOSSplashScreenProps) {
       <img
         src="/rucula-logo.png"
         alt="Rucula"
-        className="w-24 h-24 object-contain"
+        className="w-48 h-48 object-contain"
       />
     </div>
   );

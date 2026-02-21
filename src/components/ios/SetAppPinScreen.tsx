@@ -190,11 +190,11 @@ export function SetAppPinScreen() {
       ? "Creá tu PIN de Rucula"
       : "Confirmá tu PIN";
   const subtitle = reenter
-    ? "Ingresá tu PIN para asegurar esta sesión en el dispositivo."
+    ? "Guardá tu sesión en este dispositivo para desbloquear con PIN la próxima vez."
     : step === "create"
       ? "Usá 6 dígitos para desbloquear la app en este dispositivo."
       : "Ingresá el mismo PIN de nuevo.";
-  const buttonLabel = reenter ? "Asegurar sesión" : "Crear PIN";
+  const buttonLabel = reenter ? "Continuar" : "Crear PIN";
   const showContinueButton = (step === "confirm" || reenter) && isComplete;
 
   return (

@@ -75,6 +75,14 @@ const Auth = () => {
     }
   }, [session, biometricModalOpen, pendingSession, navigate, redirectTo]);
 
+  // On iOS, if returning user has PIN configured, go to gate so they only see PIN (not password)
+  useEffect(() => {
+    if (!isIOSNativeApp() || !showReturningUser) return;
+    hasPinConfigured().then((configured) => {
+      if (configured) navigate("/", { replace: true });
+    });
+  }, [showReturningUser, navigate]);
+
   // When showing returning user, try Face ID first if biometric is configured (skip on iOS - use app PIN instead)
   useEffect(() => {
     if (!showReturningUser) {
@@ -280,7 +288,7 @@ const Auth = () => {
 
   const renderForm = () => {
     if (showReturningUser) {
-      if (checkingBiometric) {
+      if (checkingBiometric && !isIOSNativeApp()) {
         return (
           <div className="flex flex-col items-center justify-center py-12 space-y-4">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
