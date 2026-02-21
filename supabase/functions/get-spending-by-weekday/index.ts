@@ -76,11 +76,15 @@ Deno.serve(async (req) => {
     // Fetch categories first so we can identify "Tarjeta" category
     const categoriesResult = await supabase.from("categories").select("id, name").order("name");
     const categoryMap = new Map<string, string>();
-    const tarjetaCatIds = new Set<string>();
+    // Hard-code the known Tarjeta UUID as safety net + dynamically detect others
+    const TARJETA_UUID = "2eee47f0-252a-4580-8672-0ec0bdd6f11d";
+    const TARJETA_TEXT = "Tarjeta"; // Some transactions use text instead of UUID
+    const tarjetaCatIds = new Set<string>([TARJETA_UUID, TARJETA_TEXT]);
     for (const c of categoriesResult.data || []) {
       categoryMap.set(c.id, c.name);
       if (c.name.toLowerCase() === "tarjeta") tarjetaCatIds.add(c.id);
     }
+    
 
     const [
       exchangeRateResult,
@@ -94,23 +98,33 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle(),
       (async () => {
-        // Exclude credit card payment transactions (category "Tarjeta")
-        // since those amounts are already broken down in credit_card_transactions
+        // Exclude credit card statement payments (category "Tarjeta" as UUID or text)
+        // since those amounts are already broken down in credit_card_transactions.
         let query = supabase
           .from("transactions")
           .select("date, category, amount, currency")
           .eq("type", "expense")
           .neq("payment_method", "credit_card")
+          .neq("category", TARJETA_UUID)
+          .neq("category", TARJETA_TEXT)
           .gte("date", startStr)
           .lte("date", endStr);
         if (workspace_id) query = query.eq("workspace_id", workspace_id);
         const result = await query;
+        // JS safety: filter out any remaining Tarjeta-like categories (case variations)
         return {
           ...result,
-          data: (result.data || []).filter((t) => !tarjetaCatIds.has(t.category)),
+          data: (result.data || []).filter((t) => {
+            if (tarjetaCatIds.has(t.category)) return false;
+            // Also catch case-insensitive text matches
+            if (typeof t.category === "string" && t.category.toLowerCase() === "tarjeta") return false;
+            return true;
+          }),
         };
       })(),
       (async () => {
+        // Only include consumos and first cuotas (not impuestos/ajustes)
+        // to reflect actual spending patterns
         const consumos = await (() => {
           let q = supabase
             .from("credit_card_transactions")
