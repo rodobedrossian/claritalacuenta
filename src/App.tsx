@@ -66,7 +66,16 @@ const App = () => {
   const isMobile = useIsMobile();
   const isIOSApp = Capacitor.getPlatform() === 'ios';
   const hasSeenOnboarding = localStorage.getItem("clarita_onboarding_seen") === "true";
-  
+
+  // Quitar splash estático del HTML tras el primer paint (evita pantalla blanca al abrir)
+  useEffect(() => {
+    const hide = () => {
+      const el = document.getElementById("initial-splash");
+      if (el) el.style.display = "none";
+    };
+    requestAnimationFrame(() => requestAnimationFrame(hide));
+  }, []);
+
   useOfflineDetection();
   
   // For development/testing: allow forcing onboarding via URL param

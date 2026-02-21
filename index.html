@@ -33,9 +33,22 @@
     <meta name="twitter:title" content="Rucula" />
     <meta property="og:description" content="Gestiona ingresos, gastos y ahorros." />
     <meta name="twitter:description" content="Gestiona ingresos, gastos y ahorros." />
+    <style>
+      /* Evitar pantalla blanca al abrir: primer paint con color de marca (Capacitor iOS) */
+      body { margin: 0; min-height: 100vh; background-color: #2d7a4f; }
+      #root { min-height: 100vh; background-color: #2d7a4f; }
+      #initial-splash {
+        position: fixed; inset: 0; background-color: #2d7a4f;
+        display: flex; align-items: center; justify-content: center; z-index: 9999;
+      }
+      #initial-splash img { width: 192px; height: 192px; object-fit: contain; }
+    </style>
   </head>
 
   <body>
+    <div id="initial-splash">
+      <img src="/rucula-logo.png" alt="" width="192" height="192" />
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

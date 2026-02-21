@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
-  verifyPin,
   getSessionWithPin,
   clearPinData,
   isIOSNativeApp,
@@ -90,6 +89,8 @@ export function PinUnlockScreen() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [shake, setShake] = useState(false);
+  const verifyingRef = useRef(false);
 
   if (!isIOSNativeApp()) {
     navigate("/", { replace: true });
@@ -106,16 +107,18 @@ export function PinUnlockScreen() {
     setPin((p) => p.slice(0, -1));
   };
 
-  const handleUnlock = async () => {
-    if (pin.length !== PIN_LENGTH) return;
+  const verifyAndUnlock = async (pinValue: string) => {
+    if (pinValue.length !== PIN_LENGTH || verifyingRef.current) return;
+    verifyingRef.current = true;
     setLoading(true);
     setError(null);
     try {
-      const sessionData = await getSessionWithPin(pin);
+      const sessionData = await getSessionWithPin(pinValue);
       if (!sessionData?.refresh_token) {
-        setError("PIN incorrecto");
         setPin("");
-        toast.error("PIN incorrecto");
+        setError("PIN incorrecto. Intentá de nuevo.");
+        setShake(true);
+        setTimeout(() => setShake(false), 400);
         return;
       }
       await supabase.auth.setSession({ refresh_token: sessionData.refresh_token });
@@ -123,24 +126,33 @@ export function PinUnlockScreen() {
       navigate("/", { replace: true });
     } catch (e) {
       console.error("[PinUnlock]", e);
-      setError("Error al restaurar sesión");
       setPin("");
-      toast.error("Error al ingresar");
+      setError("PIN incorrecto. Intentá de nuevo.");
+      setShake(true);
+      setTimeout(() => setShake(false), 400);
     } finally {
       setLoading(false);
+      verifyingRef.current = false;
     }
   };
+
+  // Al completar 6 dígitos, verificar y entrar (sin botón Desbloquear)
+  useEffect(() => {
+    if (pin.length === PIN_LENGTH) {
+      verifyAndUnlock(pin);
+    }
+  }, [pin]);
 
   const handleForgotPin = async () => {
     await clearPinData();
     navigate("/auth", { replace: true });
   };
 
-  const isComplete = pin.length === PIN_LENGTH;
-
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 safe-area-pb">
-      <div className="w-full max-w-sm">
+      <div
+        className={`w-full max-w-sm transition-transform ${shake ? "animate-shake" : ""}`}
+      >
         {lastUser && (
           <div className="flex flex-col items-center mb-6">
             <div
@@ -160,20 +172,15 @@ export function PinUnlockScreen() {
         </p>
         <PinDots length={pin.length} />
         {error && <p className="text-sm text-destructive text-center mb-2">{error}</p>}
-        <NumPad onDigit={handleDigit} onBackspace={handleBackspace} disabled={loading} />
-        {isComplete && (
-          <Button
-            className="w-full mt-6"
-            size="lg"
-            onClick={handleUnlock}
-            disabled={loading}
-          >
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Desbloquear"}
-          </Button>
+        {loading && (
+          <div className="flex justify-center my-2">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
         )}
+        <NumPad onDigit={handleDigit} onBackspace={handleBackspace} disabled={loading} />
         <Button
           variant="ghost"
-          className="w-full mt-3 text-muted-foreground"
+          className="w-full mt-6 text-muted-foreground"
           onClick={handleForgotPin}
           disabled={loading}
         >
