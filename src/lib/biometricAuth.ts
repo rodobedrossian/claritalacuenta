@@ -2,6 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import { NativeBiometric } from "@capgo/capacitor-native-biometric";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { isIOSNativeApp, clearPinData } from "@/lib/iosAppPin";
 
 const BIOMETRIC_ENABLED_KEY = "clarita_biometric_enabled";
 const BIOMETRIC_PROMPT_SHOWN_KEY = "clarita_biometric_prompt_shown";
@@ -155,6 +156,9 @@ export async function clearStoredSession(): Promise<void> {
 /** Sign out and clear any stored biometric credentials. Use for logout. */
 export async function performLogout(): Promise<void> {
   await clearStoredSession();
+  if (isIOSNativeApp()) {
+    await clearPinData();
+  }
   try {
     sessionStorage.removeItem(BIOMETRIC_SESSION_UNLOCKED_KEY);
   } catch {

@@ -4,9 +4,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { persistQueryClient } from '@tanstack/react-query-persist-client';
 import { queryPersister } from '@/lib/queryPersister';
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
+import { isIOSNativeApp } from "@/lib/iosAppPin";
+import { IOSAppGate } from "@/components/ios/IOSAppGate";
+import { SetAppPinScreen } from "@/components/ios/SetAppPinScreen";
+import { PinUnlockScreen } from "@/components/ios/PinUnlockScreen";
 import { IOSSystemBanner } from "@/components/ui/ios-system-banner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOfflineDetection } from "@/hooks/use-offline-detection";
@@ -146,22 +150,32 @@ function AppRoutes({
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
       <Route path="/auth" element={<Auth />} />
+      <Route
+        path="/set-pin"
+        element={isIOSNativeApp() ? <SetAppPinScreen /> : <Navigate to="/" replace />}
+      />
+      <Route
+        path="/pin-unlock"
+        element={isIOSNativeApp() ? <PinUnlockScreen /> : <Navigate to="/" replace />}
+      />
       <Route path="/admin" element={<AdminAuth />} />
       <Route element={<AdminLayout />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
       </Route>
-      <Route element={<ProtectedLayout />}>
-        <Route path="/" element={<Index />} />
-        <Route path="/transactions" element={<Transactions />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/savings" element={<Savings />} />
-        <Route path="/budgets" element={<Budgets />} />
-        <Route path="/credit-cards" element={<CreditCards />} />
-        <Route path="/insights" element={<Insights />} />
-        <Route path="/categories" element={<Categories />} />
-        <Route path="/recurrentes" element={<Recurrentes />} />
-        <Route path="/mas" element={<Mas />} />
-        <Route path="/legales" element={<Legales />} />
+      <Route element={<IOSAppGate />}>
+        <Route element={<ProtectedLayout />}>
+          <Route path="/" element={<Index />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/savings" element={<Savings />} />
+          <Route path="/budgets" element={<Budgets />} />
+          <Route path="/credit-cards" element={<CreditCards />} />
+          <Route path="/insights" element={<Insights />} />
+          <Route path="/categories" element={<Categories />} />
+          <Route path="/recurrentes" element={<Recurrentes />} />
+          <Route path="/mas" element={<Mas />} />
+          <Route path="/legales" element={<Legales />} />
+        </Route>
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

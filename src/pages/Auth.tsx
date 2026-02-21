@@ -23,6 +23,7 @@ import {
   setBiometricPromptShown,
 } from "@/lib/biometricAuth";
 import { getLastUser, setLastUser } from "@/lib/authStorage";
+import { isIOSNativeApp } from "@/lib/iosAppPin";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -66,13 +67,21 @@ const Auth = () => {
   const { session } = useAuth();
   useEffect(() => {
     if (session && !biometricModalOpen && !pendingSession) {
-      navigate(redirectTo, { replace: true });
+      if (isIOSNativeApp()) {
+        navigate("/", { replace: true });
+      } else {
+        navigate(redirectTo, { replace: true });
+      }
     }
   }, [session, biometricModalOpen, pendingSession, navigate, redirectTo]);
 
-  // When showing returning user, try Face ID first if biometric is configured
+  // When showing returning user, try Face ID first if biometric is configured (skip on iOS - use app PIN instead)
   useEffect(() => {
     if (!showReturningUser) {
+      setCheckingBiometric(false);
+      return;
+    }
+    if (isIOSNativeApp()) {
       setCheckingBiometric(false);
       return;
     }
@@ -115,6 +124,11 @@ const Auth = () => {
     session: Session
   ) => {
     setLastUser({ email: userEmail, full_name: userName });
+
+    if (isIOSNativeApp()) {
+      navigate("/set-pin", { replace: true, state: { session } });
+      return;
+    }
 
     // Si Face ID ya está habilitado, guardar sesión para que BiometricGate pueda pedir Face ID
     if (isBiometricSupported() && isBiometricEnabled()) {

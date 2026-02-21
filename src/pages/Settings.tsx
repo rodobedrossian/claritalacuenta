@@ -17,6 +17,7 @@ import {
   storeSession,
   clearStoredSession,
 } from "@/lib/biometricAuth";
+import { isIOSNativeApp } from "@/lib/iosAppPin";
 import { showIOSBanner } from "@/hooks/use-ios-banner";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
@@ -43,7 +44,7 @@ export default function Settings() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const { openDrawer: openInviteDrawer } = useInviteDrawer();
-  const showBiometric = isBiometricSupported();
+  const showBiometric = isBiometricSupported() && !isIOSNativeApp();
 
   useEffect(() => {
     if (showBiometric) setBiometricOn(isBiometricEnabled());

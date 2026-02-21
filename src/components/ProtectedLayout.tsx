@@ -5,6 +5,7 @@ import {
   isBiometricSupported,
   isBiometricEnabled,
 } from "@/lib/biometricAuth";
+import { isIOSNativeApp } from "@/lib/iosAppPin";
 import { BiometricGate } from "@/components/BiometricGate";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -19,7 +20,10 @@ const ProtectedLayout = () => {
 
   const noSession = !session && !authLoading;
   const showBiometricGate =
-    noSession && isBiometricSupported() && isBiometricEnabled();
+    noSession &&
+    isBiometricSupported() &&
+    isBiometricEnabled() &&
+    !isIOSNativeApp();
 
   useEffect(() => {
     if (noSession && !showBiometricGate) {
