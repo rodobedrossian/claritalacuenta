@@ -2,20 +2,20 @@ import { useState, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { isIOSNativeApp } from "@/lib/iosAppPin";
-import { hasPinConfigured } from "@/lib/iosAppPin";
+import { isIOSNativeApp, hasPinConfigured, hasEncryptedSession } from "@/lib/iosAppPin";
 import { IOSSplashScreen } from "./IOSSplashScreen";
 import { PinUnlockScreen } from "./PinUnlockScreen";
 
 /**
- * Wraps protected routes on iOS. Shows splash then PIN or Auth when no session;
- * redirects to SetAppPin when session but no PIN; otherwise renders children.
+ * Wraps protected routes on iOS. Shows splash then PIN or Auth when no session.
+ * PIN solo cuando hay sesión cifrada para restaurar; si no (ej. tras logout) → Auth.
  */
 export function IOSAppGate() {
   const navigate = useNavigate();
   const location = useLocation();
   const { session, loading: authLoading } = useAuth();
   const [hasPin, setHasPin] = useState<boolean | null>(null);
+  const [hasEncryptedSess, setHasEncryptedSess] = useState<boolean | null>(null);
   const [stage, setStage] = useState<"loading" | "splash" | "pin" | "content">("loading");
 
   const isProtectedPath =
@@ -31,10 +31,15 @@ export function IOSAppGate() {
     location.pathname.startsWith("/mas") ||
     location.pathname.startsWith("/legales");
 
-  // Fetch hasPin as soon as we're on the gate (so splash can finish when auth is ready)
+  // Fetch hasPin y (si hay PIN) hasEncryptedSession para decidir PIN vs Auth
   useEffect(() => {
     if (!isIOSNativeApp() || !isProtectedPath || hasPin !== null) return;
     hasPinConfigured().then(setHasPin);
+  }, [isProtectedPath, hasPin]);
+
+  useEffect(() => {
+    if (!isIOSNativeApp() || !isProtectedPath || hasPin !== true) return;
+    hasEncryptedSession().then(setHasEncryptedSess);
   }, [isProtectedPath, hasPin]);
 
   // Splash solo al abrir la app (sin sesión). Con sesión ir directo a contenido o set-pin.
@@ -47,18 +52,18 @@ export function IOSAppGate() {
     if (hasPin === null) return;
     if (session) {
       if (hasPin === true) setStage("content");
-      // hasPin === false → ya se maneja más abajo (redirect set-pin)
     } else {
+      if (hasPin === true && hasEncryptedSess === null) return;
       setStage("splash");
     }
-  }, [isProtectedPath, authLoading, session, hasPin]);
+  }, [isProtectedPath, authLoading, session, hasPin, hasEncryptedSess]);
 
   const handleSplashFinish = () => {
     if (session && hasPin === true) {
       setStage("content");
     } else if (session && hasPin === false) {
       navigate("/set-pin", { replace: true, state: { session } });
-    } else if (!session && hasPin === true) {
+    } else if (!session && hasPin === true && hasEncryptedSess === true) {
       setStage("pin");
     } else {
       navigate("/auth", { replace: true });
@@ -73,13 +78,17 @@ export function IOSAppGate() {
     return <Outlet />;
   }
 
-  // Splash con logo solo al abrir la app (auth cargando o sin sesión en etapa splash)
+  const splashReady =
+    !authLoading &&
+    hasPin !== null &&
+    (hasPin === false || hasEncryptedSess !== null);
+
   if (authLoading || stage === "loading") {
     return (
       <IOSSplashScreen
         onFinish={handleSplashFinish}
         minDurationMs={2200}
-        ready={!authLoading && hasPin !== null}
+        ready={splashReady}
       />
     );
   }

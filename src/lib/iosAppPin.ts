@@ -130,6 +130,12 @@ export async function hasPinConfigured(): Promise<boolean> {
   return !!salt && !!hash;
 }
 
+/** Whether there is an encrypted session to restore with PIN (false after logout). */
+export async function hasEncryptedSession(): Promise<boolean> {
+  const payload = await getPref(PIN_ENCRYPTED_KEY);
+  return !!payload;
+}
+
 /** Set PIN: generate salt, hash PIN, store hash and salt. Does not store session. */
 export async function setPin(pin: string): Promise<void> {
   if (!isIOSNativeApp()) return;
