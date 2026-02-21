@@ -29,15 +29,13 @@ async function getPref(key: string): Promise<string | null> {
   if (!isIOSNativeApp()) return null;
   try {
     const { value } = await Preferences.get({ key });
-    return value;
+    if (value != null && value !== "") return value;
   } catch (e) {
-    if (isUnimplementedError(e)) {
-      try {
-        return localStorage.getItem(PREFS_LOCALSTORAGE_PREFIX + key);
-      } catch {
-        return null;
-      }
-    }
+    if (!isUnimplementedError(e)) return null;
+  }
+  try {
+    return localStorage.getItem(PREFS_LOCALSTORAGE_PREFIX + key);
+  } catch {
     return null;
   }
 }
