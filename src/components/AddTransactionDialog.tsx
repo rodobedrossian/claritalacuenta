@@ -50,6 +50,8 @@ interface AddTransactionDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   initialData?: TransactionInitialData | null;
+  /** Called after a transaction is successfully added (e.g. to show success animation). */
+  onSuccess?: () => void;
 }
 
 type WizardStep = "amount" | "category" | "details";
@@ -62,6 +64,7 @@ export const AddTransactionDialog = ({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
   initialData,
+  onSuccess,
 }: AddTransactionDialogProps) => {
   const isMobile = useIsMobile();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -195,6 +198,7 @@ export const AddTransactionDialog = ({
       });
 
       setOpen(false);
+      onSuccess?.();
       toast.success("Transacción agregada");
     } catch (error) {
       toast.error("Error al agregar transacción");

@@ -128,9 +128,6 @@ export const MonthlyDetailView = ({
           categories={categories}
           creditCards={creditCards}
         />
-
-        {/* Spacer to clear bottom nav */}
-        <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden" />
       </div>
     </div>
   );

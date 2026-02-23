@@ -59,7 +59,7 @@ const Index = () => {
   const [savingsWizardOpen, setSavingsWizardOpen] = useState(false);
   const [transferSurplusModalOpen, setTransferSurplusModalOpen] = useState(false);
   const [isTransferringSurplus, setIsTransferringSurplus] = useState(false);
-  const [showVoiceSuccess, setShowVoiceSuccess] = useState(false);
+  const [successConfetti, setSuccessConfetti] = useState<{ message: string; subtitle?: string } | null>(null);
   const [isVoiceTransaction, setIsVoiceTransaction] = useState(false);
 
   const { workspaceId } = useWorkspace(user?.id ?? null);
@@ -458,6 +458,7 @@ const Index = () => {
           open={addTransactionDialogOpen}
           onOpenChange={setAddTransactionDialogOpen}
           initialData={voiceInitialData}
+          onSuccess={() => setSuccessConfetti({ message: "¡Transacción guardada!" })}
         />
 
         <ImportStatementDialog
@@ -505,7 +506,7 @@ const Index = () => {
               setVoiceConfirmationOpen(false);
               await addTransaction(newTransaction);
               voiceTransaction.reset();
-              setShowVoiceSuccess(true);
+              setSuccessConfetti({ message: "¡Transacción guardada!", subtitle: "Creada por voz" });
             }
           }}
           onEdit={() => {
@@ -525,7 +526,12 @@ const Index = () => {
           onCancel={() => { setVoiceConfirmationOpen(false); voiceTransaction.reset(); }}
         />
 
-        <SuccessConfetti show={showVoiceSuccess} onComplete={() => setShowVoiceSuccess(false)} message="¡Transacción guardada!" />
+        <SuccessConfetti
+          show={successConfetti != null}
+          onComplete={() => setSuccessConfetti(null)}
+          message={successConfetti?.message ?? "¡Listo!"}
+          subtitle={successConfetti?.subtitle}
+        />
 
         <AddSavingsWizard
           open={savingsWizardOpen}
@@ -533,6 +539,7 @@ const Index = () => {
           onAdd={async (entry) => {
             await addSavingsEntry(entry);
             refetch();
+            setSuccessConfetti({ message: "¡Ahorro guardado!" });
           }}
           availableBalanceUSD={monthlyBalance.availableUSD}
           availableBalanceARS={monthlyBalance.availableARS}

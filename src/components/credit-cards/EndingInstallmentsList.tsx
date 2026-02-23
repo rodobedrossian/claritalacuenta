@@ -1,7 +1,7 @@
 import { MonthlyProjection } from "@/hooks/useInstallmentProjection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, ArrowUp, Sparkles } from "lucide-react";
+import { Calendar, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -87,25 +87,19 @@ export const EndingInstallmentsList = ({ projections }: EndingInstallmentsListPr
               >
                 <AccordionTrigger className="hover:no-underline py-3">
                   <div className="flex flex-col items-start gap-2 w-full pr-4">
-                    {/* Row 1: Date badge + freed amounts */}
-                    <div className="flex items-center justify-between w-full gap-2">
+                    {/* Row 1: Date badge + "Últimos pagos por..." */}
+                    <div className="flex items-center justify-between w-full gap-2 flex-wrap">
                       <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 shrink-0 text-xs">
                         📅 {formatMonth(month.month)}
                       </Badge>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {totalFreedARS > 0 && (
-                          <Badge className="bg-success/20 text-success hover:bg-success/30 border-0 text-xs px-1.5 py-0.5">
-                            <ArrowUp className="h-3 w-3 mr-0.5" />
-                            ${totalFreedARS.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                          </Badge>
-                        )}
-                        {totalFreedUSD > 0 && (
-                          <Badge className="bg-success/20 text-success hover:bg-success/30 border-0 text-xs px-1.5 py-0.5">
-                            <ArrowUp className="h-3 w-3 mr-0.5" />
-                            US${totalFreedUSD.toLocaleString('es-AR', { maximumFractionDigits: 2 })}
-                          </Badge>
-                        )}
-                      </div>
+                      {(totalFreedARS > 0 || totalFreedUSD > 0) && (
+                        <span className="text-xs text-success font-medium shrink-0">
+                          Últimos pagos por {[
+                            totalFreedARS > 0 && `$${totalFreedARS.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`,
+                            totalFreedUSD > 0 && `US$${totalFreedUSD.toLocaleString('es-AR', { maximumFractionDigits: 2 })}`,
+                          ].filter(Boolean).join(' / ')}
+                        </span>
+                      )}
                     </div>
                     {/* Row 2: Description */}
                     <span className="text-sm text-muted-foreground text-left line-clamp-1">
@@ -136,7 +130,7 @@ export const EndingInstallmentsList = ({ projections }: EndingInstallmentsListPr
                                 {installment.description.replace(/^\*\s*/, '')}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                Cuota {installment.installmentCurrent} de {installment.installmentTotal}
+                                Última cuota ({installment.installmentTotal} de {installment.installmentTotal})
                               </p>
                             </div>
                           </TableCell>

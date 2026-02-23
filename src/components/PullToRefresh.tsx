@@ -147,16 +147,15 @@ export const PullToRefresh = ({
         </div>
       </div>
 
-      {/* Content wrapper */}
+      {/* Content wrapper: padding-bottom so last content clears bottom nav on mobile */}
       <div
+        className="pb-[calc(72px+env(safe-area-inset-bottom,0)+0.75rem)] md:pb-0"
         style={{
           transform: `translateY(${pullDistance}px)`,
           transition: isPulling ? "none" : "transform 0.2s ease-out",
         }}
       >
         {children}
-        {/* Generous spacer to ensure content clears the bottom navigation on mobile */}
-        <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden" />
       </div>
     </div>
   );
