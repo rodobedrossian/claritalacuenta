@@ -68,9 +68,95 @@ function buildPromoSearchableText(payload: Payload): string {
   return normalizeText(parts.join(' '))
 }
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+// Banks/brands that can make a promo exclusive: if the promo text mentions one of these,
+// we require the user to have that bank (and optionally a matching network).
+// promoPatterns: substrings or words that indicate this bank in promo text (normalized).
+// userTerms: terms that indicate the user has this bank (from their cards, normalized).
+const BANK_EXCLUSIVE_CONFIG: { name: string; promoPatterns: string[]; userTerms: string[] }[] = [
+  { name: 'ciudad', promoPatterns: ['banco ciudad'], userTerms: ['ciudad', 'banco ciudad'] },
+  { name: 'bna', promoPatterns: ['bna', 'banco nacion', 'del bna'], userTerms: ['bna', 'nacion'] },
+  { name: 'icbc', promoPatterns: ['icbc'], userTerms: ['icbc'] },
+  { name: 'naranja', promoPatterns: ['naranja x', 'naranja'], userTerms: ['naranja'] },
+  { name: 'credicoop', promoPatterns: ['credicoop'], userTerms: ['credicoop'] },
+  { name: 'galicia', promoPatterns: ['galicia'], userTerms: ['galicia'] },
+  { name: 'santander', promoPatterns: ['santander'], userTerms: ['santander', 'rio'] },
+  { name: 'bbva', promoPatterns: ['bbva'], userTerms: ['bbva'] },
+  { name: 'modo', promoPatterns: ['modo bna'], userTerms: ['modo'] },
+  { name: 'mercadopago', promoPatterns: ['mercado pago', 'mercadopago'], userTerms: ['mercadopago', 'mercado pago'] },
+  { name: 'cabal', promoPatterns: ['cabal'], userTerms: ['cabal'] },
+]
+
+const CARD_NETWORK_TERMS = ['visa', 'mastercard', 'amex', 'cabal', 'naranja', 'mercadopago']
+
+function textContainsWordBoundary(text: string, word: string): boolean {
+  if (!word) return false
+  const escaped = escapeRegex(word)
+  return new RegExp(`\\b${escaped}\\b`, 'i').test(text)
+}
+
+function textContainsPhrase(text: string, phrase: string): boolean {
+  return text.includes(phrase)
+}
+
+/** Returns the exclusive bank key if the promo text indicates the offer is for a specific bank. */
+function getExclusiveBankFromText(text: string): string | null {
+  if (!text) return null
+  for (const bank of BANK_EXCLUSIVE_CONFIG) {
+    for (const pattern of bank.promoPatterns) {
+      const hasMatch = pattern.includes(' ')
+        ? textContainsPhrase(text, pattern)
+        : textContainsWordBoundary(text, pattern)
+      if (hasMatch) return bank.name
+    }
+  }
+  return null
+}
+
+/** Returns true if the promo text mentions any card network. */
+function getMentionedNetworksInText(text: string): Set<string> {
+  const mentioned = new Set<string>()
+  for (const net of CARD_NETWORK_TERMS) {
+    if (textContainsWordBoundary(text, net)) mentioned.add(net)
+  }
+  return mentioned
+}
+
+function userHasBankTerm(userTerms: Set<string>, bankKey: string): boolean {
+  const bank = BANK_EXCLUSIVE_CONFIG.find(b => b.name === bankKey)
+  if (!bank) return false
+  for (const term of bank.userTerms) {
+    if (userTerms.has(term)) return true
+    const normalized = normalizeText(term)
+    if (normalized && userTerms.has(normalized)) return true
+    const bankNorm = normalizeBankForTerm(term)
+    if (bankNorm && userTerms.has(bankNorm)) return true
+  }
+  return false
+}
+
+function userHasAnyNetwork(userTerms: Set<string>, networks: Set<string>): boolean {
+  if (networks.size === 0) return true
+  for (const net of networks) {
+    if (userTerms.has(net)) return true
+  }
+  return false
+}
+
 function promoMatchesUserTerms(userTerms: Set<string>, payload: Payload): boolean {
   const text = buildPromoSearchableText(payload)
   if (!text) return false
+
+  const exclusiveBank = getExclusiveBankFromText(text)
+  if (exclusiveBank !== null) {
+    if (!userHasBankTerm(userTerms, exclusiveBank)) return false
+    const mentionedNetworks = getMentionedNetworksInText(text)
+    if (mentionedNetworks.size > 0 && !userHasAnyNetwork(userTerms, mentionedNetworks)) return false
+  }
+
   for (const term of userTerms) {
     if (!term) continue
     const normalizedTerm = normalizeText(term)
@@ -83,10 +169,6 @@ function promoMatchesUserTerms(userTerms: Set<string>, payload: Payload): boolea
     }
   }
   return false
-}
-
-function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 // --- Response types ---
