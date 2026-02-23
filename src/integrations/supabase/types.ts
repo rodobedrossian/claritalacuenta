@@ -511,33 +511,33 @@ export type Database = {
       }
       promotions: {
         Row: {
-          id: string
-          entity: string
-          day_of_week: number
-          source: string | null
-          payload: Json
-          is_active: boolean
           created_at: string
+          day_of_week: number
+          entity: string
+          id: string
+          is_active: boolean
+          payload: Json
+          source: string | null
           updated_at: string
         }
         Insert: {
-          id?: string
-          entity: string
-          day_of_week: number
-          source?: string | null
-          payload: Json
-          is_active?: boolean
           created_at?: string
+          day_of_week: number
+          entity: string
+          id?: string
+          is_active?: boolean
+          payload: Json
+          source?: string | null
           updated_at?: string
         }
         Update: {
-          id?: string
-          entity?: string
-          day_of_week?: number
-          source?: string | null
-          payload?: Json
-          is_active?: boolean
           created_at?: string
+          day_of_week?: number
+          entity?: string
+          id?: string
+          is_active?: boolean
+          payload?: Json
+          source?: string | null
           updated_at?: string
         }
         Relationships: []
