@@ -23,6 +23,9 @@ import LandingApple from "./pages/LandingApple";
 import LandingGenZ from "./pages/LandingGenZ";
 import AdminAuth from "./pages/admin/AdminAuth";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminPromotions from "./pages/admin/AdminPromotions";
+import AdminPromotionNew from "./pages/admin/AdminPromotionNew";
+import AdminPromotionDetail from "./pages/admin/AdminPromotionDetail";
 import Transactions from "./pages/Transactions";
 import Settings from "./pages/Settings";
 import Savings from "./pages/Savings";
@@ -158,6 +161,9 @@ function AppRoutes({
       <Route path="/admin" element={<AdminAuth />} />
       <Route element={<AdminLayout />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/promotions" element={<AdminPromotions />} />
+        <Route path="/admin/promotions/new" element={<AdminPromotionNew />} />
+        <Route path="/admin/promotions/:id" element={<AdminPromotionDetail />} />
       </Route>
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<Index />} />

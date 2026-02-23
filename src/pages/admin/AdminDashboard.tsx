@@ -38,8 +38,10 @@ import {
   ChevronDown,
   ChevronUp,
   Bot,
-  Calendar
+  Calendar,
+  Tag
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -267,6 +269,12 @@ const AdminDashboard = () => {
             <RuculaLogo size="sm" />
             <div className="h-6 w-px bg-border" />
             <h1 className="text-xl font-semibold">Backoffice</h1>
+            <Link to="/admin/promotions">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <Tag className="h-4 w-4" />
+                Promociones
+              </Button>
+            </Link>
           </div>
           <Button variant="outline" onClick={handleLogout}>
             <LogOut className="h-4 w-4 mr-2" />

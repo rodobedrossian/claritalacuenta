@@ -509,6 +509,39 @@ export type Database = {
         }
         Relationships: []
       }
+      promotions: {
+        Row: {
+          id: string
+          entity: string
+          day_of_week: number
+          source: string | null
+          payload: Json
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          entity: string
+          day_of_week: number
+          source?: string | null
+          payload: Json
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          entity?: string
+          day_of_week?: number
+          source?: string | null
+          payload?: Json
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           auth_key: string
