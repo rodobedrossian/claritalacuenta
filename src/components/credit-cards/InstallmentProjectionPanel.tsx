@@ -63,7 +63,7 @@ export const InstallmentProjectionPanel = ({
     return null;
   }
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrencyARS = (amount: number) => {
     if (amount >= 1000000) {
       return `$${(amount / 1000000).toFixed(1)}M`;
     }
@@ -71,6 +71,10 @@ export const InstallmentProjectionPanel = ({
       return `$${Math.round(amount / 1000)}K`;
     }
     return `$${amount.toLocaleString()}`;
+  };
+
+  const formatCurrencyUSD = (amount: number) => {
+    return `US$${amount.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
   };
 
   // Find next month with freed money
@@ -97,10 +101,15 @@ export const InstallmentProjectionPanel = ({
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Cuotas del próximo mes</p>
-                <p className="text-2xl font-bold">{formatCurrency(summary.nextMonthTotalARS)}</p>
-                {summary.nextMonthTotalUSD > 0 && (
-                  <p className="text-sm text-muted-foreground">+ US${summary.nextMonthTotalUSD.toLocaleString()}</p>
-                )}
+                <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                  <p className="text-2xl font-bold">{formatCurrencyARS(summary.nextMonthTotalARS)}</p>
+                  {summary.nextMonthTotalUSD > 0 && (
+                    <>
+                      <span className="text-2xl font-bold text-muted-foreground">·</span>
+                      <p className="text-2xl font-bold">{formatCurrencyUSD(summary.nextMonthTotalUSD)}</p>
+                    </>
+                  )}
+                </div>
               </div>
               <div className="p-2 rounded-lg bg-primary/10">
                 <CreditCard className="h-5 w-5 text-primary" />
@@ -119,14 +128,19 @@ export const InstallmentProjectionPanel = ({
                   {nextMonthWithFreed ? <>En {nextMonthWithFreed.monthLabel} liberás</> : "Próxima liberación"}
                 </p>
                 {nextMonthWithFreed ? (
-                  <>
+                  <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
                     <p className="text-2xl font-bold text-success">
-                      {formatCurrency(nextMonthWithFreed.freedAmountARS)}
+                      {formatCurrencyARS(nextMonthWithFreed.freedAmountARS)}
                     </p>
                     {nextMonthWithFreed.freedAmountUSD > 0 && (
-                      <p className="text-sm text-success">+ US${nextMonthWithFreed.freedAmountUSD.toLocaleString()}</p>
+                      <>
+                        <span className="text-2xl font-bold text-success/70">·</span>
+                        <p className="text-2xl font-bold text-success">
+                          {formatCurrencyUSD(nextMonthWithFreed.freedAmountUSD)}
+                        </p>
+                      </>
                     )}
-                  </>
+                  </div>
                 ) : (
                   <p className="text-xl font-medium text-muted-foreground">Sin cambios próximos</p>
                 )}
@@ -152,7 +166,7 @@ export const InstallmentProjectionPanel = ({
               <div>
                 <p className="text-sm text-muted-foreground mb-1">En 6 meses baja</p>
                 <div className="flex items-center gap-2">
-                  <p className="text-2xl font-bold">{formatCurrency(summary.sixMonthReductionARS)}</p>
+                  <p className="text-2xl font-bold">{formatCurrencyARS(summary.sixMonthReductionARS)}</p>
                   {summary.sixMonthReductionPercent > 0 && (
                     <Badge className="bg-success/20 text-success hover:bg-success/30 border-0">
                       -{summary.sixMonthReductionPercent}%

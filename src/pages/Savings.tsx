@@ -20,6 +20,7 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { SuccessConfetti } from "@/components/animations/SuccessConfetti";
 
 const Savings = () => {
   const isMobile = useIsMobile();
@@ -43,6 +44,7 @@ const Savings = () => {
     investment_type?: Investment["investment_type"];
   } | null>(null);
   const [reinvestSourceId, setReinvestSourceId] = useState<string | null>(null);
+  const [successConfetti, setSuccessConfetti] = useState(false);
 
   const { workspaceId } = useWorkspace(user?.id ?? null);
 
@@ -255,9 +257,18 @@ const Savings = () => {
         <AddSavingsWizard
           open={savingsWizardOpen}
           onOpenChange={setSavingsWizardOpen}
-          onAdd={addEntry}
+          onAdd={async (entry) => {
+            await addEntry(entry);
+            setSuccessConfetti(true);
+          }}
           availableBalanceUSD={monthlyBalance.availableUSD}
           availableBalanceARS={monthlyBalance.availableARS}
+        />
+
+        <SuccessConfetti
+          show={successConfetti}
+          onComplete={() => setSuccessConfetti(false)}
+          message="¡Ahorro guardado!"
         />
 
         {/* Add Investment Wizard */}

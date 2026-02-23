@@ -76,7 +76,7 @@ const Budgets = () => {
 
   return (
     <AppLayout>
-      <div className="flex-1 overflow-y-auto overflow-x-hidden -webkit-overflow-scrolling-touch">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden -webkit-overflow-scrolling-touch pb-[calc(72px+env(safe-area-inset-bottom,0)+0.75rem)] md:pb-0">
         {/* Hero Section */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -134,8 +134,6 @@ const Budgets = () => {
             />
           </div>
         </main>
-
-        <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden" />
       </div>
 
       <AddBudgetWizard

@@ -19,15 +19,13 @@ const Legales = () => {
           </div>
         </header>
 
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-[calc(72px+env(safe-area-inset-bottom,0)+0.75rem)] md:pb-0">
           <div className="container mx-auto px-4 py-6 max-w-3xl">
             <h2 className="text-2xl font-bold text-foreground mb-2">Política de Privacidad</h2>
             <p className="text-sm text-muted-foreground mb-6">Última actualización: Enero 2026</p>
             <PrivacyContent />
           </div>
         </div>
-
-        <div className="h-[calc(72px+env(safe-area-inset-bottom,0)+2rem)] md:hidden shrink-0" />
       </div>
     </AppLayout>
   );

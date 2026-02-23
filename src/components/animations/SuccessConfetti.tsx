@@ -6,6 +6,8 @@ interface SuccessConfettiProps {
   show: boolean;
   onComplete?: () => void;
   message?: string;
+  /** Optional subtitle (e.g. "Creada por voz"). Omit for manual/savings. */
+  subtitle?: string;
 }
 
 // Generate random particles
@@ -95,7 +97,8 @@ const Particle = ({
 export const SuccessConfetti = ({ 
   show, 
   onComplete,
-  message = "¡Transacción guardada!" 
+  message = "¡Transacción guardada!",
+  subtitle,
 }: SuccessConfettiProps) => {
   const [particles, setParticles] = useState<ReturnType<typeof generateParticles>>([]);
 
@@ -203,14 +206,16 @@ export const SuccessConfetti = ({
               <p className="text-xl font-semibold text-foreground">
                 {message}
               </p>
-              <motion.p
-                className="text-sm text-muted-foreground mt-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
-              >
-                Creada por voz
-              </motion.p>
+              {subtitle != null && subtitle !== "" && (
+                <motion.p
+                  className="text-sm text-muted-foreground mt-1"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.7 }}
+                >
+                  {subtitle}
+                </motion.p>
+              )}
             </motion.div>
           </div>
         </motion.div>
