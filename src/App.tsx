@@ -26,6 +26,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminPromotions from "./pages/admin/AdminPromotions";
 import AdminPromotionNew from "./pages/admin/AdminPromotionNew";
 import AdminPromotionDetail from "./pages/admin/AdminPromotionDetail";
+import AdminPromoEligibleUsers from "./pages/admin/AdminPromoEligibleUsers";
 import Transactions from "./pages/Transactions";
 import Settings from "./pages/Settings";
 import Savings from "./pages/Savings";
@@ -164,6 +165,7 @@ function AppRoutes({
         <Route path="/admin/promotions" element={<AdminPromotions />} />
         <Route path="/admin/promotions/new" element={<AdminPromotionNew />} />
         <Route path="/admin/promotions/:id" element={<AdminPromotionDetail />} />
+        <Route path="/admin/promotions/eligible" element={<AdminPromoEligibleUsers />} />
       </Route>
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<Index />} />

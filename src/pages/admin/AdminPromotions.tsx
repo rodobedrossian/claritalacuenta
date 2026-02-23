@@ -84,6 +84,19 @@ const AdminPromotions = () => {
     return "-";
   };
 
+  const getPaymentMethods = (payload: PromotionRow["payload"]): string[] => {
+    if (!payload || typeof payload !== "object" || !("payment_methods" in payload)) return [];
+    const pm = (payload as { payment_methods?: unknown }).payment_methods;
+    if (!Array.isArray(pm)) return [];
+    return pm.map((x) => (typeof x === "string" ? x : String(x)));
+  };
+
+  const getBankLogo = (payload: PromotionRow["payload"]): string | null => {
+    if (!payload || typeof payload !== "object" || !("bank_logo" in payload)) return null;
+    const url = (payload as { bank_logo?: unknown }).bank_logo;
+    return typeof url === "string" && url ? url : null;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card sticky top-0 z-10">
@@ -116,6 +129,9 @@ const AdminPromotions = () => {
               Promociones
             </CardTitle>
             <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/admin/promotions/eligible">Usuarios elegibles</Link>
+              </Button>
               <Button variant="outline" size="sm" onClick={fetchList} disabled={loading}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
                 Actualizar
@@ -141,7 +157,9 @@ const AdminPromotions = () => {
                   <TableRow>
                     <TableHead>Entidad</TableHead>
                     <TableHead>Día</TableHead>
+                    <TableHead className="w-[52px]">Banco</TableHead>
                     <TableHead>Beneficio</TableHead>
+                    <TableHead>Medios de pago</TableHead>
                     <TableHead>Origen</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
@@ -152,8 +170,42 @@ const AdminPromotions = () => {
                     <TableRow key={row.id}>
                       <TableCell className="font-medium">{row.entity}</TableCell>
                       <TableCell>{DAY_NAMES[row.day_of_week] ?? row.day_of_week}</TableCell>
+                      <TableCell className="w-[52px]">
+                        <div className="flex items-center justify-center w-10 h-8">
+                          {(() => {
+                            const logoUrl = getBankLogo(row.payload);
+                            if (!logoUrl) return <span className="text-muted-foreground text-xs">—</span>;
+                            return (
+                              <>
+                                <img
+                                  src={logoUrl}
+                                  alt=""
+                                  className="h-8 w-8 rounded object-contain bg-muted/50"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                    const next = e.currentTarget.nextElementSibling;
+                                    if (next) (next as HTMLElement).style.display = "inline";
+                                  }}
+                                />
+                                <span className="text-muted-foreground text-xs" style={{ display: "none" }}>—</span>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </TableCell>
                       <TableCell className="max-w-[200px] truncate" title={getBenefit(row.payload)}>
                         {getBenefit(row.payload)}
+                      </TableCell>
+                      <TableCell className="max-w-[220px]">
+                        {(() => {
+                          const methods = getPaymentMethods(row.payload);
+                          if (methods.length === 0) return <span className="text-muted-foreground">—</span>;
+                          return (
+                            <span className="text-sm" title={methods.join(", ")}>
+                              {methods.join(", ")}
+                            </span>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {row.source ?? "-"}
@@ -184,7 +236,7 @@ const AdminPromotions = () => {
                   ))}
                   {list.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         No hay promociones cargadas. Cargá un JSON desde "Nueva carga".
                       </TableCell>
                     </TableRow>
