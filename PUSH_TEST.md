@@ -1,11 +1,27 @@
 # Cómo probar Push Notifications en Android (paso a paso)
 
+## Importante: de dónde carga la app el código
+
+En **lovable-ios**, `capacitor.config.json` tiene `server.url` apuntando a una URL de Vercel. Eso significa que **la app en el emulador no ejecuta el código de tu carpeta local**: ejecuta el JavaScript que está **desplegado** en esa URL.
+
+- Si no ves registros en `push_tokens` y no hay logs en `register-push-token`, casi siempre es porque **esa URL (Vercel) sigue sirviendo una versión anterior** que no incluye el registro de push ni la llamada a `register-push-token`.
+
+**Qué hacer:**
+
+1. **Opción recomendada:** Desplegar el código actual de **claritalacuenta-main** (con `initPushNotifications`, `ProtectedLayout` actualizado, `src/lib/pushNotifications.ts`) en el proyecto/branch de Vercel que usa esa URL. Después de desplegar, cerrar la app en el emulador, volver a abrirla, iniciar sesión y revisar de nuevo la tabla `push_tokens` y los logs.
+2. **Opción para probar en local sin Vercel:** En lovable-ios, comentar o quitar temporalmente `server` en `capacitor.config.json`, hacer `npm run build` en claritalacuenta-main, copiar `dist/` a lovable-ios `www/`, ejecutar `npx cap sync android` y abrir la app. Así la app cargará el bundle local y sí ejecutará el código nuevo.
+
+Tras desplegar (o usar www local), en la consola del WebView deberías ver logs como `[Push] initPushNotifications called`, `[Push] Token: ...` y `[Push] register-push-token success`. Si no ves ninguno de esos, el bundle que se está cargando sigue siendo el viejo.
+
+---
+
 ## Requisitos previos
 
 - Proyecto Firebase con app Android agregada y `google-services.json` en el proyecto nativo (lovable-ios/android/app/).
 - Secrets en Supabase: `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY`.
 - Migración `push_tokens` aplicada en Supabase (Dashboard → SQL o `supabase db push`).
 - Edge Functions desplegadas: `send-push-notification`, `register-push-token`.
+- **Código con push desplegado en la URL que usa la app** (o uso de `www` local como arriba).
 
 ---
 

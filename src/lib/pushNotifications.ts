@@ -11,7 +11,11 @@ const isNative = Capacitor.isNativePlatform();
 const platform = Capacitor.getPlatform();
 
 export async function initPushNotifications(supabase: SupabaseClient) {
-  if (!isNative || (platform !== "android" && platform !== "ios")) return;
+  console.log("[Push] initPushNotifications called", { isNative, platform });
+  if (!isNative || (platform !== "android" && platform !== "ios")) {
+    console.log("[Push] Skipped: not native or platform not android/ios");
+    return;
+  }
 
   try {
     const { receive } = await PushNotifications.requestPermissions();
@@ -32,7 +36,8 @@ export async function initPushNotifications(supabase: SupabaseClient) {
     if (typeof window !== "undefined") (window as unknown as { __FCM_TOKEN__?: string }).__FCM_TOKEN__ = token;
 
     try {
-      const { error } = await supabase.functions.invoke("register-push-token", {
+      console.log("[Push] Calling register-push-token Edge Function...");
+      const { data, error } = await supabase.functions.invoke("register-push-token", {
         body: {
           platform: platform as "android" | "ios",
           token,
@@ -40,6 +45,7 @@ export async function initPushNotifications(supabase: SupabaseClient) {
         },
       });
       if (error) console.error("[Push] Error al registrar token en backend:", error);
+      else console.log("[Push] register-push-token success", data);
     } catch (e) {
       console.error("[Push] Error al llamar register-push-token:", e);
     }

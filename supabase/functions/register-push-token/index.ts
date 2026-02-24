@@ -12,6 +12,7 @@ interface RegisterBody {
 }
 
 Deno.serve(async (req) => {
+  console.log("[register-push-token] Request received", req.method);
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
