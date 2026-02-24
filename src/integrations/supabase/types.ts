@@ -575,6 +575,36 @@ export type Database = {
         }
         Relationships: []
       }
+      push_tokens: {
+        Row: {
+          id: string
+          user_id: string
+          platform: string
+          token: string
+          device_name: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          platform: string
+          token: string
+          device_name?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          platform?: string
+          token?: string
+          device_name?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       recurring_expenses: {
         Row: {
           category: string

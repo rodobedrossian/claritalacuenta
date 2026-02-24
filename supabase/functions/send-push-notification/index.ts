@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as webpush from "jsr:@negrel/webpush@0.5.0";
+import { SignJWT } from "https://esm.sh/jose@5";
+import { importPKCS8 } from "https://esm.sh/jose@5";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +15,65 @@ interface PushPayload {
   type: string;
   data?: Record<string, unknown>;
   url?: string;
+}
+
+/** Get OAuth2 access token for FCM using service account credentials. */
+async function getFcmAccessToken(clientEmail: string, privateKeyPem: string): Promise<string> {
+  const privateKey = await importPKCS8(privateKeyPem.replace(/\\n/g, "\n"), "RS256");
+  const now = Math.floor(Date.now() / 1000);
+  const jwt = await new SignJWT({ scope: "https://www.googleapis.com/auth/firebase.messaging" })
+    .setIssuer(clientEmail)
+    .setSubject(clientEmail)
+    .setAudience("https://oauth2.googleapis.com/token")
+    .setIssuedAt(now)
+    .setExpirationTime(now + 3600)
+    .sign(privateKey);
+
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt,
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`FCM OAuth failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  if (!data.access_token) throw new Error("No access_token in FCM OAuth response");
+  return data.access_token;
+}
+
+/** Send one message via FCM HTTP v1. Returns true if sent, false if token invalid/expired. */
+async function sendFcmMessage(
+  projectId: string,
+  accessToken: string,
+  fcmToken: string,
+  title: string,
+  body: string,
+  data: Record<string, string>
+): Promise<{ ok: boolean; removeToken?: boolean }> {
+  const res = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      message: {
+        token: fcmToken,
+        notification: { title, body },
+        data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
+      },
+    }),
+  });
+  if (res.ok) return { ok: true };
+  const err = await res.json().catch(() => ({}));
+  const code = err.error?.details?.[0]?.errorCode || err.error?.code;
+  const removeToken = res.status === 404 || res.status === 400 || code === "UNREGISTERED" || code === "INVALID_ARGUMENT";
+  return { ok: false, removeToken };
 }
 
 function base64UrlEncode(input: Uint8Array | ArrayBuffer): string {
@@ -159,106 +220,141 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: subscriptions, error: subError } = await supabase
-      .from("push_subscriptions")
-      .select("*")
-      .eq("user_id", payload.user_id);
+    const [{ data: subscriptions, error: subError }, { data: androidTokens, error: tokensError }] = await Promise.all([
+      supabase.from("push_subscriptions").select("*").eq("user_id", payload.user_id),
+      supabase.from("push_tokens").select("id, token").eq("user_id", payload.user_id).eq("platform", "android"),
+    ]);
 
     if (subError) {
       console.error("Error fetching subscriptions:", subError);
       throw subError;
     }
+    if (tokensError) {
+      console.error("Error fetching push_tokens:", tokensError);
+      throw tokensError;
+    }
 
-    if (!subscriptions || subscriptions.length === 0) {
-      console.log("No subscriptions found for user:", payload.user_id);
+    const hasWeb = subscriptions && subscriptions.length > 0;
+    const hasAndroid = androidTokens && androidTokens.length > 0;
+    if (!hasWeb && !hasAndroid) {
+      console.log("No subscriptions or tokens found for user:", payload.user_id);
       return new Response(JSON.stringify({ success: true, sent: 0, message: "No subscriptions found" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Use a standards-compliant WebPush implementation (payload encryption + VAPID headers)
-    let exportedKeys;
-    try {
-      exportedKeys = exportedVapidKeysFromBase64Url(vapidPublicKey, vapidPrivateKey);
-      console.log("VAPID keys converted successfully");
-    } catch (keyError) {
-      console.error("Error converting VAPID keys:", keyError);
-      throw new Error(`Invalid VAPID key format: ${keyError instanceof Error ? keyError.message : String(keyError)}`);
-    }
-
-    let importedVapidKeys;
-    try {
-      importedVapidKeys = await webpush.importVapidKeys(exportedKeys, { extractable: false });
-      console.log("VAPID keys imported successfully");
-    } catch (importError) {
-      console.error("Error importing VAPID keys:", importError);
-      throw new Error(
-        `Failed to import VAPID keys: ${importError instanceof Error ? importError.message : String(importError)}`,
-      );
-    }
-
-    let appServer;
-    try {
-      appServer = await webpush.ApplicationServer.new({
-        contactInformation: vapidSubject, // This is critical for JWT generation
-        vapidKeys: importedVapidKeys,
-      });
-      console.log("ApplicationServer created with subject:", vapidSubject);
-    } catch (serverError) {
-      console.error("Error creating ApplicationServer:", serverError);
-      throw new Error(
-        `Failed to create ApplicationServer: ${serverError instanceof Error ? serverError.message : String(serverError)}`,
-      );
-    }
-
-    const pushPayload = JSON.stringify({
-      title: payload.title,
-      body: payload.body,
-      icon: "/pwa-192x192.png",
-      badge: "/pwa-192x192.png",
-      data: {
-        type: payload.type,
-        url: payload.url || "/",
-        ...payload.data,
-      },
-    });
-
     let sentCount = 0;
     const errors: string[] = [];
 
-    for (const subscription of subscriptions) {
+    // --- Web Push (existing) ---
+    if (hasWeb) {
+      let exportedKeys;
       try {
-        console.log("Processing subscription:", subscription.id, subscription.device_name);
+        exportedKeys = exportedVapidKeysFromBase64Url(vapidPublicKey, vapidPrivateKey);
+        console.log("VAPID keys converted successfully");
+      } catch (keyError) {
+        console.error("Error converting VAPID keys:", keyError);
+        throw new Error(`Invalid VAPID key format: ${keyError instanceof Error ? keyError.message : String(keyError)}`);
+      }
 
-        const subscriber = appServer.subscribe({
-          endpoint: subscription.endpoint,
-          keys: {
-            auth: subscription.auth_key,
-            p256dh: subscription.p256dh_key,
-          },
+      let importedVapidKeys;
+      try {
+        importedVapidKeys = await webpush.importVapidKeys(exportedKeys, { extractable: false });
+        console.log("VAPID keys imported successfully");
+      } catch (importError) {
+        console.error("Error importing VAPID keys:", importError);
+        throw new Error(
+          `Failed to import VAPID keys: ${importError instanceof Error ? importError.message : String(importError)}`,
+        );
+      }
+
+      let appServer;
+      try {
+        appServer = await webpush.ApplicationServer.new({
+          contactInformation: vapidSubject,
+          vapidKeys: importedVapidKeys,
         });
+        console.log("ApplicationServer created with subject:", vapidSubject);
+      } catch (serverError) {
+        console.error("Error creating ApplicationServer:", serverError);
+        throw new Error(
+          `Failed to create ApplicationServer: ${serverError instanceof Error ? serverError.message : String(serverError)}`,
+        );
+      }
 
-        await subscriber.pushTextMessage(pushPayload, {
-          ttl: 86400,
-          urgency: webpush.Urgency.High,
-        });
+      const pushPayload = JSON.stringify({
+        title: payload.title,
+        body: payload.body,
+        icon: "/pwa-192x192.png",
+        badge: "/pwa-192x192.png",
+        data: {
+          type: payload.type,
+          url: payload.url || "/",
+          ...payload.data,
+        },
+      });
 
-        sentCount++;
-      } catch (err: unknown) {
-        if (err instanceof webpush.PushMessageError) {
-          const responseText = await err.response.text().catch(() => "");
-          console.error("Push failed:", err.response.status, responseText);
-
-          if (err.isGone() || err.response.status === 404) {
-            console.log("Removing expired subscription:", subscription.id);
-            await supabase.from("push_subscriptions").delete().eq("id", subscription.id);
+      for (const subscription of subscriptions!) {
+        try {
+          console.log("Processing subscription:", subscription.id, subscription.device_name);
+          const subscriber = appServer.subscribe({
+            endpoint: subscription.endpoint,
+            keys: { auth: subscription.auth_key, p256dh: subscription.p256dh_key },
+          });
+          await subscriber.pushTextMessage(pushPayload, { ttl: 86400, urgency: webpush.Urgency.High });
+          sentCount++;
+        } catch (err: unknown) {
+          if (err instanceof webpush.PushMessageError) {
+            const responseText = await err.response.text().catch(() => "");
+            console.error("Push failed:", err.response.status, responseText);
+            if (err.isGone() || err.response.status === 404) {
+              await supabase.from("push_subscriptions").delete().eq("id", subscription.id);
+            }
+            errors.push(`${subscription.id}: ${err.response.status} - ${responseText || err.response.statusText}`);
+          } else {
+            console.error("Error sending push:", err);
+            errors.push(`${subscription.id}: ${err instanceof Error ? err.message : String(err)}`);
           }
-
-          errors.push(`${subscription.id}: ${err.response.status} - ${responseText || err.response.statusText}`);
-        } else {
-          console.error("Error sending push:", err);
-          errors.push(`${subscription.id}: ${err instanceof Error ? err.message : String(err)}`);
         }
+      }
+    }
+
+    // --- FCM (Android) ---
+    if (hasAndroid && androidTokens!.length > 0) {
+      const fcmProjectId = Deno.env.get("FCM_PROJECT_ID");
+      const fcmClientEmail = Deno.env.get("FCM_CLIENT_EMAIL");
+      const fcmPrivateKey = Deno.env.get("FCM_PRIVATE_KEY");
+      if (fcmProjectId && fcmClientEmail && fcmPrivateKey) {
+        try {
+          const accessToken = await getFcmAccessToken(fcmClientEmail.trim(), fcmPrivateKey.trim());
+          const data: Record<string, string> = {
+            type: payload.type,
+            url: payload.url || "/",
+            ...(payload.data && Object.fromEntries(Object.entries(payload.data).map(([k, v]) => [k, String(v)]))),
+          };
+          for (const row of androidTokens!) {
+            const result = await sendFcmMessage(
+              fcmProjectId,
+              accessToken,
+              row.token,
+              payload.title,
+              payload.body,
+              data
+            );
+            if (result.ok) sentCount++;
+            else if (result.removeToken) {
+              await supabase.from("push_tokens").delete().eq("id", row.id);
+              errors.push(`FCM token ${row.id}: removed (invalid/expired)`);
+            } else {
+              errors.push(`FCM token ${row.id}: send failed`);
+            }
+          }
+        } catch (fcmErr) {
+          console.error("FCM send error:", fcmErr);
+          errors.push(`FCM: ${fcmErr instanceof Error ? fcmErr.message : String(fcmErr)}`);
+        }
+      } else {
+        console.log("FCM credentials not set, skipping Android push");
       }
     }
 
@@ -271,13 +367,14 @@ Deno.serve(async (req) => {
       data: payload.data,
     });
 
-    console.log(`Push notification result: ${sentCount}/${subscriptions.length}`, errors.length ? errors : "no errors");
+    const totalTargets = (subscriptions?.length || 0) + (androidTokens?.length || 0);
+    console.log(`Push notification result: ${sentCount}/${totalTargets}`, errors.length ? errors : "no errors");
 
     return new Response(
       JSON.stringify({
         success: true,
         sent: sentCount,
-        total: subscriptions.length,
+        total: totalTargets,
         errors: errors.length > 0 ? errors : undefined,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
