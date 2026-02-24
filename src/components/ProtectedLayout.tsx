@@ -1,7 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { initPushNotifications } from "@/lib/pushNotifications";
 
 /**
  * Layout that wraps all protected routes. If no session, redirects to /auth.
@@ -9,12 +11,20 @@ import { useAuth } from "@/contexts/AuthContext";
 const ProtectedLayout = () => {
   const { session, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const pushInited = useRef(false);
 
   useEffect(() => {
     if (!authLoading && !session) {
       navigate("/auth", { replace: true });
     }
   }, [authLoading, session, navigate]);
+
+  useEffect(() => {
+    if (session && !pushInited.current) {
+      pushInited.current = true;
+      initPushNotifications(supabase);
+    }
+  }, [session]);
 
   if (authLoading) {
     return (
