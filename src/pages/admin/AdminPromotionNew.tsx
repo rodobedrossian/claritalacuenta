@@ -57,7 +57,7 @@ const AdminPromotionNew = () => {
         entity: trimmedEntity,
         day_of_week: dayOfWeek,
         source: data.source ?? null,
-        payload: p as Record<string, unknown>,
+        payload: p as unknown as import("@/integrations/supabase/types").Json,
         is_active: true,
       }));
       const { error: insertError } = await supabase.from("promotions").insert(rows);
