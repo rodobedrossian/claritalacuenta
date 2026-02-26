@@ -10,6 +10,37 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const isNative = Capacitor.isNativePlatform();
 const platform = Capacitor.getPlatform();
 
+declare global {
+  interface Window {
+    Capacitor?: { PluginHeaders?: unknown };
+  }
+}
+
+/** Espera a que el bridge nativo de Capacitor esté listo antes de usar plugins. */
+export function waitForCapacitorBridge(timeoutMs = 10000): Promise<void> {
+  if (typeof window === "undefined" || !Capacitor.isNativePlatform()) {
+    return Promise.resolve();
+  }
+  if ((window as Window).Capacitor?.PluginHeaders) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    const deadline = Date.now() + timeoutMs;
+    const check = () => {
+      if ((window as Window).Capacitor?.PluginHeaders) {
+        resolve();
+        return;
+      }
+      if (Date.now() > deadline) {
+        reject(new Error("[Push] Capacitor bridge timeout"));
+        return;
+      }
+      requestAnimationFrame(check);
+    };
+    check();
+  });
+}
+
 export async function initPushNotifications(supabase: SupabaseClient) {
   console.log("[Push] initPushNotifications called", { isNative, platform });
   if (!isNative || (platform !== "android" && platform !== "ios")) {
