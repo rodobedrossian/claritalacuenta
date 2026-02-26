@@ -10,34 +10,37 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const isNative = Capacitor.isNativePlatform();
 const platform = Capacitor.getPlatform();
 
-declare global {
-  interface Window {
-    Capacitor?: { PluginHeaders?: unknown };
-  }
-}
+const PLUGIN_NOT_READY = /not implemented|plugin is not implemented/i;
 
-/** Espera a que el bridge nativo de Capacitor esté listo antes de usar plugins. */
-export function waitForCapacitorBridge(timeoutMs = 10000): Promise<void> {
+/** Espera a que el plugin PushNotifications esté disponible (útil cuando la app carga desde URL remota). */
+function waitForPushPlugin(timeoutMs = 15000): Promise<void> {
   if (typeof window === "undefined" || !Capacitor.isNativePlatform()) {
-    return Promise.resolve();
-  }
-  if ((window as Window).Capacitor?.PluginHeaders) {
     return Promise.resolve();
   }
   return new Promise((resolve, reject) => {
     const deadline = Date.now() + timeoutMs;
-    const check = () => {
-      if ((window as Window).Capacitor?.PluginHeaders) {
-        resolve();
-        return;
-      }
-      if (Date.now() > deadline) {
-        reject(new Error("[Push] Capacitor bridge timeout"));
-        return;
-      }
-      requestAnimationFrame(check);
+    const intervalMs = 500;
+
+    const tryOnce = () => {
+      PushNotifications.checkPermissions()
+        .then(() => {
+          console.log("[Push] Plugin listo");
+          resolve();
+        })
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (Date.now() > deadline) {
+            reject(new Error("[Push] Plugin no disponible a tiempo: " + msg));
+            return;
+          }
+          if (PLUGIN_NOT_READY.test(msg)) {
+            setTimeout(tryOnce, intervalMs);
+          } else {
+            reject(err);
+          }
+        });
     };
-    check();
+    tryOnce();
   });
 }
 
@@ -45,6 +48,13 @@ export async function initPushNotifications(supabase: SupabaseClient) {
   console.log("[Push] initPushNotifications called", { isNative, platform });
   if (!isNative || (platform !== "android" && platform !== "ios")) {
     console.log("[Push] Skipped: not native or platform not android/ios");
+    return;
+  }
+
+  try {
+    await waitForPushPlugin(15000);
+  } catch (err) {
+    console.warn("[Push] No se pudo esperar al plugin:", err);
     return;
   }
 
