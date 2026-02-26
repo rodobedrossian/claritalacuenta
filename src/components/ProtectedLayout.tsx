@@ -3,7 +3,7 @@ import { useNavigate, Outlet } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { initPushNotifications, waitForCapacitorBridge } from "@/lib/pushNotifications";
+import { initPushNotifications } from "@/lib/pushNotifications";
 
 /**
  * Layout that wraps all protected routes. If no session, redirects to /auth.
@@ -22,9 +22,7 @@ const ProtectedLayout = () => {
   useEffect(() => {
     if (!session || pushInited.current) return;
     pushInited.current = true;
-    waitForCapacitorBridge()
-      .then(() => initPushNotifications(supabase))
-      .catch((err) => console.warn("[Push] Bridge wait failed:", err));
+    initPushNotifications(supabase).catch((err) => console.warn("[Push] Init failed:", err));
   }, [session]);
 
   if (authLoading) {
