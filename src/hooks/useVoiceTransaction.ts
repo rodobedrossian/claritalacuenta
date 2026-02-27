@@ -88,8 +88,11 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
   const currentPartialRef = useRef<string>("");
   const hasReceivedSpeechRef = useRef<boolean>(false);
   const hasSentFirstChunkRef = useRef<boolean>(false);
+  const partialDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingPartialRef = useRef<string>("");
 
   const MAX_DURATION_MS = 30_000;
+  const PARTIAL_DEBOUNCE_MS = 250; // Reduce parpadeo: no actualizar UI en cada chunk
   // Previous text context for first chunk only (< 50 chars, improves accuracy per ElevenLabs docs)
   const STT_PREVIOUS_TEXT_CONTEXT = "Gasto o ingreso, monto y categoría en pesos o dólares";
   const SILENCE_TIMEOUT_MS = 2_000; // Stop after 2 seconds of silence (optimized for iOS feel)
@@ -121,6 +124,10 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
     if (silenceTimeoutRef.current) {
       clearTimeout(silenceTimeoutRef.current);
       silenceTimeoutRef.current = null;
+    }
+    if (partialDebounceRef.current) {
+      clearTimeout(partialDebounceRef.current);
+      partialDebounceRef.current = null;
     }
     if (sourceRef.current) {
       try { sourceRef.current.disconnect(); } catch (e) { /* ignore */ }
@@ -443,25 +450,58 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
           console.log("[Voice] WS message:", msgType, data.text ? `"${data.text}"` : "");
           
           switch (msgType) {
-            case "partial_transcript":
+            case "partial_transcript": {
               // Live partial transcript - filter out invalid characters
-              currentPartialRef.current = (data.text || "")
+              const rawPartial = (data.text || "")
                 .replace(/[^\p{L}\p{N}\p{P}\p{Z}]/gu, '');
+              currentPartialRef.current = rawPartial;
+
+              // Regla #1/#2: interim reemplaza, no appendear. Evitar duplicación cuando
+              // el partial incluye la frase completa (ElevenLabs suele enviar todo de nuevo).
               const committedArray = Array.from(committedTextsRef.current);
-              const displayText = [...committedArray, currentPartialRef.current]
-                .filter(Boolean)
-                .join(" ");
-              setPartialText(displayText);
-              
-              // Mark that we've received speech and reset silence timer
-              if (currentPartialRef.current) {
+              const finalStr = committedArray.join(" ").replace(/\s+/g, " ").trim();
+              const partial = rawPartial.replace(/\s+/g, " ").trim();
+
+              let displayText: string;
+              if (!partial) {
+                displayText = finalStr;
+              } else if (!finalStr) {
+                displayText = partial;
+              } else if (partial.startsWith(finalStr) && partial.length > finalStr.length) {
+                const interimOnly = partial.slice(finalStr.length).replace(/^\s+/, "");
+                displayText = interimOnly ? `${finalStr} ${interimOnly}` : finalStr;
+              } else if (partial === finalStr) {
+                displayText = finalStr;
+              } else {
+                // Partial no empieza con final: puede ser corrección o formato distinto.
+                // Buscar overlap (sufijo de final = prefijo de partial) para evitar duplicar.
+                let interimOnly = partial;
+                for (let k = Math.min(finalStr.length, partial.length); k > 0; k--) {
+                  const partialPrefix = partial.substring(0, k);
+                  if (finalStr.endsWith(partialPrefix)) {
+                    interimOnly = partial.slice(k).replace(/^\s+/, "");
+                    break;
+                  }
+                }
+                displayText = interimOnly ? `${finalStr} ${interimOnly}` : finalStr;
+              }
+
+              pendingPartialRef.current = displayText;
+              if (partialDebounceRef.current) clearTimeout(partialDebounceRef.current);
+              partialDebounceRef.current = setTimeout(() => {
+                partialDebounceRef.current = null;
+                setPartialText(pendingPartialRef.current);
+              }, PARTIAL_DEBOUNCE_MS);
+
+              if (rawPartial) {
                 hasReceivedSpeechRef.current = true;
                 resetSilenceTimer();
               }
               break;
+            }
               
             case "committed_transcript":
-            case "final_transcript":
+            case "final_transcript": {
               // Final committed transcript - use Set to avoid duplicates
               if (data.text && data.text.trim()) {
                 const cleanText = data.text.trim()
@@ -471,12 +511,18 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
                   const fullText = Array.from(committedTextsRef.current).join(" ");
                   setTranscribedText(fullText);
                   currentPartialRef.current = "";
+                  pendingPartialRef.current = fullText;
+                  if (partialDebounceRef.current) {
+                    clearTimeout(partialDebounceRef.current);
+                    partialDebounceRef.current = null;
+                  }
                   setPartialText(fullText);
                   hasReceivedSpeechRef.current = true;
                   resetSilenceTimer();
                 }
               }
               break;
+            }
 
             case "committed_transcript_with_timestamps":
               // Same segment as committed_transcript but with word-level timestamps for UI
@@ -488,6 +534,11 @@ export const useVoiceTransaction = ({ categories, userName, getToken }: UseVoice
                   const fullText = Array.from(committedTextsRef.current).join(" ");
                   setTranscribedText(fullText);
                   currentPartialRef.current = "";
+                  pendingPartialRef.current = fullText;
+                  if (partialDebounceRef.current) {
+                    clearTimeout(partialDebounceRef.current);
+                    partialDebounceRef.current = null;
+                  }
                   setPartialText(fullText);
                   hasReceivedSpeechRef.current = true;
                   resetSilenceTimer();
