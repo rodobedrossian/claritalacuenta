@@ -188,6 +188,11 @@
     padding-bottom: calc(84px + env(safe-area-inset-bottom, 0));
   }
 
+  /* Drawer/Sheet: evita que el contenido quede detrás de la barra de navegación (Android botones, iOS home indicator) */
+  .pb-safe-drawer {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 48px));
+  }
+
   /* Modal/Dialog safe area for iOS - avoids cutoff near home indicator */
   .dialog-safe-ios {
     max-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 2rem);

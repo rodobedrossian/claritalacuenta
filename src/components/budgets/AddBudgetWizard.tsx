@@ -163,7 +163,7 @@ export const AddBudgetWizard = ({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={handleOpenChange}>
-        <DrawerContent className="h-[85vh] max-h-[85vh] px-4 pb-safe">
+        <DrawerContent className="h-[85vh] max-h-[85vh] px-4 pb-safe-drawer">
           <div className="pt-4 h-full flex flex-col">
             <h2 className="text-lg font-semibold text-center mb-1">Crear Presupuesto</h2>
             {content}

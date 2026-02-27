@@ -125,7 +125,7 @@ export const CategoryDialog = ({ onSave, userId, category, defaultType = "expens
             </Button>
           )}
         </DrawerTrigger>
-        <DrawerContent className="pb-8">
+        <DrawerContent className="pb-safe-drawer">
           <DrawerHeader>
             <DrawerTitle>{title}</DrawerTitle>
           </DrawerHeader>

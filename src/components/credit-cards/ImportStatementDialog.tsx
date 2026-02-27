@@ -422,7 +422,7 @@ export function ImportStatementDialog({
     const isPreviewStep = step === "preview";
     return (
       <Drawer open={open} onOpenChange={handleClose}>
-        <DrawerContent className="max-h-[92vh] flex flex-col pb-safe">
+        <DrawerContent className="max-h-[92vh] flex flex-col pb-safe-drawer">
           <div className="px-4 pt-2 pb-4 flex flex-col flex-1 min-h-0 overflow-hidden">
             <DrawerHeader className="px-0 text-left shrink-0 relative pr-10">
               <DrawerTitle className="text-left pr-0">{Header}</DrawerTitle>

@@ -133,7 +133,7 @@ const ForgotPasswordDialog = ({ open, onOpenChange, defaultEmail = "" }: ForgotP
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={handleClose}>
-        <DrawerContent className="px-6 pb-safe">
+        <DrawerContent className="px-6 pb-safe-drawer">
           <DrawerHeader className="text-left px-0">
             <DrawerTitle>Recuperar contraseña</DrawerTitle>
             <DrawerDescription className="text-left">
