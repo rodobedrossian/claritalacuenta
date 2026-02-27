@@ -22,7 +22,7 @@ import { SuccessConfetti } from "@/components/animations/SuccessConfetti";
 import { InsightsCard } from "@/components/insights/InsightsCard";
 import { SpendingByWeekdayCard } from "@/components/spending-by-weekday/SpendingByWeekdayCard";
 import { MobileHeader } from "@/components/MobileHeader";
-import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
+import { DashboardLoader } from "@/components/DashboardLoader";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useVoiceTransaction } from "@/hooks/useVoiceTransaction";
 import { useVoiceTokenPrefetch } from "@/hooks/useVoiceTokenPrefetch";
@@ -62,7 +62,7 @@ const Index = () => {
   const [successConfetti, setSuccessConfetti] = useState<{ message: string; subtitle?: string } | null>(null);
   const [isVoiceTransaction, setIsVoiceTransaction] = useState(false);
 
-  const { workspaceId } = useWorkspace(user?.id ?? null);
+  const { workspaceId, isLoading: workspaceLoading } = useWorkspace(user?.id ?? null);
 
   // Dashboard data
   const { 
@@ -234,12 +234,9 @@ const Index = () => {
   const goToNextMonth = () => setActiveMonth(prev => addMonths(prev, 1));
   const goToCurrentMonth = () => setActiveMonth(new Date());
 
-  if (dataLoading && !dashboardData) {
-    return (
-      <AppLayout>
-        <DashboardSkeleton />
-      </AppLayout>
-    );
+  const dashboardNotReady = !dashboardData && (workspaceLoading || dataLoading);
+  if (dashboardNotReady) {
+    return <DashboardLoader />;
   }
 
   // Data extraction

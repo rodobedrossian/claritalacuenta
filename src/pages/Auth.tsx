@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TrendingUp, PiggyBank, BarChart3, Check, Loader2 } from "lucide-react";
+import { TrendingUp, PiggyBank, BarChart3, Check, Loader2, Eye, EyeOff } from "lucide-react";
 import ForgotPasswordDialog from "@/components/auth/ForgotPasswordDialog";
 import { RuculaLogo } from "@/components/RuculaLogo";
 
@@ -23,6 +23,7 @@ const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showFullForm, setShowFullForm] = useState(false);
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const lastUser = getLastUser();
@@ -137,17 +138,27 @@ const Auth = () => {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Contraseña</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              autoComplete="off"
-              className="h-12 bg-background border-border focus:border-primary focus:ring-primary/20"
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                autoComplete="off"
+                className="h-12 bg-background border-border focus:border-primary focus:ring-primary/20 pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
           </div>
           <Button
             type="submit"
@@ -224,22 +235,32 @@ const Auth = () => {
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Contraseña</Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              if (passwordError) setPasswordError(null);
-            }}
-            required
-            minLength={6}
-            autoComplete="off"
-            className={`h-12 bg-background border-border focus:border-primary focus:ring-primary/20 ${
-              passwordError ? "border-destructive focus:border-destructive" : ""
-            }`}
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (passwordError) setPasswordError(null);
+              }}
+              required
+              minLength={6}
+              autoComplete="off"
+              className={`h-12 bg-background border-border focus:border-primary focus:ring-primary/20 pr-12 ${
+                passwordError ? "border-destructive focus:border-destructive" : ""
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
           {passwordError && (
             <p className="text-sm text-destructive font-medium" role="alert">
               {passwordError}

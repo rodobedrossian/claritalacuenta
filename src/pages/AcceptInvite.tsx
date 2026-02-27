@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, UserPlus, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { RuculaLogo } from "@/components/RuculaLogo";
 
@@ -32,6 +32,7 @@ export default function AcceptInvite() {
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -243,14 +244,24 @@ export default function AcceptInvite() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="unified-password">Contraseña</Label>
-              <Input
-                id="unified-password"
-                type="password"
-                placeholder={hasAccount ? "Tu contraseña" : "Creá una contraseña (mín. 6 caracteres)"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full"
-              />
+              <div className="relative">
+                <Input
+                  id="unified-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder={hasAccount ? "Tu contraseña" : "Creá una contraseña (mín. 6 caracteres)"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
             </div>
             {authError && (
               <p className="text-sm text-destructive">{authError}</p>
