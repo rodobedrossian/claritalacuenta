@@ -35,7 +35,7 @@ export const AddTransactionMethodSheet = ({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="safe-area-bottom pb-6">
+      <DrawerContent className="pb-safe-drawer">
         <DrawerHeader className="text-center pb-1 pt-2">
           <DrawerTitle className="text-base font-semibold text-foreground">
             ¿Cómo querés agregar?

@@ -89,7 +89,7 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
   // Desktop/Tablet layout with sidebar
   return (
     <InviteDrawerProvider>
-      <div className="min-h-screen bg-muted/30 flex">
+      <div className="min-h-screen bg-background flex">
         {/* Sidebar */}
         <aside
           className={cn(

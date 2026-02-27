@@ -279,7 +279,7 @@ export const AddTransactionDialog = ({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerContent className="h-[85vh] px-4 pb-safe">
+        <DrawerContent className="h-[85vh] px-4 pb-safe-drawer">
           <div className="pt-4 h-full">
             {content}
           </div>
