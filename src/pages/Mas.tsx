@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { Target, Sparkles, Settings, LogOut, Tag, Repeat, PiggyBank, ChevronDown, Info } from "lucide-react";
 import { performLogout } from "@/lib/logout";
 import { cn } from "@/lib/utils";
@@ -33,17 +32,7 @@ const menuItems = [
 
 export default function Mas() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<{ id: string; email?: string; user_metadata?: { full_name?: string } } | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUser(data.user);
-      } else {
-        navigate("/auth");
-      }
-    });
-  }, [navigate]);
+  const { user } = useAuth();
 
   const handleSignOut = async () => {
     await performLogout();
@@ -52,6 +41,18 @@ export default function Mas() {
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Usuario";
   const initials = getInitials(user?.user_metadata?.full_name, user?.email);
+
+  if (!user) {
+    return (
+      <AppLayout>
+        <div className="flex-1 flex flex-col min-h-0 md:max-w-2xl md:mx-auto md:w-full">
+          <div className="flex-1 flex items-center justify-center min-h-0 px-4">
+            <div className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
