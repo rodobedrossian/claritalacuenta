@@ -77,11 +77,8 @@ Deno.serve(async (req) => {
     // Fetch categories first so we can identify "Tarjeta" category
     const categoriesResult = await supabase.from("categories").select("id, name").order("name");
     const categoryMap = new Map<string, string>();
-    // Hard-code known UUIDs as safety net + dynamically detect others
-    const TARJETA_UUID = "2eee47f0-252a-4580-8672-0ec0bdd6f11d";
-    const TARJETA_TEXT = "Tarjeta";
-    const ALQUILER_UUID = "0c1645cf-bf73-4702-bde9-e4d04b5300ef";
-    const excludedCatIds = new Set<string>([TARJETA_UUID, TARJETA_TEXT, ALQUILER_UUID]);
+    // All category values are now UUIDs - just use UUID-based exclusion
+    const excludedCatIds = new Set<string>();
     for (const c of categoriesResult.data || []) {
       categoryMap.set(c.id, c.name);
       const lower = c.name.toLowerCase();
@@ -101,32 +98,20 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle(),
       (async () => {
-        // Exclude credit card statement payments (category "Tarjeta" as UUID or text)
-        // since those amounts are already broken down in credit_card_transactions.
+        // Exclude credit card statement payments (category "Tarjeta" or "Alquiler" by UUID)
         let query = supabase
           .from("transactions")
           .select("date, category, amount, currency")
           .eq("type", "expense")
           .neq("payment_method", "credit_card")
-          .neq("category", TARJETA_UUID)
-          .neq("category", TARJETA_TEXT)
-          .neq("category", ALQUILER_UUID)
           .gte("date", startStr)
           .lte("date", endStr);
+        // Exclude known categories
+        for (const id of excludedCatIds) {
+          query = query.neq("category", id);
+        }
         if (workspace_id) query = query.eq("workspace_id", workspace_id);
-        const result = await query;
-        // JS safety: filter out any remaining Tarjeta-like categories (case variations)
-        return {
-          ...result,
-          data: (result.data || []).filter((t) => {
-            if (excludedCatIds.has(t.category)) return false;
-            if (typeof t.category === "string") {
-              const lower = t.category.toLowerCase();
-              if (lower === "tarjeta" || lower === "alquiler") return false;
-            }
-            return true;
-          }),
-        };
+        return query;
       })(),
       (async () => {
         // Only include consumos and first cuotas (not impuestos/ajustes)

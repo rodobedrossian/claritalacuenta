@@ -74,7 +74,7 @@ export function RecurringExpensesList({
             <TableRow key={expense.id} className={!expense.is_active ? "opacity-50" : ""}>
               <TableCell className="font-medium">{expense.description}</TableCell>
               <TableCell>
-                <Badge variant="outline">{expense.category}</Badge>
+                <Badge variant="outline">{categories.find(c => c.id === expense.category)?.name || expense.category}</Badge>
               </TableCell>
               <TableCell className="text-right">
                 {expense.currency} {expense.default_amount.toLocaleString()}
@@ -121,6 +121,7 @@ export function RecurringExpensesList({
         open={generateOpen}
         onOpenChange={setGenerateOpen}
         onGenerate={onGenerate}
+        categoryName={selectedExpense ? categories.find(c => c.id === selectedExpense.category)?.name : undefined}
       />
 
       <EditRecurringExpenseDialog

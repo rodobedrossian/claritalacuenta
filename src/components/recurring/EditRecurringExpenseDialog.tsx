@@ -123,8 +123,8 @@ export function EditRecurringExpenseDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {expenseCategories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.name}>
+              {expenseCategories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
                     {cat.name}
                   </SelectItem>
                 ))}

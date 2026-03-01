@@ -233,14 +233,14 @@ async function executeTool(
         if (args.max_amount) query = query.lte("amount", args.max_amount);
         if (args.description_search) query = query.ilike("description", `%${args.description_search}%`);
         
-        // Category filter: match both UUID-based and text-based categories
+        // Category filter: find UUID(s) matching the category name
         if (args.category) {
           const matchingIds = findCategoryIds(args.category, catMap);
-          // Build filter: ilike on text OR in matching UUIDs
           if (matchingIds.length > 0) {
-            query = query.or(`category.ilike.%${args.category}%,category.in.(${matchingIds.join(",")})`);
+            query = query.in("category", matchingIds);
           } else {
-            query = query.ilike("category", `%${args.category}%`);
+            // Fallback: try direct match (shouldn't happen with normalized data)
+            query = query.eq("category", args.category);
           }
         }
 

@@ -26,7 +26,7 @@ export const BudgetProgress = ({ budgets, projectedExpensesUSD = 0, projectedExp
       if (budget.percentage >= 100 && !alertedBudgetsRef.current.has(key100)) {
         alertedBudgetsRef.current.add(key100);
         toast.error(
-          `¡Presupuesto agotado! Has superado el límite de ${budget.category} (${budget.currency})`,
+          `¡Presupuesto agotado! Has superado el límite de ${budget.categoryName || budget.category} (${budget.currency})`,
           {
             duration: 6000,
             icon: <XCircle className="h-5 w-5 text-destructive" />
@@ -39,7 +39,7 @@ export const BudgetProgress = ({ budgets, projectedExpensesUSD = 0, projectedExp
       {
         alertedBudgetsRef.current.add(key80);
         toast.warning(
-          `¡Alerta! Has alcanzado el 80% del presupuesto de ${budget.category} (${budget.currency})`,
+          `¡Alerta! Has alcanzado el 80% del presupuesto de ${budget.categoryName || budget.category} (${budget.currency})`,
           {
             duration: 5000,
             icon: <AlertTriangle className="h-5 w-5 text-warning" />
@@ -66,11 +66,12 @@ export const BudgetProgress = ({ budgets, projectedExpensesUSD = 0, projectedExp
     return "bg-primary";
   };
 
-  const getStatusIcon = (percentage: number, categoryName: string) => {
+  const getStatusIcon = (percentage: number, budget: BudgetWithSpending) => {
     if (percentage >= 100) return <XCircle className="h-4 w-4 text-destructive" />;
     if (percentage >= 80) return <AlertTriangle className="h-4 w-4 text-warning" />;
-    const IconComponent = getIconForCategory(categoryName);
-    const color = getCategoryColor(categoryName);
+    const catDisplay = budget.categoryName || budget.category;
+    const IconComponent = getIconForCategory(catDisplay);
+    const color = getCategoryColor(catDisplay);
     return <IconComponent className="h-4 w-4" style={{ color }} />;
   };
 
@@ -112,8 +113,8 @@ export const BudgetProgress = ({ budgets, projectedExpensesUSD = 0, projectedExp
 
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
-                  {getStatusIcon(budget.percentage, budget.category)}
-                  <span className="font-medium">{budget.category}</span>
+                  {getStatusIcon(budget.percentage, budget)}
+                  <span className="font-medium">{budget.categoryName || budget.category}</span>
                   <span className="text-muted-foreground text-xs">
                     ({budget.currency})
                   </span>

@@ -17,6 +17,7 @@ interface GenerateRecurringDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onGenerate: (expense: RecurringExpense, amount?: number) => Promise<void>;
+  categoryName?: string;
 }
 
 export function GenerateRecurringDialog({
@@ -24,6 +25,7 @@ export function GenerateRecurringDialog({
   open,
   onOpenChange,
   onGenerate,
+  categoryName,
 }: GenerateRecurringDialogProps) {
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
@@ -56,7 +58,7 @@ export function GenerateRecurringDialog({
         <DialogHeader>
           <DialogTitle>Registrar Gasto</DialogTitle>
           <DialogDescription>
-            {expense.description} - Categoría: {expense.category}
+            {expense.description} - Categoría: {categoryName || expense.category}
           </DialogDescription>
         </DialogHeader>
 

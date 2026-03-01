@@ -72,10 +72,11 @@ export const DetailsStep = ({
   onSubmit,
   isSubmitting,
 }: DetailsStepProps) => {
-  // Get category info for display
-  const categoryData = categories.find(c => c.name === category);
-  const color = categoryData?.color || DEFAULT_CATEGORY_COLORS[category] || getCategoryColor(category);
-  const IconComponent = getIconForCategory(category, categoryData?.icon);
+  // Get category info for display - category is now a UUID
+  const categoryData = categories.find(c => c.id === category);
+  const categoryName = categoryData?.name || category;
+  const color = categoryData?.color || DEFAULT_CATEGORY_COLORS[categoryName] || getCategoryColor(categoryName);
+  const IconComponent = getIconForCategory(categoryName, categoryData?.icon);
 
   const formattedAmount = new Intl.NumberFormat("es-AR", {
     minimumFractionDigits: 0,
@@ -110,7 +111,7 @@ export const DetailsStep = ({
           <IconComponent className="h-6 w-6" style={{ color }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium truncate">{category}</p>
+          <p className="font-medium truncate">{categoryName}</p>
           <p className="text-xs text-muted-foreground">
             {type === "income" ? "Ingreso" : "Gasto"}
           </p>
