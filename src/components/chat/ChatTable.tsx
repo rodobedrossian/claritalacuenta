@@ -6,7 +6,7 @@ interface ChatTableProps {
 
 export function ChatTable({ title, headers, rows }: ChatTableProps) {
   return (
-    <div className="my-3 rounded-xl border border-border/50 bg-card overflow-hidden">
+    <div className="my-3 rounded-xl bg-card overflow-hidden">
       {title && (
         <div className="px-4 py-2.5 border-b border-border/50">
           <h4 className="text-sm font-semibold text-foreground">{title}</h4>

@@ -13,7 +13,7 @@ export function ChatKPICard({ label, value, change_percent, change_label }: Chat
   const isNegative = change_percent != null && change_percent < 0;
 
   return (
-    <div className="my-3 rounded-xl border border-border/50 bg-card p-4">
+    <div className="my-3 rounded-xl bg-card p-4">
       <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
       <p className="text-2xl font-bold text-foreground mt-1">{value}</p>
       {change_percent != null && (
