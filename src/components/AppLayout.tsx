@@ -21,6 +21,7 @@ import { RuculaLogo } from "@/components/RuculaLogo";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
+import { FloatingChatButton } from "@/components/FloatingChatButton";
 import { InviteDrawerProvider } from "@/contexts/InviteDrawerContext";
 import { InviteToWorkspaceDrawer } from "@/components/workspace/InviteToWorkspaceDrawer";
 
@@ -80,6 +81,7 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
             onVoiceRecord={() => navigate("/?action=voice-record", { replace: true })}
             onImportStatement={() => navigate("/?action=import-statement", { replace: true })}
           />
+          <FloatingChatButton />
         </div>
         <InviteToWorkspaceDrawer />
       </InviteDrawerProvider>
