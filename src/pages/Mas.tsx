@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { Target, Sparkles, Settings, LogOut, Tag, Repeat, PiggyBank, ChevronDown, Info } from "lucide-react";
+import { Target, Sparkles, Settings, LogOut, Tag, Repeat, PiggyBank, ChevronDown, Info, MessageCircle } from "lucide-react";
 import { performLogout } from "@/lib/logout";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +22,7 @@ function getInitials(name: string | undefined, email: string | undefined): strin
 }
 
 const menuItems = [
+  { title: "Clarita AI", path: "/chat", icon: MessageCircle },
   { title: "Ahorros", path: "/savings", icon: PiggyBank },
   { title: "Presupuestos", path: "/budgets", icon: Target },
   { title: "Recurrentes", path: "/recurrentes", icon: Repeat },

@@ -36,6 +36,7 @@ import Insights from "./pages/Insights";
 import Categories from "./pages/Categories";
 import Recurrentes from "./pages/Recurrentes";
 import Mas from "./pages/Mas";
+import Chat from "./pages/Chat";
 import Legales from "./pages/Legales";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
@@ -178,6 +179,7 @@ function AppRoutes({
         <Route path="/categories" element={<Categories />} />
         <Route path="/recurrentes" element={<Recurrentes />} />
         <Route path="/mas" element={<Mas />} />
+        <Route path="/chat" element={<Chat />} />
         <Route path="/legales" element={<Legales />} />
       </Route>
       <Route path="*" element={<NotFound />} />
