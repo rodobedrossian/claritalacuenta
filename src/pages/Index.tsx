@@ -27,6 +27,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useVoiceTransaction } from "@/hooks/useVoiceTransaction";
 import { useVoiceTokenPrefetch } from "@/hooks/useVoiceTokenPrefetch";
 import { useInsightsData } from "@/hooks/useInsightsData";
+import { useAccountAge } from "@/hooks/useAccountAge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -48,6 +49,7 @@ const Index = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const { user } = useAuth();
+  const { hasMinimumUsage } = useAccountAge();
   const [isRefreshingRate, setIsRefreshingRate] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -82,7 +84,7 @@ const Index = () => {
     loading: insightsLoading, 
     isFetching: isInsightsFetching, 
     refetch: refetchInsights 
-  } = useInsightsData(user?.id);
+  } = useInsightsData(user?.id, hasMinimumUsage);
 
   const isFetchingAny = !!(isDashboardFetching || isInsightsFetching);
 
@@ -347,7 +349,7 @@ const Index = () => {
                     )}
                   </div>
 
-                  <InsightsCard insights={insightsData?.insights || []} loading={insightsLoading} onRefresh={refetchInsights} />
+                  <InsightsCard insights={insightsData?.insights || []} loading={insightsLoading} onRefresh={refetchInsights} hasMinimumUsage={hasMinimumUsage} />
 
                   <SpendingByWeekdayCard workspaceId={workspaceId} />
 
@@ -406,7 +408,8 @@ const Index = () => {
                 <InsightsCard 
                   insights={insightsData?.insights || []} 
                   loading={insightsLoading} 
-                  onRefresh={refetchInsights} 
+                  onRefresh={refetchInsights}
+                  hasMinimumUsage={hasMinimumUsage}
                 />
               </div>
 

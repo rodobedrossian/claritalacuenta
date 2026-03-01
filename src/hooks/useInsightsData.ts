@@ -31,7 +31,7 @@ export interface UseInsightsDataReturn {
   refetch: () => Promise<void>;
 }
 
-export function useInsightsData(userId: string | null): UseInsightsDataReturn {
+export function useInsightsData(userId: string | null, enabled: boolean = true): UseInsightsDataReturn {
   const queryClient = useQueryClient();
 
   const { 
@@ -59,7 +59,7 @@ export function useInsightsData(userId: string | null): UseInsightsDataReturn {
         metadata: response.metadata || null,
       } as InsightsData;
     },
-    enabled: !!userId,
+    enabled: !!userId && enabled,
     staleTime: 1000 * 60 * 15, // 15 minutos
   });
 
