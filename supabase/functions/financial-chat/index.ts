@@ -207,6 +207,14 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "list_credit_cards",
+      description: "Lista las tarjetas de crédito del usuario con su nombre, banco y red.",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_exchange_rate",
       description: "Tipo de cambio USD/ARS actual.",
       parameters: { type: "object", properties: {}, additionalProperties: false },
@@ -546,6 +554,15 @@ async function executeTool(
         });
 
         return { result: JSON.stringify(result), toolName: name };
+      }
+
+      case "list_credit_cards": {
+        const { data } = await supabase
+          .from("credit_cards")
+          .select("id, name, bank, card_network, closing_day")
+          .eq("workspace_id", workspaceId);
+
+        return { result: JSON.stringify(data || []), toolName: name };
       }
 
       case "get_exchange_rate": {
