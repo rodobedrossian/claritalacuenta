@@ -13,7 +13,14 @@ export function ChatBarChart({ data, title }: ChatBarChartProps) {
         <BarChart data={data} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
           <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-          <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+          <YAxis
+            tick={{ fontSize: 10 }}
+            stroke="hsl(var(--muted-foreground))"
+            tickFormatter={(v: number) =>
+              v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `${(v / 1_000).toFixed(0)}K` : String(v)
+            }
+            width={48}
+          />
           <Tooltip
             formatter={(value: number) =>
               new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(value)

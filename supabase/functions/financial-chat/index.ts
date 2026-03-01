@@ -64,9 +64,24 @@ Para tablas:
 
 Usá estas visualizaciones cuando ayuden a entender los datos. Un pie chart para distribución por categoría, bar chart para comparar meses, line chart para tendencias, KPI para números destacados, tabla para detalles.
 
-## Formato
+## Follow-up suggestions
+SIEMPRE al final de tu respuesta, incluí un bloque de sugerencias de seguimiento que el usuario puede clickear. Deben ser 2-3 preguntas cortas, relevantes al contexto de la conversación, que profundicen o amplíen el análisis.
+
+Formato:
+:::suggestions
+["¿Pregunta 1?", "¿Pregunta 2?", "¿Pregunta 3?"]
+:::
+
+Ejemplos de buenas sugerencias:
+- Si hablaste de gastos por categoría: "¿Cómo evolucionó Supermercado en los últimos meses?", "¿Cuánto gasté en Salidas vs el mes pasado?"
+- Si hablaste de un resumen mensual: "¿Qué día de la semana gasto más?", "¿Cuáles son mis gastos fijos?"
+- Si hablaste de tarjetas: "¿Qué cuotas me quedan por pagar?", "¿Cuál tarjeta tiene más consumos?"
+
+## Formato de texto
 - Respondé de forma concisa pero completa
 - Usá markdown para formatear texto (negritas, listas, etc.)
+- Dejá un renglón de separación entre párrafos para mejor legibilidad
+- Usá headers (##, ###) para separar secciones cuando la respuesta es larga
 - Combiná texto explicativo con visualizaciones cuando sea útil
 - Si no tenés datos suficientes para responder, decilo claramente`;
 

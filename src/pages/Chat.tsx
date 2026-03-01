@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useFinancialChat } from "@/hooks/useFinancialChat";
 import { ChatMessageBubble } from "@/components/chat/ChatMessage";
 import { Send, Trash2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 const SUGGESTIONS = [
   "¿Cuánto gasté este mes?",
@@ -18,19 +19,24 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+    // Small delay to let the DOM render the new message
+    const timer = setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [messages, isLoading]);
 
-  const handleSend = () => {
-    const trimmed = input.trim();
+  const handleSend = useCallback((text?: string) => {
+    const trimmed = (text ?? input).trim();
     if (!trimmed || isLoading) return;
-    setInput("");
+    if (!text) setInput("");
     sendMessage(trimmed);
-    // Reset textarea height
     if (inputRef.current) inputRef.current.style.height = "auto";
-  };
+  }, [input, isLoading, sendMessage]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -45,6 +51,11 @@ export default function Chat() {
       inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 120) + "px";
     }
   };
+
+  const handleSuggestionClick = useCallback((text: string) => {
+    if (isLoading) return;
+    sendMessage(text);
+  }, [isLoading, sendMessage]);
 
   const isEmpty = messages.length === 0;
 
@@ -83,7 +94,7 @@ export default function Chat() {
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s}
-                    onClick={() => sendMessage(s)}
+                    onClick={() => handleSend(s)}
                     className="text-xs px-3 py-2 rounded-full border border-border/50 bg-card text-foreground hover:bg-muted/50 transition-colors"
                   >
                     {s}
@@ -93,11 +104,27 @@ export default function Chat() {
             </div>
           ) : (
             <>
-              {messages.map((m, i) => (
-                <ChatMessageBubble key={i} message={m} />
-              ))}
+              <AnimatePresence initial={false}>
+                {messages.map((m, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                  >
+                    <ChatMessageBubble
+                      message={m}
+                      onSuggestionClick={handleSuggestionClick}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
               {isLoading && (
-                <div className="flex justify-start mb-3">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex justify-start mb-3"
+                >
                   <div className="rounded-2xl rounded-bl-md px-4 py-3 bg-card border border-border/50">
                     <div className="flex gap-1.5">
                       <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "0ms" }} />
@@ -105,8 +132,9 @@ export default function Chat() {
                       <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "300ms" }} />
                     </div>
                   </div>
-                </div>
+                </motion.div>
               )}
+              <div ref={bottomRef} />
             </>
           )}
         </div>
@@ -126,7 +154,7 @@ export default function Chat() {
               disabled={isLoading}
             />
             <button
-              onClick={handleSend}
+              onClick={() => handleSend()}
               disabled={!input.trim() || isLoading}
               className={cn(
                 "p-2 rounded-xl transition-colors shrink-0",
