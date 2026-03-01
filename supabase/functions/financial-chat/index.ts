@@ -587,7 +587,7 @@ Deno.serve(async (req: Request) => {
       ...messages,
     ];
 
-    // Tool-calling loop with token tracking
+    // Tool-calling loop with token tracking and latency
     let currentMessages = aiMessages;
     let iterations = 0;
     let finalResponse: any = null;
@@ -595,10 +595,13 @@ Deno.serve(async (req: Request) => {
     let totalCompletionTokens = 0;
     let totalTokens = 0;
     const allToolCalls: any[] = [];
+    const latencyLog: { step: string; duration_ms: number }[] = [];
+    const totalStart = Date.now();
 
     while (iterations < MAX_TOOL_ITERATIONS) {
       iterations++;
 
+      const aiStart = Date.now();
       const aiResp = await fetch(AI_GATEWAY, {
         method: "POST",
         headers: {
@@ -612,6 +615,7 @@ Deno.serve(async (req: Request) => {
           stream: false,
         }),
       });
+      latencyLog.push({ step: `ai_call_${iterations}`, duration_ms: Date.now() - aiStart });
 
       if (!aiResp.ok) {
         const status = aiResp.status;
@@ -664,7 +668,9 @@ Deno.serve(async (req: Request) => {
             : tc.function.arguments;
 
           console.log(`Executing tool: ${tc.function.name}`, toolArgs);
+          const toolStart = Date.now();
           const { result } = await executeTool(tc.function.name, toolArgs, supabase, workspaceId);
+          latencyLog.push({ step: `tool:${tc.function.name}`, duration_ms: Date.now() - toolStart });
 
           allToolCalls.push({
             name: tc.function.name,
@@ -686,6 +692,10 @@ Deno.serve(async (req: Request) => {
       finalResponse = choice.message?.content || "";
       break;
     }
+
+    const totalDuration = Date.now() - totalStart;
+    latencyLog.push({ step: "total", duration_ms: totalDuration });
+    console.log("Latency breakdown:", JSON.stringify(latencyLog));
 
     if (finalResponse === null) {
       finalResponse = "Lo siento, no pude procesar tu consulta. Intentá de nuevo.";
@@ -726,7 +736,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    return new Response(JSON.stringify({ content: finalResponse, conversation_id: convId }), {
+    return new Response(JSON.stringify({ content: finalResponse, conversation_id: convId, latency: latencyLog }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
