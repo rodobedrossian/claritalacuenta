@@ -2,9 +2,15 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+export type LatencyEntry = {
+  step: string;
+  duration_ms: number;
+};
+
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
+  latency?: LatencyEntry[];
 };
 
 export function useFinancialChat() {
@@ -69,6 +75,7 @@ export function useFinancialChat() {
       const assistantMsg: ChatMessage = {
         role: "assistant",
         content: data.content || "No pude generar una respuesta.",
+        latency: data.latency || undefined,
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
