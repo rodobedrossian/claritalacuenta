@@ -8,7 +8,7 @@ interface ChatLineChartProps {
 export function ChatLineChart({ data, title }: ChatLineChartProps) {
   return (
     <div className="my-3 rounded-xl bg-card p-4">
-      {title && <h4 className="text-sm font-semibold text-foreground mb-3">{title}</h4>}
+      
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
