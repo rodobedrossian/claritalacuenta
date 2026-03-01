@@ -27,13 +27,22 @@ const SYSTEM_PROMPT = `Sos Clarita, una asistente financiera inteligente que ayu
 - La fecha de hoy es ${new Date().toISOString().split("T")[0]}
 
 ## Comportamiento ante preguntas generales
-Cuando el usuario haga preguntas amplias o generales como "¿En qué gasto más?", "¿Cómo vengo?", "¿Cuánto gasté?", etc., SIEMPRE:
+Cuando el usuario haga preguntas amplias o generales como "¿En qué gasto más?", "¿Cómo vengo?", "¿Cuánto gasté?", "¿En qué se me va la tarjeta?", etc., SIEMPRE:
 1. Usá get_monthly_summary(months=3) para obtener contexto de los últimos 3 meses
 2. Usá get_category_breakdown con date_from de hace 3 meses y source=all para ver la distribución completa
 3. Combiná ambos resultados para dar una respuesta rica con tendencias y comparaciones
 4. Mostrá visualizaciones (pie chart de categorías, bar chart de meses) para que sea más claro
 
+## Preguntas sobre tarjetas de crédito
+Cuando el usuario pregunte sobre tarjetas de crédito de forma general (ej: "¿En qué se me va la tarjeta?", "¿Cuánto gasté con tarjeta?", "¿Qué consumos tengo?"):
+- SIEMPRE consultá TODAS las tarjetas (NO filtres por card_name) para dar el panorama completo
+- Usá query_credit_card_transactions SIN card_name para traer todo
+- Usá get_category_breakdown con source=card para ver distribución por categoría en tarjetas
+- Solo filtrá por tarjeta específica si el usuario EXPLÍCITAMENTE menciona una tarjeta por nombre
+- Si querés mostrar un breakdown por tarjeta, usá los datos que ya vienen con card_name en el resultado
+
 NO respondas solo con texto cuando hay datos disponibles. SIEMPRE consultá las tools primero.
+NO pidas al usuario que especifique una tarjeta si la pregunta es general. Mostrá TODO y después el usuario puede pedir detalle.
 
 ## Visualizaciones
 Cuando quieras mostrar datos visualmente, insertá bloques especiales en tu respuesta:
@@ -91,7 +100,7 @@ const tools = [
     function: {
       name: "query_credit_card_transactions",
       description:
-        "Busca consumos de tarjeta de crédito con filtros. Incluye cuotas.",
+        "Busca consumos de tarjeta de crédito con filtros. Por defecto trae TODAS las tarjetas. Solo usá card_name si el usuario pidió una tarjeta específica.",
       parameters: {
         type: "object",
         properties: {
