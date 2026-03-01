@@ -26,7 +26,7 @@ export function ChatPieChart({ data, title }: ChatPieChartProps) {
 
   return (
     <div className="my-3 rounded-xl bg-card p-4 overflow-hidden">
-      {title && <h4 className="text-sm font-semibold text-foreground mb-3">{title}</h4>}
+      
       <ResponsiveContainer width="100%" height={200}>
         <PieChart>
           <Pie
