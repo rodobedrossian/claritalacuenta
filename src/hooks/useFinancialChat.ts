@@ -10,6 +10,7 @@ export type ChatMessage = {
 export function useFinancialChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   const sendMessage = useCallback(async (input: string) => {
     const userMsg: ChatMessage = { role: "user", content: input };
@@ -38,7 +39,10 @@ export function useFinancialChat() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ messages: allMessages }),
+          body: JSON.stringify({
+            messages: allMessages,
+            conversation_id: conversationId,
+          }),
         }
       );
 
@@ -56,6 +60,12 @@ export function useFinancialChat() {
       }
 
       const data = await resp.json();
+      
+      // Track conversation_id from backend
+      if (data.conversation_id && !conversationId) {
+        setConversationId(data.conversation_id);
+      }
+
       const assistantMsg: ChatMessage = {
         role: "assistant",
         content: data.content || "No pude generar una respuesta.",
@@ -68,11 +78,12 @@ export function useFinancialChat() {
     } finally {
       setIsLoading(false);
     }
-  }, [messages]);
+  }, [messages, conversationId]);
 
   const clearChat = useCallback(() => {
     setMessages([]);
+    setConversationId(null);
   }, []);
 
-  return { messages, isLoading, sendMessage, clearChat };
+  return { messages, isLoading, sendMessage, clearChat, conversationId };
 }

@@ -138,6 +138,91 @@ export type Database = {
           },
         ]
       }
+      chat_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          title: string | null
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          completion_tokens: number | null
+          content: string | null
+          conversation_id: string
+          created_at: string
+          id: string
+          model: string | null
+          prompt_tokens: number | null
+          role: string
+          tool_calls: Json | null
+          total_tokens: number | null
+          visualization_type: string | null
+        }
+        Insert: {
+          completion_tokens?: number | null
+          content?: string | null
+          conversation_id: string
+          created_at?: string
+          id?: string
+          model?: string | null
+          prompt_tokens?: number | null
+          role: string
+          tool_calls?: Json | null
+          total_tokens?: number | null
+          visualization_type?: string | null
+        }
+        Update: {
+          completion_tokens?: number | null
+          content?: string | null
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          model?: string | null
+          prompt_tokens?: number | null
+          role?: string
+          tool_calls?: Json | null
+          total_tokens?: number | null
+          visualization_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_card_transactions: {
         Row: {
           amount: number
