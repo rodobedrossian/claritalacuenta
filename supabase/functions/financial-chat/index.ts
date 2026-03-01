@@ -10,6 +10,7 @@ const corsHeaders = {
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MAX_TOOL_ITERATIONS = 5;
 
@@ -24,6 +25,15 @@ const SYSTEM_PROMPT = `Sos Clarita, una asistente financiera inteligente que ayu
 - Cuando muestres montos en ARS usá el formato $1.234.567 (punto como separador de miles)
 - Cuando muestres montos en USD usá el formato US$1,234
 - La fecha de hoy es ${new Date().toISOString().split("T")[0]}
+
+## Comportamiento ante preguntas generales
+Cuando el usuario haga preguntas amplias o generales como "¿En qué gasto más?", "¿Cómo vengo?", "¿Cuánto gasté?", etc., SIEMPRE:
+1. Usá get_monthly_summary(months=3) para obtener contexto de los últimos 3 meses
+2. Usá get_category_breakdown con date_from de hace 3 meses y source=all para ver la distribución completa
+3. Combiná ambos resultados para dar una respuesta rica con tendencias y comparaciones
+4. Mostrá visualizaciones (pie chart de categorías, bar chart de meses) para que sea más claro
+
+NO respondas solo con texto cuando hay datos disponibles. SIEMPRE consultá las tools primero.
 
 ## Visualizaciones
 Cuando quieras mostrar datos visualmente, insertá bloques especiales en tu respuesta:
@@ -158,16 +168,46 @@ const tools = [
   },
 ];
 
+// ─── Category resolution helper ─────────────────────────────────
+async function buildCategoryMap(supabase: any, workspaceId: string): Promise<Map<string, string>> {
+  const { data: cats } = await supabase
+    .from("categories")
+    .select("id, name")
+    .or(`workspace_id.eq.${workspaceId},workspace_id.is.null`);
+  
+  const map = new Map<string, string>();
+  for (const c of cats || []) {
+    map.set(c.id, c.name);
+  }
+  return map;
+}
+
+function resolveCategoryName(category: string, catMap: Map<string, string>): string {
+  return catMap.get(category) || category;
+}
+
+function findCategoryIds(categoryName: string, catMap: Map<string, string>): string[] {
+  const ids: string[] = [];
+  for (const [id, name] of catMap) {
+    if (name.toLowerCase().includes(categoryName.toLowerCase())) {
+      ids.push(id);
+    }
+  }
+  return ids;
+}
+
 // ─── Tool execution ──────────────────────────────────────────────
 async function executeTool(
   name: string,
   args: Record<string, any>,
   supabase: any,
   workspaceId: string
-): Promise<string> {
+): Promise<{ result: string; toolName: string }> {
   try {
     switch (name) {
       case "query_transactions": {
+        const catMap = await buildCategoryMap(supabase, workspaceId);
+        
         let query = supabase
           .from("transactions")
           .select("id, amount, category, currency, type, description, date, payment_method, status")
@@ -178,23 +218,42 @@ async function executeTool(
 
         if (args.date_from) query = query.gte("date", args.date_from);
         if (args.date_to) query = query.lte("date", args.date_to + "T23:59:59");
-        if (args.category) query = query.ilike("category", `%${args.category}%`);
         if (args.currency) query = query.eq("currency", args.currency);
         if (args.type) query = query.eq("type", args.type);
         if (args.min_amount) query = query.gte("amount", args.min_amount);
         if (args.max_amount) query = query.lte("amount", args.max_amount);
         if (args.description_search) query = query.ilike("description", `%${args.description_search}%`);
+        
+        // Category filter: match both UUID-based and text-based categories
+        if (args.category) {
+          const matchingIds = findCategoryIds(args.category, catMap);
+          // Build filter: ilike on text OR in matching UUIDs
+          if (matchingIds.length > 0) {
+            query = query.or(`category.ilike.%${args.category}%,category.in.(${matchingIds.join(",")})`);
+          } else {
+            query = query.ilike("category", `%${args.category}%`);
+          }
+        }
 
         const { data, error } = await query;
-        if (error) return JSON.stringify({ error: error.message });
-        return JSON.stringify({ count: data.length, transactions: data });
+        if (error) return { result: JSON.stringify({ error: error.message }), toolName: name };
+        
+        // Resolve category names
+        const enriched = (data || []).map((t: any) => ({
+          ...t,
+          category: resolveCategoryName(t.category, catMap),
+        }));
+        
+        return { result: JSON.stringify({ count: enriched.length, transactions: enriched }), toolName: name };
       }
 
       case "query_credit_card_transactions": {
+        const catMap = await buildCategoryMap(supabase, workspaceId);
+        
         let query = supabase
           .from("credit_card_transactions")
           .select(
-            "id, amount, currency, description, date, transaction_type, installment_current, installment_total, credit_card_id"
+            "id, amount, currency, description, date, transaction_type, installment_current, installment_total, credit_card_id, category_id"
           )
           .eq("workspace_id", workspaceId)
           .order("date", { ascending: false })
@@ -204,7 +263,6 @@ async function executeTool(
         if (args.date_to) query = query.lte("date", args.date_to);
         if (args.currency) query = query.eq("currency", args.currency);
 
-        // If card_name filter, resolve card id first
         if (args.card_name) {
           const { data: cards } = await supabase
             .from("credit_cards")
@@ -212,17 +270,13 @@ async function executeTool(
             .eq("workspace_id", workspaceId)
             .ilike("name", `%${args.card_name}%`);
           if (cards && cards.length > 0) {
-            query = query.in(
-              "credit_card_id",
-              cards.map((c: any) => c.id)
-            );
+            query = query.in("credit_card_id", cards.map((c: any) => c.id));
           }
         }
 
         const { data, error } = await query;
-        if (error) return JSON.stringify({ error: error.message });
+        if (error) return { result: JSON.stringify({ error: error.message }), toolName: name };
 
-        // Enrich with card names
         const cardIds = [...new Set(data?.map((t: any) => t.credit_card_id).filter(Boolean))];
         let cardMap: Record<string, string> = {};
         if (cardIds.length) {
@@ -236,13 +290,15 @@ async function executeTool(
         const enriched = data?.map((t: any) => ({
           ...t,
           card_name: cardMap[t.credit_card_id] || null,
+          category: resolveCategoryName(t.category_id || "", catMap),
         }));
 
-        return JSON.stringify({ count: enriched?.length || 0, transactions: enriched });
+        return { result: JSON.stringify({ count: enriched?.length || 0, transactions: enriched }), toolName: name };
       }
 
       case "get_monthly_summary": {
         const months = args.months || 3;
+        const catMap = await buildCategoryMap(supabase, workspaceId);
         const results: any[] = [];
 
         for (let i = 0; i < months; i++) {
@@ -256,7 +312,7 @@ async function executeTool(
 
           const { data } = await supabase
             .from("transactions")
-            .select("amount, type, currency")
+            .select("amount, type, currency, category")
             .eq("workspace_id", workspaceId)
             .eq("status", "confirmed")
             .gte("date", from)
@@ -275,13 +331,14 @@ async function executeTool(
           });
         }
 
-        return JSON.stringify(results);
+        return { result: JSON.stringify(results), toolName: name };
       }
 
       case "get_category_breakdown": {
         const from = args.date_from || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
         const to = args.date_to || new Date().toISOString().split("T")[0];
         const source = args.source || "all";
+        const catMap = await buildCategoryMap(supabase, workspaceId);
 
         const breakdown: Record<string, { ars: number; usd: number }> = {};
 
@@ -296,20 +353,13 @@ async function executeTool(
             .lte("date", to + "T23:59:59");
 
           for (const t of data || []) {
-            if (!breakdown[t.category]) breakdown[t.category] = { ars: 0, usd: 0 };
-            breakdown[t.category][t.currency.toLowerCase() as "ars" | "usd"] += Number(t.amount);
+            const catName = resolveCategoryName(t.category, catMap);
+            if (!breakdown[catName]) breakdown[catName] = { ars: 0, usd: 0 };
+            breakdown[catName][t.currency.toLowerCase() as "ars" | "usd"] += Number(t.amount);
           }
         }
 
         if (source === "card" || source === "all") {
-          // Get categories mapping
-          const { data: cats } = await supabase
-            .from("categories")
-            .select("id, name")
-            .or(`workspace_id.eq.${workspaceId},workspace_id.is.null`);
-          const catMap: Record<string, string> = {};
-          for (const c of cats || []) catMap[c.id] = c.name;
-
           const { data } = await supabase
             .from("credit_card_transactions")
             .select("category_id, amount, currency")
@@ -318,7 +368,7 @@ async function executeTool(
             .lte("date", to);
 
           for (const t of data || []) {
-            const catName = catMap[t.category_id] || "Sin categoría";
+            const catName = resolveCategoryName(t.category_id || "", catMap);
             if (!breakdown[catName]) breakdown[catName] = { ars: 0, usd: 0 };
             breakdown[catName][t.currency.toLowerCase() as "ars" | "usd"] += Number(t.amount);
           }
@@ -328,7 +378,7 @@ async function executeTool(
           .map(([category, amounts]) => ({ category, ...amounts }))
           .sort((a, b) => b.ars + b.usd - (a.ars + a.usd));
 
-        return JSON.stringify(result);
+        return { result: JSON.stringify(result), toolName: name };
       }
 
       case "get_savings_status": {
@@ -349,23 +399,27 @@ async function executeTool(
           .eq("workspace_id", workspaceId)
           .eq("is_active", true);
 
-        return JSON.stringify({
-          savings: savings || { ars_amount: 0, usd_amount: 0, ars_cash: 0, usd_cash: 0 },
-          goals: goals || [],
-          investments: investments || [],
-        });
+        return {
+          result: JSON.stringify({
+            savings: savings || { ars_amount: 0, usd_amount: 0, ars_cash: 0, usd_cash: 0 },
+            goals: goals || [],
+            investments: investments || [],
+          }),
+          toolName: name,
+        };
       }
 
       case "get_budgets_status": {
+        const catMap = await buildCategoryMap(supabase, workspaceId);
+        
         const { data: budgets } = await supabase
           .from("budgets")
           .select("*")
           .eq("workspace_id", workspaceId)
           .eq("is_active", true);
 
-        if (!budgets || budgets.length === 0) return JSON.stringify([]);
+        if (!budgets || budgets.length === 0) return { result: JSON.stringify([]), toolName: name };
 
-        // Get current month spending per category
         const now = new Date();
         const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
         const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, "0")}T23:59:59`;
@@ -379,21 +433,26 @@ async function executeTool(
           .gte("date", monthStart)
           .lte("date", monthEnd);
 
+        // Aggregate spending by resolved category name
         const spending: Record<string, number> = {};
         for (const t of txns || []) {
-          // Only count matching currency
-          spending[t.category] = (spending[t.category] || 0) + Number(t.amount);
+          const catName = resolveCategoryName(t.category, catMap);
+          spending[catName] = (spending[catName] || 0) + Number(t.amount);
         }
 
-        const result = budgets.map((b: any) => ({
-          category: b.category,
-          currency: b.currency,
-          monthly_limit: b.monthly_limit,
-          spent: spending[b.category] || 0,
-          percentage: Math.round(((spending[b.category] || 0) / b.monthly_limit) * 100),
-        }));
+        const result = budgets.map((b: any) => {
+          const budgetCatName = resolveCategoryName(b.category, catMap);
+          const spent = spending[budgetCatName] || 0;
+          return {
+            category: budgetCatName,
+            currency: b.currency,
+            monthly_limit: b.monthly_limit,
+            spent,
+            percentage: Math.round((spent / b.monthly_limit) * 100),
+          };
+        });
 
-        return JSON.stringify(result);
+        return { result: JSON.stringify(result), toolName: name };
       }
 
       case "get_exchange_rate": {
@@ -404,15 +463,15 @@ async function executeTool(
           .limit(1)
           .maybeSingle();
 
-        return JSON.stringify(data || { rate: null, source: null });
+        return { result: JSON.stringify(data || { rate: null, source: null }), toolName: name };
       }
 
       default:
-        return JSON.stringify({ error: `Unknown tool: ${name}` });
+        return { result: JSON.stringify({ error: `Unknown tool: ${name}` }), toolName: name };
     }
   } catch (e) {
     console.error(`Tool ${name} error:`, e);
-    return JSON.stringify({ error: e instanceof Error ? e.message : "Tool execution failed" });
+    return { result: JSON.stringify({ error: e instanceof Error ? e.message : "Tool execution failed" }), toolName: name };
   }
 }
 
@@ -423,7 +482,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Auth
+    // Auth - use getUser() for consistency with all other functions
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -436,16 +495,15 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = claimsData.claims.sub as string;
+    const userId = user.id;
 
     // Resolve workspace
     const { data: membership } = await supabase
@@ -463,7 +521,41 @@ Deno.serve(async (req: Request) => {
     }
 
     const workspaceId = membership.workspace_id;
-    const { messages } = await req.json();
+    const { messages, conversation_id } = await req.json();
+
+    // Service role client for persistence (bypasses RLS for inserts)
+    const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Manage conversation
+    let convId = conversation_id;
+    if (!convId) {
+      // Create new conversation
+      const { data: conv, error: convError } = await serviceClient
+        .from("chat_conversations")
+        .insert({
+          user_id: userId,
+          workspace_id: workspaceId,
+          title: messages?.[messages.length - 1]?.content?.slice(0, 100) || "Nueva conversación",
+        })
+        .select("id")
+        .single();
+      
+      if (convError) {
+        console.error("Error creating conversation:", convError);
+      } else {
+        convId = conv.id;
+      }
+    }
+
+    // Persist user message
+    const lastUserMsg = messages?.[messages.length - 1];
+    if (convId && lastUserMsg?.role === "user") {
+      await serviceClient.from("chat_messages").insert({
+        conversation_id: convId,
+        role: "user",
+        content: lastUserMsg.content,
+      });
+    }
 
     // Build messages with system prompt
     const aiMessages = [
@@ -471,10 +563,14 @@ Deno.serve(async (req: Request) => {
       ...messages,
     ];
 
-    // Tool-calling loop
+    // Tool-calling loop with token tracking
     let currentMessages = aiMessages;
     let iterations = 0;
     let finalResponse: any = null;
+    let totalPromptTokens = 0;
+    let totalCompletionTokens = 0;
+    let totalTokens = 0;
+    const allToolCalls: any[] = [];
 
     while (iterations < MAX_TOOL_ITERATIONS) {
       iterations++;
@@ -518,6 +614,14 @@ Deno.serve(async (req: Request) => {
       const aiData = await aiResp.json();
       const choice = aiData.choices?.[0];
 
+      // Accumulate token usage from every iteration
+      const usage = aiData.usage;
+      if (usage) {
+        totalPromptTokens += usage.prompt_tokens || 0;
+        totalCompletionTokens += usage.completion_tokens || 0;
+        totalTokens += usage.total_tokens || 0;
+      }
+
       if (!choice) {
         return new Response(JSON.stringify({ error: "No response from AI" }), {
           status: 500,
@@ -528,18 +632,21 @@ Deno.serve(async (req: Request) => {
       // If AI wants to call tools
       if (choice.finish_reason === "tool_calls" || choice.message?.tool_calls?.length) {
         const toolCalls = choice.message.tool_calls;
-
-        // Add assistant message with tool calls
         currentMessages.push(choice.message);
 
-        // Execute each tool and add results
         for (const tc of toolCalls) {
           const toolArgs = typeof tc.function.arguments === "string"
             ? JSON.parse(tc.function.arguments)
             : tc.function.arguments;
 
           console.log(`Executing tool: ${tc.function.name}`, toolArgs);
-          const result = await executeTool(tc.function.name, toolArgs, supabase, workspaceId);
+          const { result } = await executeTool(tc.function.name, toolArgs, supabase, workspaceId);
+
+          allToolCalls.push({
+            name: tc.function.name,
+            args: toolArgs,
+            result_preview: result.slice(0, 500),
+          });
 
           currentMessages.push({
             role: "tool",
@@ -548,27 +655,11 @@ Deno.serve(async (req: Request) => {
           });
         }
 
-        // Continue loop to let AI process tool results
         continue;
       }
 
-      // AI responded with text (no more tool calls)
+      // AI responded with text
       finalResponse = choice.message?.content || "";
-
-      // Log usage
-      const usage = aiData.usage;
-      if (usage) {
-        await supabase.from("ai_usage_logs").insert({
-          user_id: userId,
-          workspace_id: workspaceId,
-          function_name: "financial-chat",
-          model: "google/gemini-2.5-flash",
-          prompt_tokens: usage.prompt_tokens || 0,
-          completion_tokens: usage.completion_tokens || 0,
-          total_tokens: usage.total_tokens || 0,
-        });
-      }
-
       break;
     }
 
@@ -576,7 +667,42 @@ Deno.serve(async (req: Request) => {
       finalResponse = "Lo siento, no pude procesar tu consulta. Intentá de nuevo.";
     }
 
-    return new Response(JSON.stringify({ content: finalResponse }), {
+    // Detect visualization types in the response
+    const vizTypes: string[] = [];
+    if (finalResponse.includes(":::chart")) vizTypes.push("chart");
+    if (finalResponse.includes(":::kpi")) vizTypes.push("kpi");
+    if (finalResponse.includes(":::table")) vizTypes.push("table");
+
+    // Persist assistant message
+    if (convId) {
+      await serviceClient.from("chat_messages").insert({
+        conversation_id: convId,
+        role: "assistant",
+        content: finalResponse,
+        tool_calls: allToolCalls.length > 0 ? allToolCalls : null,
+        visualization_type: vizTypes.length > 0 ? vizTypes.join(",") : null,
+        prompt_tokens: totalPromptTokens,
+        completion_tokens: totalCompletionTokens,
+        total_tokens: totalTokens,
+        model: "google/gemini-2.5-flash",
+      });
+    }
+
+    // Log aggregated usage
+    if (totalTokens > 0) {
+      await serviceClient.from("ai_usage_logs").insert({
+        user_id: userId,
+        workspace_id: workspaceId,
+        function_name: "financial-chat",
+        model: "google/gemini-2.5-flash",
+        prompt_tokens: totalPromptTokens,
+        completion_tokens: totalCompletionTokens,
+        total_tokens: totalTokens,
+        reference_id: convId || null,
+      });
+    }
+
+    return new Response(JSON.stringify({ content: finalResponse, conversation_id: convId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
