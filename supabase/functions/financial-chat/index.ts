@@ -361,28 +361,11 @@ async function executeTool(
             if (key in summary) (summary as any)[key] += Number(t.amount);
           }
 
-          // Also fetch credit card transaction expenses for this month (these are actual consumptions not in transactions table)
-          const { data: ccData } = await supabase
-            .from("credit_card_transactions")
-            .select("amount, currency")
-            .eq("workspace_id", workspaceId)
-            .gte("date", from)
-            .lte("date", `${year}-${String(month + 1).padStart(2, "0")}-${String(toDate.getDate()).padStart(2, "0")}`);
-
-          let cc_expense_ars = 0;
-          let cc_expense_usd = 0;
-          for (const t of ccData || []) {
-            if (t.currency === "USD") cc_expense_usd += Number(t.amount);
-            else cc_expense_ars += Number(t.amount);
-          }
-
           const balanceArs = summary.income_ars - summary.expense_ars;
           const balanceUsd = summary.income_usd - summary.expense_usd;
 
           results.push({
             ...summary,
-            cc_expense_ars,
-            cc_expense_usd,
             balance_ars: balanceArs,
             balance_usd: balanceUsd,
           });
@@ -399,7 +382,7 @@ async function executeTool(
 
         const enriched = results.map((r: any) => {
           const totalIncomeArs = r.income_ars + r.income_usd * usdToArs;
-          const totalExpenseArs = r.expense_ars + r.expense_usd * usdToArs + r.cc_expense_ars + r.cc_expense_usd * usdToArs;
+          const totalExpenseArs = r.expense_ars + r.expense_usd * usdToArs;
           return {
             ...r,
             income_consolidado_ars: Math.round(totalIncomeArs),
