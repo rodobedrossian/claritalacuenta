@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Plus, PenLine, Mic, FileUp, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,6 +18,10 @@ const actions = [
 
 export const FloatingActionButton = ({ onAddManual, onVoiceRecord, onImportStatement }: FloatingActionButtonProps) => {
   const [open, setOpen] = useState(false);
+  const location = useLocation();
+
+  // Hide FAB on chat page
+  if (location.pathname === "/chat") return null;
 
   const handleAction = (key: string) => {
     setOpen(false);

@@ -71,7 +71,7 @@ export default function Chat() {
         <div className="flex items-center justify-between px-4 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pb-2 border-b border-border/50">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-bold text-foreground">Clarita AI</h1>
+            <h1 className="text-lg font-bold text-foreground">Rúcula AI</h1>
           </div>
           {messages.length > 0 && (
             <button
@@ -91,9 +91,9 @@ export default function Chat() {
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
                 <Sparkles className="h-8 w-8 text-primary" />
               </div>
-              <h2 className="text-xl font-bold text-foreground mb-2">¡Hola! Soy Clarita</h2>
+              <h2 className="text-xl font-bold text-foreground mb-2">¡Hola! Soy Rúcula AI</h2>
               <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-                Tu asistente financiera. Preguntame sobre tus gastos, categorías, tendencias o metas de ahorro.
+                Tu asistente financiero. Preguntame sobre tus gastos, categorías, tendencias o metas de ahorro.
               </p>
               <div className="flex flex-wrap justify-center gap-2">
                 {SUGGESTIONS.map((s) => (
@@ -159,7 +159,7 @@ export default function Chat() {
               onChange={(e) => setInput(e.target.value)}
               onInput={handleTextareaInput}
               onKeyDown={handleKeyDown}
-              placeholder="Preguntale a Clarita..."
+              placeholder="Preguntale a Rúcula..."
               className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none max-h-[120px]"
               rows={1}
               disabled={isLoading}
