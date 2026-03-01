@@ -26,6 +26,9 @@ const SYSTEM_PROMPT = `Sos Clarita, una asistente financiera inteligente que ayu
 - Cuando muestres montos en USD usá el formato US$1,234
 - La fecha de hoy es ${new Date().toISOString().split("T")[0]}
 
+## Balance consolidado
+Cuando el resumen mensual tenga ingresos y gastos en ARS y USD, usá el campo "balance_consolidado_ars" que ya viene calculado usando el tipo de cambio actual. Reportá el balance mensual como un único número consolidado en ARS, no digas "negativo en ARS y positivo en USD". El usuario puede usar USD para pagar gastos en ARS; lo que importa es si sus ingresos totales alcanzaron para cubrir sus gastos totales. Si el balance consolidado es positivo, decí que el mes cerró con superávit. Si es negativo, decí que hubo déficit.
+
 ## Comportamiento ante preguntas generales
 Cuando el usuario haga preguntas amplias o generales como "¿En qué gasto más?", "¿Cómo vengo?", "¿Cuánto gasté?", "¿En qué se me va la tarjeta?", etc., SIEMPRE:
 1. Usá get_monthly_summary(months=3) para obtener contexto de los últimos 3 meses
@@ -342,20 +345,38 @@ async function executeTool(
             .gte("date", from)
             .lte("date", to);
 
-          const summary = { month: from.slice(0, 7), income_ars: 0, expense_ars: 0, income_usd: 0, expense_usd: 0 };
+        const summary = { month: from.slice(0, 7), income_ars: 0, expense_ars: 0, income_usd: 0, expense_usd: 0 };
           for (const t of data || []) {
             const key = `${t.type}_${t.currency.toLowerCase()}`;
             if (key in summary) (summary as any)[key] += Number(t.amount);
           }
 
+          const balanceArs = summary.income_ars - summary.expense_ars;
+          const balanceUsd = summary.income_usd - summary.expense_usd;
+
           results.push({
             ...summary,
-            balance_ars: summary.income_ars - summary.expense_ars,
-            balance_usd: summary.income_usd - summary.expense_usd,
+            balance_ars: balanceArs,
+            balance_usd: balanceUsd,
           });
         }
 
-        return { result: JSON.stringify(results), toolName: name };
+        // Fetch exchange rate and compute consolidated balance
+        const { data: rateData } = await supabase
+          .from("exchange_rates")
+          .select("rate")
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const usdToArs = rateData?.rate || 1;
+
+        const enriched = results.map((r: any) => ({
+          ...r,
+          balance_consolidado_ars: Math.round(r.balance_ars + r.balance_usd * usdToArs),
+          exchange_rate_used: usdToArs,
+        }));
+
+        return { result: JSON.stringify(enriched), toolName: name };
       }
 
       case "get_category_breakdown": {
