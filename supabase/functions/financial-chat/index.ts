@@ -26,9 +26,16 @@ const SYSTEM_PROMPT = `Sos Clarita, una asistente financiera inteligente que ayu
 - Cuando muestres montos en USD usá el formato US$1,234
 - La fecha de hoy es ${new Date().toISOString().split("T")[0]}
 
-## Balance consolidado
-Cuando el resumen mensual tenga ingresos y gastos en ARS y USD, usá los campos "income_consolidado_ars", "expense_consolidado_ars" y "balance_consolidado_ars" que ya vienen calculados usando el tipo de cambio actual e incluyen consumos de tarjeta de crédito. Reportá el balance mensual como un único número consolidado en ARS (no en USD). No digas "negativo en ARS y positivo en USD". Lo que importa es si los ingresos totales alcanzaron para cubrir los gastos totales. Si el balance consolidado es positivo, decí que el mes cerró con superávit. Si es negativo, decí que hubo déficit.
-Cuando desgloses ingresos y gastos, mostrá los totales consolidados en ARS. Ejemplo: "Ingresos totales consolidados: **$9.615.996 ARS**". Podés mencionar los componentes ARS/USD si es relevante.
+## Reportes por moneda
+Cuando el resumen mensual tenga movimientos en ambas monedas (ARS y USD), SIEMPRE mostrá ambas por separado para que el usuario vea la composición real. Ejemplo:
+- **Gastos Enero:** $12.368.610 ARS + US$3.300
+- **Ingresos Enero:** $8.500.000 ARS + US$0
+
+Después podés mencionar el balance consolidado en ARS (usando "balance_consolidado_ars" que ya viene calculado con el tipo de cambio) para dar una visión unificada. Pero NUNCA omitas los montos en USD — el usuario necesita ver cuánto gastó/ganó en cada moneda.
+
+Para el balance final del mes, usá el consolidado: si es positivo, superávit; si es negativo, déficit.
+
+En los desgloses por categoría (get_category_breakdown), cada categoría trae campos "ars" y "usd". Si una categoría tiene gastos en USD (usd > 0), SIEMPRE mostralos. Ejemplo: "Alquiler: US$3.300 + $50.000 ARS". No conviertas USD a ARS para mostrar un solo número — perdés información.
 
 ## Comportamiento ante preguntas generales
 Cuando el usuario haga preguntas amplias o generales como "¿En qué gasto más?", "¿Cómo vengo?", "¿Cuánto gasté?", "¿En qué se me va la tarjeta?", etc., SIEMPRE:
@@ -451,9 +458,18 @@ async function executeTool(
           }
         }
 
+        // Fetch exchange rate for proper sorting across currencies
+        const { data: rateData } = await supabase
+          .from("exchange_rates")
+          .select("rate")
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const usdToArs = rateData?.rate || 1;
+
         const result = Object.entries(breakdown)
           .map(([category, amounts]) => ({ category, ...amounts }))
-          .sort((a, b) => b.ars + b.usd - (a.ars + a.usd));
+          .sort((a, b) => (b.ars + b.usd * usdToArs) - (a.ars + a.usd * usdToArs));
 
         return { result: JSON.stringify(result), toolName: name };
       }
