@@ -1,4 +1,3 @@
-import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ChatPieChart } from "./ChatPieChart";
 import { ChatBarChart } from "./ChatBarChart";
@@ -6,8 +5,7 @@ import { ChatLineChart } from "./ChatLineChart";
 import { ChatKPICard } from "./ChatKPICard";
 import { ChatTable } from "./ChatTable";
 import { cn } from "@/lib/utils";
-import { Clock, ChevronDown, ChevronUp } from "lucide-react";
-import type { ChatMessage as ChatMessageType, LatencyEntry } from "@/hooks/useFinancialChat";
+import type { ChatMessage as ChatMessageType } from "@/hooks/useFinancialChat";
 
 // Parse :::type\n{json}\n::: blocks
 function parseBlocks(content: string) {
@@ -150,59 +148,7 @@ export function ChatMessageBubble({ message, onSuggestionClick }: Props) {
           }
           return null;
         })}
-        {message.latency && message.latency.length > 0 && (
-          <LatencyBadge latency={message.latency} />
-        )}
       </div>
-    </div>
-  );
-}
-
-function LatencyBadge({ latency }: { latency: LatencyEntry[] }) {
-  const [expanded, setExpanded] = useState(false);
-  const total = latency.find((l) => l.step === "total");
-  const steps = latency.filter((l) => l.step !== "total");
-
-  const formatMs = (ms: number) => ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
-
-  return (
-    <div className="mt-1">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <Clock className="h-3 w-3" />
-        <span>{total ? formatMs(total.duration_ms) : "—"}</span>
-        {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-      </button>
-      {expanded && (
-        <div className="mt-1.5 rounded-lg bg-muted/50 border border-border/30 px-3 py-2 space-y-1">
-          {steps.map((s, i) => {
-            const label = s.step.startsWith("ai_call_")
-              ? `🤖 AI call #${s.step.split("_")[2]}`
-              : s.step.startsWith("tool:")
-              ? `🔧 ${s.step.replace("tool:", "")}`
-              : s.step;
-            return (
-              <div key={i} className="flex items-center justify-between text-[11px]">
-                <span className="text-muted-foreground">{label}</span>
-                <span className={cn(
-                  "font-mono",
-                  s.duration_ms > 3000 ? "text-destructive" : s.duration_ms > 1000 ? "text-amber-500" : "text-muted-foreground"
-                )}>
-                  {formatMs(s.duration_ms)}
-                </span>
-              </div>
-            );
-          })}
-          {total && (
-            <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border/30">
-              <span className="font-medium text-foreground">Total</span>
-              <span className="font-mono font-medium text-foreground">{formatMs(total.duration_ms)}</span>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
