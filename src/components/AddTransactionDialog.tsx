@@ -87,20 +87,26 @@ export const AddTransactionDialog = ({
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "debit">("cash");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Helper to match category with fuzzy matching
+  // Helper to match category with fuzzy matching - returns cat.id
   const matchCategory = (aiCategory: string, availableCategories: Category[]): string => {
     const normalizedAi = aiCategory.toLowerCase().trim();
     
-    // Exact match
-    const exact = availableCategories.find(c => c.name.toLowerCase() === normalizedAi);
-    if (exact) return exact.name;
+    // Check if it's already a UUID (from DB)
+    if (/^[0-9a-f]{8}-/.test(normalizedAi)) {
+      const byId = availableCategories.find(c => c.id === aiCategory);
+      if (byId) return byId.id;
+    }
     
-    // Partial match
+    // Exact name match
+    const exact = availableCategories.find(c => c.name.toLowerCase() === normalizedAi);
+    if (exact) return exact.id;
+    
+    // Partial name match
     const partial = availableCategories.find(c => 
       c.name.toLowerCase().includes(normalizedAi) ||
       normalizedAi.includes(c.name.toLowerCase())
     );
-    if (partial) return partial.name;
+    if (partial) return partial.id;
     
     return aiCategory;
   };
@@ -168,7 +174,8 @@ export const AddTransactionDialog = ({
     }
 
     // Use category name as description if empty
-    const finalDescription = description.trim() || category;
+    const categoryData = categories.find(c => c.id === category);
+    const finalDescription = description.trim() || categoryData?.name || category;
 
     if (fromSavings && !savingsSource) {
       toast.error("Selecciona el tipo de ahorro");

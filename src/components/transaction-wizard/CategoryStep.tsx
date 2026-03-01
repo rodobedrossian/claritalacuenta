@@ -27,8 +27,8 @@ export const CategoryStep = ({
   onNext,
   onBack,
 }: CategoryStepProps) => {
-  const handleSelectCategory = (categoryName: string) => {
-    onCategoryChange(categoryName);
+  const handleSelectCategory = (categoryId: string) => {
+    onCategoryChange(categoryId);
     // Auto-advance after short delay for visual feedback
     setTimeout(() => onNext(), 150);
   };
@@ -58,13 +58,13 @@ export const CategoryStep = ({
           {categories.map((cat) => {
             const color = cat.color || DEFAULT_CATEGORY_COLORS[cat.name] || getCategoryColor(cat.name);
             const IconComponent = getIconForCategory(cat.name, cat.icon);
-            const isSelected = selectedCategory === cat.name;
+            const isSelected = selectedCategory === cat.id;
 
             return (
               <button
                 key={cat.id}
                 type="button"
-                onClick={() => handleSelectCategory(cat.name)}
+                onClick={() => handleSelectCategory(cat.id)}
                 className={cn(
                   "flex flex-col items-center gap-2 p-3 rounded-xl border transition-all",
                   "hover:scale-[1.02] active:scale-[0.98]",

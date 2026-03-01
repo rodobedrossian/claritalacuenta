@@ -57,6 +57,13 @@ Deno.serve(async (req) => {
 
     let alertCount = 0;
 
+    // Build category UUID→name map
+    const { data: allCategories } = await supabase.from("categories").select("id, name");
+    const catMap = new Map<string, string>();
+    for (const c of allCategories || []) {
+      catMap.set(c.id, c.name);
+    }
+
     for (const setting of settings) {
       // Get user's active budgets
       const { data: budgets } = await supabase
@@ -104,11 +111,13 @@ Deno.serve(async (req) => {
           if (!existingAlert) {
             const currency = budget.currency === "USD" ? "US$" : "$";
             
+            const catName = catMap.get(budget.category) || budget.category;
+            
             await supabase.functions.invoke("send-push-notification", {
               body: {
                 user_id: setting.user_id,
                 title: "🚨 Presupuesto excedido",
-                body: `${budget.category}: ${currency}${spent.toLocaleString()} de ${currency}${Number(budget.monthly_limit).toLocaleString()} (${percentage.toFixed(0)}%)`,
+                body: `${catName}: ${currency}${spent.toLocaleString()} de ${currency}${Number(budget.monthly_limit).toLocaleString()} (${percentage.toFixed(0)}%)`,
                 type: "budget_exceeded",
                 data: { category: budget.category, budget_id: budget.id },
                 url: "/",
@@ -116,7 +125,7 @@ Deno.serve(async (req) => {
             });
 
             alertCount++;
-            console.log(`Sent budget alert for user ${setting.user_id}, category ${budget.category}`);
+            console.log(`Sent budget alert for user ${setting.user_id}, category ${catName}`);
           }
         }
       }

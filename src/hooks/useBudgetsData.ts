@@ -7,6 +7,7 @@ export interface Budget {
   id: string;
   user_id: string;
   category: string;
+  categoryName?: string;
   monthly_limit: number;
   currency: string;
   is_active: boolean;
@@ -46,16 +47,32 @@ export const useBudgetsData = (
     }
 
     try {
-      const { data, error } = await supabase
-        .from("budgets")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .eq("is_active", true);
+      const [budgetsResult, categoriesResult] = await Promise.all([
+        supabase
+          .from("budgets")
+          .select("*")
+          .eq("workspace_id", workspaceId)
+          .eq("is_active", true),
+        supabase
+          .from("categories")
+          .select("id, name")
+      ]);
 
-      if (error) throw error;
+      if (budgetsResult.error) throw budgetsResult.error;
       
-      // Type assertion since types.ts may not be updated yet
-      setBudgets((data as Budget[]) || []);
+      // Build category UUID→name map
+      const catMap = new Map<string, string>();
+      for (const c of categoriesResult.data || []) {
+        catMap.set(c.id, c.name);
+      }
+      
+      // Enrich budgets with resolved category names
+      const enriched = ((budgetsResult.data || []) as Budget[]).map(b => ({
+        ...b,
+        categoryName: catMap.get(b.category) || b.category,
+      }));
+      
+      setBudgets(enriched);
     } catch (error) {
       console.error("Error fetching budgets:", error);
       toast.error("Error al cargar presupuestos");

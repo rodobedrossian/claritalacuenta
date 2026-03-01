@@ -116,8 +116,8 @@ export function AddRecurringExpenseDialog({ categories, onAdd }: AddRecurringExp
                 <SelectValue placeholder="Seleccionar categoría" />
               </SelectTrigger>
               <SelectContent>
-                {expenseCategories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.name}>
+              {expenseCategories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
                     {cat.name}
                   </SelectItem>
                 ))}

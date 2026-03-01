@@ -58,7 +58,7 @@ export const AddBudgetDialog = ({
   filter(
     (c) =>
     !existingBudgets.some(
-      (b) => b.category === c.name && b.currency === currency
+      (b) => b.category === c.id && b.currency === currency
     )
   );
 
@@ -156,7 +156,7 @@ export const AddBudgetDialog = ({
                   </div> :
 
                 availableCategories.map((cat) =>
-                <SelectItem key={cat.id} value={cat.name}>
+                <SelectItem key={cat.id} value={cat.id}>
                       {cat.name}
                     </SelectItem>
                 )

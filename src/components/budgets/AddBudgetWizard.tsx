@@ -52,8 +52,8 @@ export const AddBudgetWizard = ({
       categories
         .filter((c) => c.type === "expense")
         .filter((c) => {
-          const hasARS = existingBudgets.some((b) => b.category === c.name && b.currency === "ARS");
-          const hasUSD = existingBudgets.some((b) => b.category === c.name && b.currency === "USD");
+          const hasARS = existingBudgets.some((b) => b.category === c.id && b.currency === "ARS");
+          const hasUSD = existingBudgets.some((b) => b.category === c.id && b.currency === "USD");
           return !hasARS || !hasUSD;
         }),
     [categories, existingBudgets]

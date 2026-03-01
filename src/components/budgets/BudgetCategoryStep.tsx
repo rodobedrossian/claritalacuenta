@@ -23,8 +23,8 @@ export const BudgetCategoryStep = ({
   onCategoryChange,
   onNext,
 }: BudgetCategoryStepProps) => {
-  const handleSelectCategory = (categoryName: string) => {
-    onCategoryChange(categoryName);
+  const handleSelectCategory = (categoryId: string) => {
+    onCategoryChange(categoryId);
     setTimeout(() => onNext(), 150);
   };
 
@@ -45,13 +45,13 @@ export const BudgetCategoryStep = ({
             availableCategories.map((cat) => {
               const color = cat.color || DEFAULT_CATEGORY_COLORS[cat.name] || getCategoryColor(cat.name);
               const IconComponent = getIconForCategory(cat.name, cat.icon);
-              const isSelected = category === cat.name;
+              const isSelected = category === cat.id;
 
               return (
                 <button
                   key={cat.id}
                   type="button"
-                  onClick={() => handleSelectCategory(cat.name)}
+                  onClick={() => handleSelectCategory(cat.id)}
                   className={cn(
                     "flex flex-col items-center gap-2 p-3 rounded-xl border transition-all",
                     "hover:scale-[1.02] active:scale-[0.98]",

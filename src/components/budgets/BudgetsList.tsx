@@ -84,7 +84,7 @@ export const BudgetsList = ({ budgets, onUpdate, onDelete }: BudgetsListProps) =
           <TableBody>
             {budgets.map((budget) => (
               <TableRow key={budget.id}>
-                <TableCell className="font-medium">{budget.category}</TableCell>
+                <TableCell className="font-medium">{budget.categoryName || budget.category}</TableCell>
                 <TableCell>{budget.currency}</TableCell>
                 <TableCell className="text-right">
                   {editingId === budget.id ? (
