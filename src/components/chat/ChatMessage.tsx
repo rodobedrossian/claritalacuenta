@@ -9,31 +9,43 @@ import type { ChatMessage as ChatMessageType } from "@/hooks/useFinancialChat";
 
 // Parse :::type\n{json}\n::: blocks
 function parseBlocks(content: string) {
-  const parts: Array<{ type: "text"; content: string } | { type: "viz"; vizType: string; data: any }> = [];
-  const regex = /:::(chart|kpi|table)\s*\n([\s\S]*?)\n:::/g;
+  const parts: Array<
+    | { type: "text"; content: string }
+    | { type: "viz"; vizType: string; data: any }
+    | { type: "suggestions"; suggestions: string[] }
+  > = [];
+  const regex = /:::(chart|kpi|table|suggestions)\s*\n([\s\S]*?)\n:::/g;
 
   let lastIndex = 0;
   let match;
 
   while ((match = regex.exec(content)) !== null) {
-    // Text before this block
     if (match.index > lastIndex) {
       const text = content.slice(lastIndex, match.index).trim();
       if (text) parts.push({ type: "text", content: text });
     }
 
-    try {
-      const data = JSON.parse(match[2].trim());
-      parts.push({ type: "viz", vizType: match[1], data });
-    } catch {
-      // If JSON parse fails, treat as text
-      parts.push({ type: "text", content: match[0] });
+    if (match[1] === "suggestions") {
+      try {
+        const data = JSON.parse(match[2].trim());
+        if (Array.isArray(data)) {
+          parts.push({ type: "suggestions", suggestions: data });
+        }
+      } catch {
+        // ignore
+      }
+    } else {
+      try {
+        const data = JSON.parse(match[2].trim());
+        parts.push({ type: "viz", vizType: match[1], data });
+      } catch {
+        parts.push({ type: "text", content: match[0] });
+      }
     }
 
     lastIndex = match.index + match[0].length;
   }
 
-  // Remaining text
   if (lastIndex < content.length) {
     const text = content.slice(lastIndex).trim();
     if (text) parts.push({ type: "text", content: text });
@@ -76,9 +88,10 @@ function renderViz(vizType: string, data: any, index: number) {
 
 interface Props {
   message: ChatMessageType;
+  onSuggestionClick?: (text: string) => void;
 }
 
-export function ChatMessageBubble({ message }: Props) {
+export function ChatMessageBubble({ message, onSuggestionClick }: Props) {
   const isUser = message.role === "user";
 
   if (isUser) {
@@ -94,25 +107,45 @@ export function ChatMessageBubble({ message }: Props) {
   const blocks = parseBlocks(message.content);
 
   return (
-    <div className="flex justify-start mb-3">
-      <div className="max-w-[95%]">
+    <div className="flex justify-start mb-4">
+      <div className="max-w-[95%] space-y-2">
         {blocks.map((block, i) => {
           if (block.type === "text") {
             return (
               <div
                 key={i}
                 className={cn(
-                  "rounded-2xl rounded-bl-md px-4 py-2.5 bg-card border border-border/50 text-sm",
+                  "rounded-2xl rounded-bl-md px-4 py-3 bg-card border border-border/50 text-sm",
                   "prose prose-sm max-w-none text-foreground",
                   "prose-strong:text-foreground prose-headings:text-foreground",
-                  i > 0 && "mt-2"
+                  "prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5",
+                  "prose-headings:mt-3 prose-headings:mb-1.5",
+                  "[&_br]:block [&_br]:mt-1"
                 )}
               >
                 <ReactMarkdown>{block.content}</ReactMarkdown>
               </div>
             );
           }
-          return renderViz(block.vizType, block.data, i);
+          if (block.type === "suggestions" && onSuggestionClick) {
+            return (
+              <div key={i} className="flex flex-wrap gap-2 pt-1">
+                {block.suggestions.map((s, si) => (
+                  <button
+                    key={si}
+                    onClick={() => onSuggestionClick(s)}
+                    className="text-xs px-3 py-2 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            );
+          }
+          if (block.type === "viz") {
+            return renderViz(block.vizType, block.data, i);
+          }
+          return null;
         })}
       </div>
     </div>
