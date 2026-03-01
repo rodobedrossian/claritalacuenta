@@ -54,9 +54,26 @@ function parseBlocks(content: string) {
   return parts.length ? parts : [{ type: "text" as const, content }];
 }
 
-// Convert single newlines to double so markdown renders separate <p> tags
+// Convert single newlines to double for paragraph spacing, but preserve markdown tables
 function normalizeNewlines(text: string): string {
-  return text.replace(/\n(?!\n)/g, '\n\n');
+  const lines = text.split('\n');
+  const result: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const isTableLine = /^\s*\|/.test(line) || /^\s*\|?\s*[-:]+[-|:\s]*$/.test(line);
+    const prevIsTableLine = i > 0 && (/^\s*\|/.test(lines[i - 1]) || /^\s*\|?\s*[-:]+[-|:\s]*$/.test(lines[i - 1]));
+
+    // Don't add blank line between table rows
+    if (isTableLine || prevIsTableLine) {
+      result.push(line);
+    } else if (line.trim() && i > 0 && result.length > 0 && result[result.length - 1]?.trim()) {
+      result.push('', line);
+    } else {
+      result.push(line);
+    }
+  }
+  return result.join('\n');
 }
 
 function renderViz(vizType: string, data: any, index: number) {
