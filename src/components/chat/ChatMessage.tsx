@@ -137,7 +137,7 @@ export function ChatMessageBubble({ message, onSuggestionClick }: Props) {
               <div
                 key={i}
                 className={cn(
-                  "rounded-2xl rounded-bl-md px-4 py-3 bg-card border border-border/50 text-sm",
+                  "rounded-2xl rounded-bl-md px-4 py-3 bg-card text-sm",
                   "prose prose-sm max-w-none text-foreground",
                   "prose-strong:text-foreground prose-headings:text-foreground",
                   "prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5",

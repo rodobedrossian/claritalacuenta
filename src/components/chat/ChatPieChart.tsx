@@ -25,7 +25,7 @@ export function ChatPieChart({ data, title }: ChatPieChartProps) {
   const total = data.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <div className="my-3 rounded-xl border border-border/50 bg-card p-4 overflow-hidden">
+    <div className="my-3 rounded-xl bg-card p-4 overflow-hidden">
       {title && <h4 className="text-sm font-semibold text-foreground mb-3">{title}</h4>}
       <ResponsiveContainer width="100%" height={200}>
         <PieChart>

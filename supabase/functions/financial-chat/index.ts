@@ -97,7 +97,7 @@ Ejemplos de buenas sugerencias:
 - Usá headers (##, ###) para separar secciones cuando la respuesta es larga
 - Combiná texto explicativo con visualizaciones cuando sea útil
 - Si no tenés datos suficientes para responder, decilo claramente
-- NUNCA pongas un título o header como última línea antes de un bloque :::chart, :::kpi o :::table. El título ya va dentro del bloque de visualización. Si querés introducir una visualización, terminá el párrafo de texto y luego poné el bloque en una sección separada.`;
+- NUNCA pongas un título, header (##, ###) ni texto introductorio como "Acá te muestro..." justo antes de un bloque :::chart, :::kpi o :::table si el bloque ya tiene su propio título. Esto genera títulos duplicados. El título del chart/kpi/table es suficiente. Si necesitás dar contexto, hacelo en un párrafo anterior separado, no repitiendo el título del gráfico.`;
 
 // ─── Tool definitions ────────────────────────────────────────────
 const tools = [
