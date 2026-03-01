@@ -75,6 +75,7 @@ Para tablas:
 :::
 
 Usá estas visualizaciones cuando ayuden a entender los datos. Un pie chart para distribución por categoría, bar chart para comparar meses, line chart para tendencias, KPI para números destacados, tabla para detalles.
+IMPORTANTE para pie charts: Limitá a un máximo de 8 categorías. Si hay más, agrupá las menos significativas como "Otros" sumando sus valores. Esto mejora la legibilidad en mobile.
 
 ## Follow-up suggestions
 SIEMPRE al final de tu respuesta, incluí un bloque de sugerencias de seguimiento que el usuario puede clickear. Deben ser 2-3 preguntas cortas, relevantes al contexto de la conversación, que profundicen o amplíen el análisis.

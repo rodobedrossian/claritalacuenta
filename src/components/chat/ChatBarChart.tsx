@@ -10,9 +10,9 @@ export function ChatBarChart({ data, title }: ChatBarChartProps) {
     <div className="my-3 rounded-xl border border-border/50 bg-card p-4">
       {title && <h4 className="text-sm font-semibold text-foreground mb-3">{title}</h4>}
       <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={data} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+        <BarChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
+          <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" interval={0} angle={data.length > 5 ? -30 : 0} textAnchor={data.length > 5 ? "end" : "middle"} height={data.length > 5 ? 50 : 30} />
           <YAxis
             tick={{ fontSize: 10 }}
             stroke="hsl(var(--muted-foreground))"
