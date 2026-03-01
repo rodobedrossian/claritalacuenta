@@ -10,9 +10,11 @@ interface InsightsCardProps {
   insights: Insight[];
   loading: boolean;
   onRefresh: () => void;
+  hasMinimumUsage?: boolean;
 }
 
-export function InsightsCard({ insights, loading }: InsightsCardProps) {
+export function InsightsCard({ insights, loading, hasMinimumUsage = true }: InsightsCardProps) {
+  if (!hasMinimumUsage) return null;
   const navigate = useNavigate();
 
   // Show only the first/most important insight
