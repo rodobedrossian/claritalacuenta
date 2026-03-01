@@ -20,12 +20,17 @@ export default function Chat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const lastUserMsgRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll: when a new user message is sent, scroll it to the top
+  // so the user sees their question and the AI response below it
   useEffect(() => {
-    // Small delay to let the DOM render the new message
     const timer = setTimeout(() => {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      if (lastUserMsgRef.current) {
+        lastUserMsgRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      }
     }, 100);
     return () => clearTimeout(timer);
   }, [messages, isLoading]);
@@ -105,19 +110,25 @@ export default function Chat() {
           ) : (
             <>
               <AnimatePresence initial={false}>
-                {messages.map((m, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
-                  >
-                    <ChatMessageBubble
-                      message={m}
-                      onSuggestionClick={handleSuggestionClick}
-                    />
-                  </motion.div>
-                ))}
+                {messages.map((m, i) => {
+                  // Attach ref to the last user message
+                  const isLastUserMsg = m.role === "user" && 
+                    messages.slice(i + 1).every((msg) => msg.role !== "user");
+                  return (
+                    <motion.div
+                      key={i}
+                      ref={isLastUserMsg ? lastUserMsgRef : undefined}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                    >
+                      <ChatMessageBubble
+                        message={m}
+                        onSuggestionClick={handleSuggestionClick}
+                      />
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
               {isLoading && (
                 <motion.div
