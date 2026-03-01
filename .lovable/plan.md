@@ -1,84 +1,118 @@
 
 
-## Plan: Fix Financial Chat Data Issues + Add Persistence
+## Plan: Normalizar categorías a UUIDs en toda la aplicación
 
-### Problems Identified
+### Situación actual
 
-1. **Category field is mixed UUIDs and text names**: The `transactions.category` column contains both UUIDs (referencing `categories.id`) and plain text names. The tools filter with `ilike` on the category text, which misses UUID-based entries. The `get_category_breakdown` and `get_monthly_summary` tools also don't resolve category IDs to names, so the AI gets unreadable data.
+**Datos en la DB:**
+- `transactions.category`: 218 de 258 registros usan texto ("Salidas", "Supermercado"), solo 40 usan UUIDs
+- `budgets.category`: 8 registros, todos con texto
+- `recurring_expenses.category`: 12 registros, todos con texto (incluido "Rent" que no tiene match en categories)
+- `credit_card_transactions.category_id`: ya usa UUIDs correctamente
 
-2. **`getClaims` may not work reliably**: Other functions use `getUser()` instead. Should switch to the same pattern for consistency.
+Todos los textos existentes (excepto "Rent") tienen un match exacto en la tabla `categories`.
 
-3. **System prompt lacks guidance for general questions**: When user asks "¿En qué gasto más?", the AI should default to querying the last 3 months across all categories/payment methods. The system prompt should instruct the AI to use broader defaults for general questions.
+**Frontend:** Todos los forms (CategoryStep, BudgetCategoryStep, AddRecurringExpense, EditTransaction, etc.) envían `cat.name` en lugar de `cat.id`.
 
-4. **No persistence tables for chat history or tool usage tracking**.
+**Edge functions:** `get-dashboard-data`, `get-transactions-data`, `financial-chat`, `get-spending-by-weekday` resuelven UUIDs a nombres al leer, pero comparan con campos que mezclan texto y UUIDs.
 
-### Changes
+### Cambios
 
-#### 1. Edge Function `financial-chat/index.ts` Fixes
-
-**Auth**: Replace `getClaims` with `getUser()` (consistent with all other functions).
-
-**Category resolution**: In every tool that reads `transactions`, fetch the `categories` table and build a UUID-to-name map. When returning data, resolve category IDs to names. When filtering by category name, also match UUIDs that map to that name.
-
-**System prompt enhancement**: Add instructions that for general/broad questions, the AI should default to `get_monthly_summary(months=3)` + `get_category_breakdown` for the last 3 months with `source=all`.
-
-**Token tracking per tool call**: Track usage from each AI gateway call (not just the final one). Accumulate `prompt_tokens`, `completion_tokens`, and `total_tokens` across all iterations and log them.
-
-#### 2. New DB Table: `chat_conversations`
-
-Stores conversation metadata per user.
+#### 1. Migración de datos existentes (SQL migration)
 
 ```sql
-CREATE TABLE chat_conversations (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  workspace_id uuid NOT NULL,
-  title text,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
--- RLS: workspace members can CRUD their own conversations
+-- Transactions: convert text categories to UUIDs
+UPDATE transactions t
+SET category = c.id::text
+FROM categories c
+WHERE LOWER(c.name) = LOWER(t.category)
+AND t.category !~ '^[0-9a-f]{8}-';
+
+-- Budgets: same
+UPDATE budgets b
+SET category = c.id::text
+FROM categories c
+WHERE LOWER(c.name) = LOWER(b.category)
+AND b.category !~ '^[0-9a-f]{8}-';
+
+-- Recurring expenses: same (map "Rent" → "Alquiler" first)
+UPDATE recurring_expenses SET category = 'Alquiler' WHERE category = 'Rent';
+UPDATE recurring_expenses re
+SET category = c.id::text
+FROM categories c
+WHERE LOWER(c.name) = LOWER(re.category)
+AND re.category !~ '^[0-9a-f]{8}-';
 ```
 
-#### 3. New DB Table: `chat_messages`
+#### 2. Frontend: Forms envían `cat.id` en vez de `cat.name`
 
-Stores each message (user + assistant), tool calls, and visualizations.
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/transaction-wizard/CategoryStep.tsx` | `handleSelectCategory(cat.id)`, comparar con `cat.id` |
+| `src/components/budgets/BudgetCategoryStep.tsx` | `handleSelectCategory(cat.id)`, comparar con `cat.id` |
+| `src/components/budgets/AddBudgetDialog.tsx` | `value={cat.id}` en SelectItem |
+| `src/components/budgets/AddBudgetWizard.tsx` | Comparar budgets existentes por `cat.id` |
+| `src/components/recurring/AddRecurringExpenseDialog.tsx` | `value={cat.id}` en SelectItem |
+| `src/components/recurring/EditRecurringExpenseDialog.tsx` | `value={cat.id}` en SelectItem |
+| `src/components/EditTransactionDialog.tsx` | `value={cat.id}` en SelectItem |
+| `src/components/AddTransactionDialog.tsx` | Resolver AI category match a `cat.id` |
 
-```sql
-CREATE TABLE chat_messages (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  conversation_id uuid NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
-  role text NOT NULL, -- 'user', 'assistant', 'tool'
-  content text,
-  tool_calls jsonb, -- array of {name, args, result} for tool messages
-  visualization_type text, -- 'chart', 'kpi', 'table' or null
-  created_at timestamptz DEFAULT now(),
-  -- Token usage for this specific AI call
-  prompt_tokens integer DEFAULT 0,
-  completion_tokens integer DEFAULT 0,
-  total_tokens integer DEFAULT 0,
-  model text
-);
--- RLS: user can access messages of their conversations
-```
+#### 3. Frontend: Display resuelve UUID → nombre
 
-#### 4. Update Edge Function to Persist
+Donde se muestra `transaction.category` o `budget.category`, se necesita resolver el UUID al nombre usando el array de categories que ya tenemos cargado. Archivos clave:
 
-- On first message of a conversation, create a `chat_conversations` row (using service role to bypass RLS for insert) or receive `conversation_id` from the client.
-- After each AI response, insert both user and assistant messages into `chat_messages`.
-- Track tokens per iteration of the tool-calling loop.
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/TransactionsList.tsx` | Resolver UUID a nombre para display |
+| `src/components/budgets/BudgetsList.tsx` | Resolver budget.category UUID a nombre |
+| `src/components/budgets/BudgetProgress.tsx` | Resolver en toasts y labels |
+| `src/hooks/useBudgetsData.ts` | Comparar budget.category (UUID) con transaction.category (UUID) — ya funcionará |
+| `src/components/SpendingChart.tsx` | Ya recibe datos pre-procesados del dashboard |
 
-#### 5. Update Frontend
+#### 4. Edge functions: Simplificar resolución
 
-- `useFinancialChat.ts`: Send/receive `conversation_id`, persist messages, load previous conversations.
-- `Chat.tsx`: Add conversation list/history sidebar or selector (optional, can be a follow-up).
+Con todo normalizado a UUIDs, las funciones se simplifican: siempre buscan en `categories` por ID y resuelven nombres solo para display. No más heurísticas "is this a UUID or text?".
 
-### Files to Create/Edit
+| Función | Cambio |
+|---------|--------|
+| `get-dashboard-data` | `categoryMap.get(t.category)` siempre será un UUID lookup |
+| `get-transactions-data` | Igual, simplificar lookup |
+| `financial-chat` | Eliminar doble-path "UUID or text" en `resolveCategoryName` |
+| `get-spending-by-weekday` | Mismo simplify |
+| `check-budget-alerts` | Asegurar que compara UUIDs |
+| `generate-insights` | Verificar que usa UUIDs |
 
-| Action | File |
-|--------|------|
-| Edit | `supabase/functions/financial-chat/index.ts` (auth fix, category resolution, system prompt, persistence, token tracking) |
-| Edit | `src/hooks/useFinancialChat.ts` (conversation_id support) |
-| Edit | `src/pages/Chat.tsx` (minor: pass conversation_id) |
-| Migration | Create `chat_conversations` and `chat_messages` tables with RLS |
+#### 5. Filtros en Transactions page
+
+`src/pages/Transactions.tsx` usa un filtro de categoría — debe enviar/comparar por UUID.
+
+### Orden de implementación
+
+1. Migración SQL (convertir datos existentes)
+2. Frontend forms → enviar `cat.id`
+3. Frontend display → resolver UUID → nombre
+4. Edge functions → simplificar
+5. Testing
+
+### Archivos a crear/editar
+
+| Acción | Archivo |
+|--------|---------|
+| Migration | SQL para normalizar transactions, budgets, recurring_expenses |
+| Edit | `src/components/transaction-wizard/CategoryStep.tsx` |
+| Edit | `src/components/budgets/BudgetCategoryStep.tsx` |
+| Edit | `src/components/budgets/AddBudgetDialog.tsx` |
+| Edit | `src/components/budgets/AddBudgetWizard.tsx` |
+| Edit | `src/components/recurring/AddRecurringExpenseDialog.tsx` |
+| Edit | `src/components/recurring/EditRecurringExpenseDialog.tsx` |
+| Edit | `src/components/EditTransactionDialog.tsx` |
+| Edit | `src/components/AddTransactionDialog.tsx` |
+| Edit | `src/components/TransactionsList.tsx` |
+| Edit | `src/components/budgets/BudgetsList.tsx` |
+| Edit | `src/components/budgets/BudgetProgress.tsx` |
+| Edit | `src/pages/Transactions.tsx` |
+| Edit | `supabase/functions/get-dashboard-data/index.ts` |
+| Edit | `supabase/functions/get-transactions-data/index.ts` |
+| Edit | `supabase/functions/financial-chat/index.ts` |
+| Edit | `supabase/functions/get-spending-by-weekday/index.ts` |
 
