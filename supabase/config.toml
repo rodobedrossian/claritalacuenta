@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.get-promo-eligible-users]
 verify_jwt = false
+
+[functions.financial-chat]
+verify_jwt = false
