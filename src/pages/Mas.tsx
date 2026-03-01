@@ -22,7 +22,7 @@ function getInitials(name: string | undefined, email: string | undefined): strin
 }
 
 const menuItems = [
-  { title: "Clarita AI", path: "/chat", icon: MessageCircle },
+  { title: "Rúcula AI", path: "/chat", icon: MessageCircle },
   { title: "Ahorros", path: "/savings", icon: PiggyBank },
   { title: "Presupuestos", path: "/budgets", icon: Target },
   { title: "Recurrentes", path: "/recurrentes", icon: Repeat },
