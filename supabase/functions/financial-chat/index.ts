@@ -40,9 +40,9 @@ Cuando el usuario haga preguntas amplias o generales como "¿En qué gasto más?
 ## Preguntas sobre tarjetas de crédito
 Cuando el usuario pregunte sobre tarjetas de crédito de forma general (ej: "¿En qué se me va la tarjeta?", "¿Cuánto gasté con tarjeta?", "¿Qué consumos tengo?"):
 - SIEMPRE consultá TODAS las tarjetas (NO filtres por card_name) para dar el panorama completo
-- Usá query_credit_card_transactions SIN card_name para traer todo
 - Usá get_category_breakdown con source=card para ver distribución por categoría en tarjetas
 - Solo filtrá por tarjeta específica si el usuario EXPLÍCITAMENTE menciona una tarjeta por nombre
+- Cuando el usuario pregunte por una tarjeta específica, usá get_category_breakdown con source=card y card_name para obtener el desglose correcto. NO uses query_credit_card_transactions para agregar manualmente — eso puede dar resultados incompletos por el límite de filas.
 - Si querés mostrar un breakdown por tarjeta, usá los datos que ya vienen con card_name en el resultado
 
 NO respondas solo con texto cuando hay datos disponibles. SIEMPRE consultá las tools primero.
@@ -163,7 +163,7 @@ const tools = [
     function: {
       name: "get_category_breakdown",
       description:
-        "Desglose de gastos por categoría en un período. Útil para pie charts y análisis.",
+        "Desglose de gastos por categoría en un período. Útil para pie charts y análisis. Soporta filtro por tarjeta específica.",
       parameters: {
         type: "object",
         properties: {
@@ -174,6 +174,7 @@ const tools = [
             enum: ["cash", "card", "all"],
             description: "Fuente: cash (transacciones), card (tarjeta), all (ambas)",
           },
+          card_name: { type: "string", description: "Filtrar por nombre de tarjeta (solo aplica a source=card o all)" },
         },
         additionalProperties: false,
       },
@@ -295,7 +296,7 @@ async function executeTool(
           )
           .eq("workspace_id", workspaceId)
           .order("date", { ascending: false })
-          .limit(args.limit || 50);
+          .limit(args.limit || 200);
 
         if (args.date_from) query = query.gte("date", args.date_from);
         if (args.date_to) query = query.lte("date", args.date_to);
@@ -422,12 +423,26 @@ async function executeTool(
         }
 
         if (source === "card" || source === "all") {
-          const { data } = await supabase
+          let ccQuery = supabase
             .from("credit_card_transactions")
-            .select("category_id, amount, currency")
+            .select("category_id, amount, currency, credit_card_id")
             .eq("workspace_id", workspaceId)
             .gte("date", from)
             .lte("date", to);
+
+          // Filter by card_name if provided
+          if (args.card_name) {
+            const { data: cards } = await supabase
+              .from("credit_cards")
+              .select("id")
+              .eq("workspace_id", workspaceId)
+              .ilike("name", `%${args.card_name}%`);
+            if (cards && cards.length > 0) {
+              ccQuery = ccQuery.in("credit_card_id", cards.map((c: any) => c.id));
+            }
+          }
+
+          const { data } = await ccQuery;
 
           for (const t of data || []) {
             const catName = resolveCategoryName(t.category_id || "", catMap);
