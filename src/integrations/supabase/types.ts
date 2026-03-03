@@ -1024,6 +1024,47 @@ export type Database = {
           },
         ]
       }
+      user_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          event_type: string
+          id: string
+          path: string | null
+          properties: Json | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          event_type: string
+          id?: string
+          path?: string | null
+          properties?: Json | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          event_type?: string
+          id?: string
+          path?: string | null
+          properties?: Json | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_invitations: {
         Row: {
           created_at: string
@@ -1111,47 +1152,6 @@ export type Database = {
           name?: string
         }
         Relationships: []
-      }
-      user_events: {
-        Row: {
-          id: string
-          user_id: string | null
-          workspace_id: string | null
-          event_type: string
-          event_name: string
-          properties: Json
-          path: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id?: string | null
-          workspace_id?: string | null
-          event_type: string
-          event_name: string
-          properties?: Json
-          path?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string | null
-          workspace_id?: string | null
-          event_type?: string
-          event_name?: string
-          properties?: Json
-          path?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_events_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {
