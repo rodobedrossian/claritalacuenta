@@ -111,11 +111,14 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
             <nav className={cn("flex-1 space-y-1", !showExpanded ? "p-2" : "p-4")}>
               {navItems.map((item) => {
                 const Icon = item.icon;
+                const trackId = item.path === "/" ? "dashboard" : item.path.slice(1).replace(/\//g, "_");
                 return (
                   <button
                     key={item.path}
                     onClick={() => navigate(item.path)}
                     title={!showExpanded ? item.title : undefined}
+                    data-track-event={`nav_bar_${trackId}`}
+                    data-track-label={item.title}
                     className={cn(
                       "w-full flex items-center gap-3 rounded-xl text-left transition-all duration-150",
                       !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
@@ -136,6 +139,8 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
               {/* Collapse toggle */}
               <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
+                data-track-event="nav_bar_collapse_toggle"
+                data-track-label={isCollapsed ? "Expandir menú" : "Colapsar menú"}
                 className={cn(
                   "w-full flex items-center gap-3 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-all mb-2",
                   !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",
@@ -154,6 +159,8 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
               <button
                 onClick={handleSignOut}
                 title={!showExpanded ? "Cerrar Sesión" : undefined}
+                data-track-event="nav_bar_sign_out"
+                data-track-label="Cerrar Sesión"
                 className={cn(
                   "w-full flex items-center gap-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all",
                   !showExpanded ? "px-3 py-3 justify-center" : "px-4 py-3",

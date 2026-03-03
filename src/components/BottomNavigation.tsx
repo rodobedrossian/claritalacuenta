@@ -33,10 +33,13 @@ export const BottomNavigation = () => {
 
           const active = isActive(item.path);
           
+          const trackId = item.path === "/" ? "inicio" : item.path.slice(1).replace(/\//g, "_");
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
+              data-track-event={`nav_bar_${trackId}`}
+              data-track-label={item.title}
               className={cn(
                 "flex flex-col items-center justify-center gap-1.5 min-w-[64px] py-2 transition-all active:opacity-70",
                 active ? "text-primary" : "text-muted-foreground"

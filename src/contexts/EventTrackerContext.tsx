@@ -40,6 +40,9 @@ function getClickProperties(target: Element): Record<string, unknown> {
     (target as HTMLElement).innerText?.trim?.()?.slice(0, 100);
   if (label) props.label = label;
 
+  const dataEvent = target.getAttribute?.("data-track-event");
+  if (dataEvent?.startsWith("nav_bar_")) props.source = "nav_bar";
+
   const href = (target as HTMLAnchorElement).href;
   if (href) props.href = href;
 
