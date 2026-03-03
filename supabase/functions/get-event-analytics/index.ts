@@ -86,16 +86,29 @@ Deno.serve(async (req) => {
       .slice(0, 15)
       .map(([name, count]) => ({ name, count }));
 
-    // Top clicks (event_type = click)
+    // Top clicks (event_type = click) - aggregate by event_name + label + path
     const clicks = filtered.filter((e) => e.event_type === "click");
-    const byClickName: Record<string, number> = {};
+    const byClickKey: Record<string, { count: number; label: string; path: string; event_name: string }> = {};
     for (const e of clicks) {
-      byClickName[e.event_name] = (byClickName[e.event_name] || 0) + 1;
+      const props = e.properties as Record<string, string> | null;
+      const label = props?.label || e.event_name;
+      const path = e.path || "(unknown)";
+      const key = `${e.event_name}::${label}::${path}`;
+      if (!byClickKey[key]) {
+        byClickKey[key] = { count: 0, label, path, event_name: e.event_name };
+      }
+      byClickKey[key].count += 1;
     }
-    const topClickTargets = Object.entries(byClickName)
-      .sort((a, b) => b[1] - a[1])
+    const topClickTargets = Object.values(byClickKey)
+      .sort((a, b) => b.count - a.count)
       .slice(0, 15)
-      .map(([name, count]) => ({ name, count }));
+      .map(({ event_name, label, path, count }) => ({
+        event_name,
+        label,
+        path,
+        count,
+        display: `${label} (${path})`,
+      }));
 
     // Top paths by clicks
     const byPathClicks: Record<string, number> = {};
@@ -154,6 +167,27 @@ Deno.serve(async (req) => {
       byOs[o] = (byOs[o] || 0) + 1;
     }
 
+    // Top users by event count
+    const byUserId: Record<string, number> = {};
+    for (const e of filtered) {
+      const uid = e.user_id || "anon";
+      byUserId[uid] = (byUserId[uid] || 0) + 1;
+    }
+    const topUserIds = Object.entries(byUserId)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 15)
+      .filter(([uid]) => uid !== "anon");
+
+    const topUsersByEvents: { user_id: string; email: string; count: number }[] = [];
+    for (const [uid, count] of topUserIds) {
+      const { data: u } = await adminClient.auth.admin.getUserById(uid);
+      topUsersByEvents.push({
+        user_id: uid,
+        email: u?.user?.email || uid,
+        count,
+      });
+    }
+
     return new Response(
       JSON.stringify({
         filters: { start_date: startDate, end_date: endDate, device_type: deviceType, os },
@@ -165,6 +199,7 @@ Deno.serve(async (req) => {
         time_by_path: timeByPathList,
         by_device_type: Object.entries(byDeviceType).map(([name, count]) => ({ name, count })),
         by_os: Object.entries(byOs).map(([name, count]) => ({ name, count })),
+        top_users_by_events: topUsersByEvents,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

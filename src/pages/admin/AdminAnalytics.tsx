@@ -24,6 +24,7 @@ import {
   Clock,
   Smartphone,
   Monitor,
+  Users,
 } from "lucide-react";
 import {
   BarChart,
@@ -53,11 +54,12 @@ interface AnalyticsData {
   total_events: number;
   by_event_type: { name: string; count: number }[];
   top_event_names: { name: string; count: number }[];
-  top_click_targets: { name: string; count: number }[];
+  top_click_targets: { event_name: string; label: string; path: string; count: number; display: string }[];
   top_paths_by_clicks: { path: string; count: number }[];
   time_by_path: { path: string; total_seconds: number; sessions: number }[];
   by_device_type: { name: string; count: number }[];
   by_os: { name: string; count: number }[];
+  top_users_by_events: { user_id: string; email: string; count: number }[];
 }
 
 const AdminAnalytics = () => {
@@ -329,19 +331,24 @@ const AdminAnalytics = () => {
                 </CardContent>
               </Card>
 
-              {/* Dónde clickean más */}
+              {/* Dónde clickean más (label + path) */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <MousePointer className="h-4 w-4" />
                     Dónde clickean más
                   </CardTitle>
+                  <p className="text-xs text-muted-foreground font-normal">
+                    Label del elemento y ruta donde ocurrió el click
+                  </p>
                 </CardHeader>
                 <CardContent>
                   {data.top_click_targets.length > 0 ? (
                     <ResponsiveContainer width="100%" height={280}>
                       <BarChart
-                        data={chartData(data.top_click_targets)}
+                        data={chartData(
+                          data.top_click_targets.map((x) => ({ name: x.display, count: x.count }))
+                        )}
                         layout="vertical"
                         margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
                       >
@@ -367,6 +374,54 @@ const AdminAnalytics = () => {
                   ) : (
                     <p className="text-sm text-muted-foreground py-8 text-center">
                       Sin datos de clicks
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Usuarios con más eventos */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Users className="h-4 w-4" />
+                    Usuarios con más eventos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(data.top_users_by_events?.length ?? 0) > 0 ? (
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart
+                        data={chartData(
+                          (data.top_users_by_events ?? []).map((x) => ({
+                            name: x.email,
+                            count: x.count,
+                          }))
+                        )}
+                        layout="vertical"
+                        margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
+                        <XAxis type="number" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis
+                          type="category"
+                          dataKey="name"
+                          tick={{ fontSize: 10 }}
+                          stroke="hsl(var(--muted-foreground))"
+                          width={140}
+                        />
+                        <Tooltip
+                          formatter={(v: number) => v.toLocaleString("es-AR")}
+                          contentStyle={{
+                            borderRadius: "0.75rem",
+                            border: "1px solid hsl(var(--border))",
+                          }}
+                        />
+                        <Bar dataKey="value" fill="hsl(270, 50%, 55%)" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-8 text-center">
+                      Sin datos de usuarios (solo eventos de usuarios autenticados)
                     </p>
                   )}
                 </CardContent>
