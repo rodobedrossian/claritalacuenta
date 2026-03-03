@@ -104,7 +104,8 @@ export function useSavingsData(userId: string | null, workspaceId: string | null
       console.log("Fetching savings data from edge function");
 
       const { data: responseData, error: functionError } = await supabase.functions.invoke(
-        "get-savings-data"
+        "get-savings-data",
+        { body: { workspace_id: workspaceId } }
       );
 
       if (functionError) {

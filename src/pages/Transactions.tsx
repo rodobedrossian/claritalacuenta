@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Filter, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { TransactionsList } from "@/components/TransactionsList";
 import { EditTransactionDialog } from "@/components/EditTransactionDialog";
 import { AppLayout } from "@/components/AppLayout";
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 
 const Transactions = () => {
   const { user, loading: authLoading } = useAuth();
+  const { workspaceId } = useWorkspace(user?.id ?? null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -43,7 +45,7 @@ const Transactions = () => {
     refetch,
     updateTransaction,
     deleteTransaction
-  } = useTransactionsData(filters, user?.id ?? null);
+  } = useTransactionsData(filters, user?.id ?? null, workspaceId);
 
   // Pull to refresh handler
   const handleRefresh = useCallback(async () => {

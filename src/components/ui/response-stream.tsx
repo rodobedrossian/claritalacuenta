@@ -113,12 +113,12 @@ function useTextStream({
     (text: string) => {
       if (modeRef.current === "fade") {
         try {
-          const segmenter = new Intl.Segmenter(navigator.language, {
+          const segmenter = new (Intl as any).Segmenter(navigator.language, {
             granularity: "word",
           });
-          const segmentIterator = segmenter.segment(text);
+          const segmentIterator = (segmenter as any).segment(text);
           const newSegments = Array.from(segmentIterator).map(
-            (segment, index) => ({
+            (segment: any, index: number) => ({
               text: segment.segment,
               index,
             })
