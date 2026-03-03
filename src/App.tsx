@@ -13,6 +13,7 @@ import { useOfflineDetection } from "@/hooks/use-offline-detection";
 import { isAdminSubdomain } from "@/lib/adminSubdomain";
 import { ADMIN_SUBDOMAIN_HOST } from "@/lib/adminSubdomain";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { EventTrackerProvider } from "@/contexts/EventTrackerContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import AdminLayout from "@/components/admin/AdminLayout";
@@ -93,12 +94,14 @@ const App = () => {
           <Sonner />
           {!isMobile && <Toaster />}
           <BrowserRouter>
-            <ErrorBoundary>
-              <AppRoutes
-                shouldShowOnboarding={shouldShowOnboarding}
-                isIOSApp={isIOSApp}
-              />
-            </ErrorBoundary>
+            <EventTrackerProvider>
+              <ErrorBoundary>
+                <AppRoutes
+                  shouldShowOnboarding={shouldShowOnboarding}
+                  isIOSApp={isIOSApp}
+                />
+              </ErrorBoundary>
+            </EventTrackerProvider>
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>

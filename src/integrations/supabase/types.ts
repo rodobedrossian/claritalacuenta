@@ -1112,6 +1112,47 @@ export type Database = {
         }
         Relationships: []
       }
+      user_events: {
+        Row: {
+          id: string
+          user_id: string | null
+          workspace_id: string | null
+          event_type: string
+          event_name: string
+          properties: Json
+          path: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          workspace_id?: string | null
+          event_type: string
+          event_name: string
+          properties?: Json
+          path?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          workspace_id?: string | null
+          event_type?: string
+          event_name?: string
+          properties?: Json
+          path?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
