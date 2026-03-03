@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useFinancialChat } from "@/hooks/useFinancialChat";
 import { ChatMessageBubble } from "@/components/chat/ChatMessage";
-import { Send, Trash2, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
+import { ShiningText } from "@/components/ui/shining-text";
 
 const SUGGESTIONS = [
   "¿Cuánto gasté este mes?",
@@ -16,46 +17,33 @@ const SUGGESTIONS = [
 
 export default function Chat() {
   const { messages, isLoading, sendMessage, clearChat } = useFinancialChat();
-  const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastUserMsgRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll: when a new user message is sent, scroll it to the top
-  // so the user sees their question and the AI response below it
+  // Auto-scroll: put last user message right below header so user sees their question + response
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (lastUserMsgRef.current) {
-        lastUserMsgRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-      } else {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const scrollToLastUserMessage = () => {
+      const container = scrollRef.current;
+      const messageEl = lastUserMsgRef.current;
+      if (container && messageEl) {
+        const msgRect = messageEl.getBoundingClientRect();
+        const contRect = container.getBoundingClientRect();
+        const scrollTop = container.scrollTop + (msgRect.top - contRect.top) - 16;
+        container.scrollTo({ top: Math.max(0, scrollTop), behavior: "smooth" });
+      } else if (bottomRef.current) {
+        bottomRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
       }
-    }, 100);
+    };
+    const timer = setTimeout(scrollToLastUserMessage, 150);
     return () => clearTimeout(timer);
   }, [messages, isLoading]);
 
-  const handleSend = useCallback((text?: string) => {
-    const trimmed = (text ?? input).trim();
+  const handleSend = useCallback((text: string) => {
+    const trimmed = text.trim();
     if (!trimmed || isLoading) return;
-    if (!text) setInput("");
     sendMessage(trimmed);
-    if (inputRef.current) inputRef.current.style.height = "auto";
-  }, [input, isLoading, sendMessage]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const handleTextareaInput = () => {
-    if (inputRef.current) {
-      inputRef.current.style.height = "auto";
-      inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 120) + "px";
-    }
-  };
+  }, [isLoading, sendMessage]);
 
   const handleSuggestionClick = useCallback((text: string) => {
     if (isLoading) return;
@@ -66,52 +54,43 @@ export default function Chat() {
 
   return (
     <AppLayout>
-      <div className="flex-1 flex flex-col min-h-0 md:max-w-2xl md:mx-auto md:w-full">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pb-2 border-b border-border/50">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-bold text-foreground">Rúcula AI</h1>
-          </div>
-          {messages.length > 0 && (
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden md:max-w-4xl md:mx-auto md:w-full">
+        {/* Header - fixed at top, never scrolls (like mobile) */}
+        {!isEmpty && (
+          <div className="shrink-0 flex items-center justify-between px-4 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pb-2 border-b border-border/50 bg-background">
+            <h1 className="text-base font-medium text-foreground">Rúcula AI</h1>
             <button
               onClick={clearChat}
-              className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
               title="Limpiar chat"
             >
               <Trash2 className="h-4 w-4" />
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Messages area */}
-        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 py-4">
+        {/* Messages area - ONLY this scrolls */}
+        <div
+          ref={scrollRef}
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar px-4 py-6"
+        >
           {isEmpty ? (
-            <div className="flex flex-col items-center justify-center h-full text-center px-4">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                <Sparkles className="h-8 w-8 text-primary" />
-              </div>
-              <h2 className="text-xl font-bold text-foreground mb-2">¡Hola! Soy Rúcula AI</h2>
-              <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-                Tu asistente financiero. Preguntame sobre tus gastos, categorías, tendencias o metas de ahorro.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => handleSend(s)}
-                    className="text-xs px-3 py-2 rounded-full border border-border/50 bg-card text-foreground hover:bg-muted/50 transition-colors"
-                  >
-                    {s}
-                  </button>
-                ))}
+            <div className="flex flex-col items-center justify-center min-h-[50vh]">
+              <h2 className="text-xl sm:text-2xl font-medium text-foreground mb-8 text-center">
+                Preguntame lo que quieras
+              </h2>
+              <div className="w-full max-w-md">
+                <PlaceholdersAndVanishInput
+                  placeholders={SUGGESTIONS}
+                  onSubmit={(_, value) => handleSend(value)}
+                  disabled={isLoading}
+                />
               </div>
             </div>
           ) : (
             <>
               <AnimatePresence initial={false}>
                 {messages.map((m, i) => {
-                  // Attach ref to the last user message
                   const isLastUserMsg = m.role === "user" && 
                     messages.slice(i + 1).every((msg) => msg.role !== "user");
                   return (
@@ -132,17 +111,11 @@ export default function Chat() {
               </AnimatePresence>
               {isLoading && (
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex justify-start mb-3"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex justify-start mb-4"
                 >
-                  <div className="rounded-2xl rounded-bl-md px-4 py-3 bg-card border border-border/50">
-                    <div className="flex gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "300ms" }} />
-                    </div>
-                  </div>
+                  <ShiningText text="Rúcula está pensando..." />
                 </motion.div>
               )}
               <div ref={bottomRef} />
@@ -150,34 +123,16 @@ export default function Chat() {
           )}
         </div>
 
-        {/* Input bar */}
-        <div className="border-t border-border/50 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
-          <div className="flex items-end gap-2 bg-card border border-border/50 rounded-2xl px-3 py-2">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onInput={handleTextareaInput}
-              onKeyDown={handleKeyDown}
-              placeholder="Preguntale a Rúcula..."
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none max-h-[120px]"
-              rows={1}
+        {/* Input bar - fixed at bottom, never scrolls (like mobile) */}
+        {!isEmpty && (
+          <div className="shrink-0 border-t border-border/50 bg-background px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
+            <PlaceholdersAndVanishInput
+              placeholders={SUGGESTIONS}
+              onSubmit={(_, value) => handleSend(value)}
               disabled={isLoading}
             />
-            <button
-              onClick={() => handleSend()}
-              disabled={!input.trim() || isLoading}
-              className={cn(
-                "p-2 rounded-xl transition-colors shrink-0",
-                input.trim() && !isLoading
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground"
-              )}
-            >
-              <Send className="h-4 w-4" />
-            </button>
           </div>
-        </div>
+        )}
       </div>
     </AppLayout>
   );

@@ -14,8 +14,15 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MAX_TOOL_ITERATIONS = 5;
 
-// ─── System prompt ───────────────────────────────────────────────
-const SYSTEM_PROMPT = `Sos Clarita, una asistente financiera inteligente que ayuda a los usuarios a entender sus finanzas personales. Hablás en español argentino, de forma clara, amigable y con datos concretos.
+// ─── System prompt (user name injected at runtime) ─────────────────
+function buildSystemPrompt(userName: string | null) {
+  const nameInstruction = userName
+    ? `El nombre del usuario es ${userName}. Saludalo por su nombre cuando sea apropiado. NUNCA uses "Clarita" para referirte al usuario — Clarita no es su nombre.`
+    : `NUNCA asumas ni uses el nombre "Clarita" para el usuario. Si no conocés su nombre, usá un saludo genérico como "Hola" o "Hola, ¿cómo estás?".`;
+
+  return `Sos Rúcula, una asistente financiera inteligente que ayuda a los usuarios a entender sus finanzas personales. Hablás en español argentino, de forma clara, amigable y con datos concretos.
+
+${nameInstruction}
 
 ## Reglas estrictas
 - NUNCA des recomendaciones de inversión (no sugerir comprar dólar, plazo fijo, acciones, crypto, etc.)
@@ -40,9 +47,14 @@ En los desgloses por categoría (get_category_breakdown), cada categoría trae c
 ## Comportamiento ante preguntas generales
 Cuando el usuario haga preguntas amplias o generales como "¿En qué gasto más?", "¿Cómo vengo?", "¿Cuánto gasté?", "¿En qué se me va la tarjeta?", etc., SIEMPRE:
 1. Usá get_monthly_summary(months=3) para obtener contexto de los últimos 3 meses
-2. Usá get_category_breakdown con date_from de hace 3 meses y source=all para ver la distribución completa
+2. Usá get_category_breakdown con date_from de hace 3 meses y source=all para ver la distribución completa (débito/efectivo + tarjetas de crédito)
 3. Combiná ambos resultados para dar una respuesta rica con tendencias y comparaciones
 4. Mostrá visualizaciones (pie chart de categorías, bar chart de meses) para que sea más claro
+
+## Preguntas sobre gastos por categoría
+Cuando el usuario pregunte sobre una categoría específica (ej: "¿Qué incluye Compras?", "¿Cuánto gasté en Supermercado?", "Detalle de gastos en Vacaciones"):
+- SIEMPRE usá get_category_breakdown con source=all para incluir débito/efectivo Y tarjetas de crédito
+- Si el usuario pide el detalle de transacciones de una categoría, consultá AMBAS: query_transactions(category=X) Y query_credit_card_transactions(category=X). Combiná los resultados y mostrá el panorama completo. No te quedes solo con transacciones manuales — las tarjetas de crédito suelen tener la mayor parte de los gastos.
 
 ## Preguntas sobre tarjetas de crédito
 Cuando el usuario pregunte sobre tarjetas de crédito de forma general (ej: "¿En qué se me va la tarjeta?", "¿Cuánto gasté con tarjeta?", "¿Qué consumos tengo?"):
@@ -70,6 +82,12 @@ Para gráficos:
 :::chart
 {"chart_type":"pie|bar|line","title":"Título","data":[{"name":"Label","value":123}]}
 :::
+
+Para line charts de evolución mensual (ingresos vs gastos), usá SIEMPRE este formato con dos series:
+:::chart
+{"chart_type":"line","title":"Evolución mensual","data":[{"name":"YYYY-MM","ingresos":1234567,"gastos":1234567},{"name":"YYYY-MM","ingresos":...,"gastos":...}]}
+:::
+Las claves deben ser exactamente "ingresos" y "gastos" (números). El "name" es el mes (ej: "2026-01").
 
 Para KPIs grandes:
 :::kpi
@@ -105,6 +123,7 @@ Ejemplos de buenas sugerencias:
 - Combiná texto explicativo con visualizaciones cuando sea útil
 - Si no tenés datos suficientes para responder, decilo claramente
 - NUNCA pongas un título, header (##, ###) ni texto introductorio como "Acá te muestro..." justo antes de un bloque :::chart, :::kpi o :::table si el bloque ya tiene su propio título. Esto genera títulos duplicados. El título del chart/kpi/table es suficiente. Si necesitás dar contexto, hacelo en un párrafo anterior separado, no repitiendo el título del gráfico.`;
+}
 
 // ─── Tool definitions ────────────────────────────────────────────
 const tools = [
@@ -136,13 +155,14 @@ const tools = [
     function: {
       name: "query_credit_card_transactions",
       description:
-        "Busca consumos de tarjeta de crédito con filtros. Por defecto trae TODAS las tarjetas. Solo usá card_name si el usuario pidió una tarjeta específica.",
+        "Busca consumos de tarjeta de crédito con filtros. Por defecto trae TODAS las tarjetas. Usá category para filtrar por categoría (ej: Compras, Supermercado). Solo usá card_name si el usuario pidió una tarjeta específica.",
       parameters: {
         type: "object",
         properties: {
           date_from: { type: "string", description: "Fecha inicio YYYY-MM-DD" },
           date_to: { type: "string", description: "Fecha fin YYYY-MM-DD" },
           card_name: { type: "string", description: "Nombre de la tarjeta" },
+          category: { type: "string", description: "Nombre de categoría para filtrar (ej: Compras, Supermercado)" },
           currency: { type: "string", enum: ["ARS", "USD"] },
           limit: { type: "number" },
         },
@@ -325,6 +345,13 @@ async function executeTool(
             .ilike("name", `%${args.card_name}%`);
           if (cards && cards.length > 0) {
             query = query.in("credit_card_id", cards.map((c: any) => c.id));
+          }
+        }
+
+        if (args.category) {
+          const matchingIds = findCategoryIds(args.category, catMap);
+          if (matchingIds.length > 0) {
+            query = query.in("category_id", matchingIds);
           }
         }
 
@@ -667,9 +694,11 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Build messages with system prompt
+    // Build messages with system prompt (include user name for personalized greetings)
+    const userName = (user.user_metadata?.full_name as string) || (user.email?.split("@")[0] as string) || null;
+    const systemPrompt = buildSystemPrompt(userName);
     const aiMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt },
       ...messages,
     ];
 

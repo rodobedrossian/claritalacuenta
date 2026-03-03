@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { ChatPieChart } from "./ChatPieChart";
 import { ChatBarChart } from "./ChatBarChart";
@@ -5,6 +6,7 @@ import { ChatLineChart } from "./ChatLineChart";
 import { ChatKPICard } from "./ChatKPICard";
 import { ChatTable } from "./ChatTable";
 import { cn } from "@/lib/utils";
+import { useTextStream } from "@/components/ui/response-stream";
 import type { ChatMessage as ChatMessageType } from "@/hooks/useFinancialChat";
 
 // Parse :::type\n{json}\n::: blocks
@@ -79,14 +81,21 @@ function normalizeNewlines(text: string): string {
 function renderViz(vizType: string, data: any, index: number) {
   switch (vizType) {
     case "chart": {
-      const chartData = data.data?.map((d: any) => ({ name: d.name || d.label, value: d.value })) || [];
+      const rawData = data.data || [];
+      const chartData = rawData.map((d: any) => ({ name: d.name || d.label, value: d.value }));
+      const lineData = rawData.map((d: any) => ({
+        name: d.name || d.label,
+        value: d.value,
+        ingresos: d.ingresos ?? d.income,
+        gastos: d.gastos ?? d.expenses,
+      }));
       switch (data.chart_type) {
         case "pie":
           return <ChatPieChart key={index} data={chartData} title={data.title} />;
         case "bar":
           return <ChatBarChart key={index} data={chartData} title={data.title} />;
         case "line":
-          return <ChatLineChart key={index} data={chartData} title={data.title} />;
+          return <ChatLineChart key={index} data={lineData} title={data.title} />;
         default:
           return <ChatBarChart key={index} data={chartData} title={data.title} />;
       }
@@ -108,6 +117,53 @@ function renderViz(vizType: string, data: any, index: number) {
   }
 }
 
+function NonAnimatedBlock({
+  children,
+  onComplete,
+}: {
+  children: React.ReactNode;
+  onComplete: () => void;
+}) {
+  useEffect(() => {
+    onComplete();
+  }, [onComplete]);
+  return <>{children}</>;
+}
+
+const proseClasses = cn(
+  "prose prose-sm max-w-none text-foreground",
+  "prose-strong:text-foreground prose-headings:text-foreground",
+  "prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5",
+  "prose-headings:mt-3 prose-headings:mb-1",
+  "leading-relaxed",
+  "[&_p]:mb-3 [&_p:last-child]:mb-0"
+);
+
+function AnimatedTextBlock({
+  content,
+  className,
+  onComplete,
+}: {
+  content: string;
+  className?: string;
+  onComplete?: () => void;
+}) {
+  const { displayedText } = useTextStream({
+    textStream: content,
+    mode: "fade",
+    speed: 80,
+    fadeDuration: 120,
+    segmentDelay: 15,
+    onComplete,
+  });
+
+  return (
+    <div className={cn(proseClasses, className)}>
+      <ReactMarkdown>{normalizeNewlines(displayedText)}</ReactMarkdown>
+    </div>
+  );
+}
+
 interface Props {
   message: ChatMessageType;
   onSuggestionClick?: (text: string) => void;
@@ -127,30 +183,57 @@ export function ChatMessageBubble({ message, onSuggestionClick }: Props) {
   }
 
   const blocks = parseBlocks(message.content);
+  const [visibleBlockIndex, setVisibleBlockIndex] = useState(0);
+
+  const advanceToNext = () => {
+    setVisibleBlockIndex((prev) => Math.min(prev + 1, blocks.length));
+  };
 
   return (
     <div className="flex justify-start mb-4">
       <div className="max-w-[95%] space-y-2">
         {blocks.map((block, i) => {
+          if (i > visibleBlockIndex) return null;
+
           if (block.type === "text") {
+            const isCurrentBlock = i === visibleBlockIndex;
             return (
               <div
                 key={i}
-                className={cn(
-                  "rounded-2xl rounded-bl-md px-4 py-3 bg-card text-sm",
-                  "prose prose-sm max-w-none text-foreground",
-                  "prose-strong:text-foreground prose-headings:text-foreground",
-                  "prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5",
-                  "prose-headings:mt-3 prose-headings:mb-1",
-                  "leading-relaxed",
-                  "[&_p]:mb-3 [&_p:last-child]:mb-0"
-                )}
+                className="rounded-2xl rounded-bl-md px-4 py-3 bg-card text-sm"
               >
-                <ReactMarkdown>{normalizeNewlines(block.content)}</ReactMarkdown>
+                {isCurrentBlock ? (
+                  <AnimatedTextBlock
+                    content={block.content}
+                    onComplete={advanceToNext}
+                  />
+                ) : (
+                  <div className={proseClasses}>
+                    <ReactMarkdown>{normalizeNewlines(block.content)}</ReactMarkdown>
+                  </div>
+                )}
               </div>
             );
           }
           if (block.type === "suggestions" && onSuggestionClick) {
+            const isCurrentBlock = i === visibleBlockIndex;
+            if (isCurrentBlock) {
+              return (
+                <NonAnimatedBlock key={i} onComplete={advanceToNext}>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {block.suggestions.map((s, si) => (
+                      <button
+                        key={si}
+                        onClick={() => onSuggestionClick(s)}
+                        className="text-xs px-3 py-2 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </NonAnimatedBlock>
+              );
+            }
             return (
               <div key={i} className="flex flex-wrap gap-2 pt-1">
                 {block.suggestions.map((s, si) => (
@@ -166,7 +249,16 @@ export function ChatMessageBubble({ message, onSuggestionClick }: Props) {
             );
           }
           if (block.type === "viz") {
-            return renderViz(block.vizType, block.data, i);
+            const isCurrentBlock = i === visibleBlockIndex;
+            const vizContent = renderViz(block.vizType, block.data, i);
+            if (isCurrentBlock) {
+              return (
+                <NonAnimatedBlock key={i} onComplete={advanceToNext}>
+                  {vizContent}
+                </NonAnimatedBlock>
+              );
+            }
+            return <React.Fragment key={i}>{vizContent}</React.Fragment>;
           }
           return null;
         })}
