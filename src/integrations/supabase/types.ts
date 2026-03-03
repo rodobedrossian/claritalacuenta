@@ -1138,6 +1138,10 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      migrate_user_data_to_workspace: {
+        Args: { _new_workspace_id: string; _user_id: string }
+        Returns: undefined
+      }
       user_workspace_ids: { Args: never; Returns: string[] }
     }
     Enums: {
