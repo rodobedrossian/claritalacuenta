@@ -94,6 +94,12 @@ export default function AcceptInvite() {
       } else throw memberError;
     }
 
+    // Migrate existing data from user's old workspace to the new shared one
+    await supabase.rpc("migrate_user_data_to_workspace" as any, {
+      _user_id: userId,
+      _new_workspace_id: invitation.workspace_id,
+    });
+
     const { error: invError } = await supabase
       .from("workspace_invitations")
       .update({ status: "accepted" })
