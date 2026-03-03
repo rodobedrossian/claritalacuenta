@@ -16,7 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RuculaLogo } from "@/components/RuculaLogo";
-import { LogOut, Plus, RefreshCw, Eye, Tag } from "lucide-react";
+import { LogOut, Plus, RefreshCw, Eye, Tag, BarChart3 } from "lucide-react";
 import { DAY_NAMES } from "@/types/promotion";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -113,6 +113,12 @@ const AdminPromotions = () => {
             <Button variant="ghost" size="sm" className="font-medium" asChild>
               <Link to="/admin/promotions">Promociones</Link>
             </Button>
+            <Link to="/admin/analytics">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Analytics
+              </Button>
+            </Link>
           </div>
           <Button variant="outline" onClick={handleLogout}>
             <LogOut className="h-4 w-4 mr-2" />

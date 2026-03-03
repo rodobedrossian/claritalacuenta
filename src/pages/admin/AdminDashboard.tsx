@@ -39,7 +39,8 @@ import {
   ChevronUp,
   Bot,
   Calendar,
-  Tag
+  Tag,
+  BarChart3
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -273,6 +274,12 @@ const AdminDashboard = () => {
               <Button variant="ghost" size="sm" className="gap-2">
                 <Tag className="h-4 w-4" />
                 Promociones
+              </Button>
+            </Link>
+            <Link to="/admin/analytics">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Analytics
               </Button>
             </Link>
           </div>
