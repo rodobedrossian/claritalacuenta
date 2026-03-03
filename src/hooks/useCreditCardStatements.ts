@@ -104,7 +104,6 @@ export function useCreditCardStatements(userId: string | null): UseCreditCardSta
       const { data, error: fetchError } = await supabase
         .from("statement_imports")
         .select("*")
-        .eq("user_id", userId)
         .order("statement_month", { ascending: false });
 
       if (fetchError) {
