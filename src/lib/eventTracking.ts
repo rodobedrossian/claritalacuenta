@@ -94,7 +94,7 @@ export function trackEvent(
       const mergedProperties = {
         ...deviceInfo,
         ...(properties ?? {}),
-      };
+      } as Record<string, string>;
 
       const payload = {
         user_id: trackingContext.userId,
@@ -105,7 +105,7 @@ export function trackEvent(
         path: trackingContext.path,
       };
 
-      supabase.from("user_events").insert(payload).then(({ error }) => {
+      supabase.from("user_events").insert([payload]).then(({ error }) => {
         if (error) {
           console.warn("[EventTracking] Insert failed:", error.message);
         }
