@@ -1,35 +1,16 @@
 
 
-## Review: Workspace Data Sharing
+## Problem
 
-### Current State (already working)
-All major tables (`transactions`, `credit_cards`, `savings`, `savings_entries`, `investments`, `savings_goals`, `budgets`, `recurring_expenses`, `credit_card_transactions`, `chat_conversations`, `monthly_surpluses`) have workspace-level RLS policies using `workspace_id IN (SELECT user_workspace_ids())`. Since edge functions use the user's auth token, RLS automatically scopes data to the shared workspace. **Both owner and member should already see the same data.**
+In `useCreditCardStatements.ts` line 107, the query filters by `.eq("user_id", userId)`, which means you only see statements imported by **your** user, not your workspace partner's. RLS already allows workspace-level access, but the explicit `user_id` filter overrides that.
 
-### Issues Found
+## Fix
 
-**1. Build error in `response-stream.tsx` (blocking deployment)**
-TypeScript error: `Intl.Segmenter` requires `es2022` lib. This needs fixing for the app to build.
+**File: `src/hooks/useCreditCardStatements.ts`**
 
-**2. `get-dashboard-data` does not receive `workspace_id` from frontend**
-`useDashboardData` has `workspaceId` as a parameter but never passes it to the edge function. While RLS handles scoping correctly, passing it explicitly would ensure the explicit workspace filter in the edge function also works (belt and suspenders).
+Remove the `.eq("user_id", userId)` filter from the `fetchStatements` query (line 107). RLS on `statement_imports` already scopes to `workspace_id IN (SELECT user_workspace_ids())`, so all workspace members' statements will be returned automatically.
 
-**3. `get-savings-data` has no workspace scoping logic at all**
-Unlike `get-dashboard-data`, this edge function has zero workspace awareness in its code. It relies entirely on RLS, which works, but is inconsistent with the dashboard pattern.
+The rest of the queries in this hook (getting transactions, totals, etc.) already rely on RLS via `credit_card_transactions` table and don't filter by `user_id`, so they'll work correctly once the statements list includes all workspace members' data.
 
-**4. `get-transactions-data` has no workspace filter**
-Same as savings -- relies entirely on RLS. Works but inconsistent.
-
-### Recommended Changes
-
-1. **Fix build error** -- Update `tsconfig.app.json` to include `"es2022"` in `lib`, or refactor the `Intl.Segmenter` usage in `response-stream.tsx` with a fallback.
-
-2. **Pass `workspace_id` from frontend to edge functions** for consistency:
-   - `useDashboardData`: pass `workspace_id: workspaceId` in the body to `get-dashboard-data`
-   - `useTransactionsData`: accept `workspaceId` param (it currently doesn't) and pass it
-   - `useSavingsData`: same pattern
-
-3. **No RLS or schema changes needed** -- the policies are correct for workspace sharing.
-
-### Summary
-The sharing already works at the RLS level. The fixes are about consistency and fixing the build error. No data access changes are strictly required.
+No database or RLS changes needed.
 
