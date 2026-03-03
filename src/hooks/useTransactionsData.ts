@@ -44,7 +44,8 @@ const ITEMS_PER_PAGE = 20;
 
 export function useTransactionsData(
   filters: TransactionFilters,
-  userId: string | null
+  userId: string | null,
+  workspaceId?: string | null
 ): UseTransactionsDataReturn {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Array<{ id: string; name: string; type: string }>>([]);
@@ -74,6 +75,7 @@ export function useTransactionsData(
           body: {
             page: pageNum,
             limit: ITEMS_PER_PAGE,
+            workspace_id: workspaceId || undefined,
             filters: {
               type: filters.type,
               category: filters.category,

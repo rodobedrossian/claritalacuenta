@@ -88,7 +88,7 @@ export function useDashboardData(activeMonth: Date, userId: string | null, works
       const { data: responseData, error: functionError } = await supabase.functions.invoke(
         "get-dashboard-data",
         {
-          body: { month: monthStr }
+          body: { month: monthStr, workspace_id: workspaceId }
         }
       );
 
