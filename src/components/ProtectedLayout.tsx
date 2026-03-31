@@ -4,6 +4,8 @@ import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { initPushNotifications } from "@/lib/pushNotifications";
+import { InviteDrawerProvider } from "@/contexts/InviteDrawerContext";
+import { InviteToWorkspaceDrawer } from "@/components/workspace/InviteToWorkspaceDrawer";
 
 /**
  * Layout that wraps all protected routes. If no session, redirects to /auth.
@@ -36,7 +38,14 @@ const ProtectedLayout = () => {
     );
   }
 
-  if (session) return <Outlet />;
+  if (session) {
+    return (
+      <InviteDrawerProvider>
+        <Outlet />
+        <InviteToWorkspaceDrawer />
+      </InviteDrawerProvider>
+    );
+  }
 
   return null;
 };

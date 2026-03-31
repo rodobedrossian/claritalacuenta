@@ -22,8 +22,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { FloatingChatButton } from "@/components/FloatingChatButton";
-import { InviteDrawerProvider } from "@/contexts/InviteDrawerContext";
-import { InviteToWorkspaceDrawer } from "@/components/workspace/InviteToWorkspaceDrawer";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -70,8 +68,7 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
   // For mobile, we use bottom navigation + floating FAB
   if (isMobile) {
     return (
-      <InviteDrawerProvider>
-        <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
+      <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
           <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
             {children}
           </main>
@@ -83,14 +80,11 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
           />
           <FloatingChatButton />
         </div>
-        <InviteToWorkspaceDrawer />
-      </InviteDrawerProvider>
     );
   }
 
   // Desktop/Tablet layout with sidebar - h-screen + overflow-hidden so Chat header/input stay fixed
   return (
-    <InviteDrawerProvider>
       <div className="h-screen overflow-hidden bg-background flex">
         {/* Sidebar */}
         <aside
@@ -176,7 +170,5 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
         {/* Main content */}
         <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">{children}</main>
       </div>
-      <InviteToWorkspaceDrawer />
-    </InviteDrawerProvider>
   );
 };
