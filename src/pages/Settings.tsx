@@ -116,8 +116,7 @@ export default function Settings() {
                 </CardContent>
               </Card>
 
-              {!isMobile && (
-                <Card>
+              <Card>
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <UserPlus className="h-5 w-5 text-primary" />
