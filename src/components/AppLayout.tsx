@@ -68,8 +68,7 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
   // For mobile, we use bottom navigation + floating FAB
   if (isMobile) {
     return (
-      <InviteDrawerProvider>
-        <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
+      <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
           <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
             {children}
           </main>
@@ -81,8 +80,6 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
           />
           <FloatingChatButton />
         </div>
-        <InviteToWorkspaceDrawer />
-      </InviteDrawerProvider>
     );
   }
 
