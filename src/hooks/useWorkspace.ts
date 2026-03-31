@@ -24,18 +24,18 @@ export function useWorkspace(userId: string | null): {
     (async () => {
       const { data, error } = await supabase
         .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", userId)
-        .limit(1)
-        .maybeSingle();
+        .select("workspace_id, role")
+        .eq("user_id", userId);
 
       if (!mounted) return;
-      if (error) {
+      if (error || !data?.length) {
         setWorkspaceId(null);
         setIsLoading(false);
         return;
       }
-      setWorkspaceId(data?.workspace_id ?? null);
+      // Prefer a workspace where user is "member" (shared) over "owner" (solo)
+      const shared = data.find((r) => r.role === "member");
+      setWorkspaceId(shared?.workspace_id ?? data[0].workspace_id);
       setIsLoading(false);
     })();
 
