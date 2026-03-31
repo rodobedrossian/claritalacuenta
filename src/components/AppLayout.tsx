@@ -22,8 +22,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { FloatingChatButton } from "@/components/FloatingChatButton";
-import { InviteDrawerProvider } from "@/contexts/InviteDrawerContext";
-import { InviteToWorkspaceDrawer } from "@/components/workspace/InviteToWorkspaceDrawer";
 
 interface AppLayoutProps {
   children: ReactNode;
