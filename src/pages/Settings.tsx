@@ -133,7 +133,6 @@ export default function Settings() {
                     </Button>
                   </CardContent>
                 </Card>
-              )}
 
               <Card className="border-destructive/30">
                 <CardHeader>
