@@ -170,7 +170,5 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
         {/* Main content */}
         <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">{children}</main>
       </div>
-      <InviteToWorkspaceDrawer />
-    </InviteDrawerProvider>
   );
 };
