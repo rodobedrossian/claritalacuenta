@@ -85,7 +85,6 @@ export const AppLayout = ({ children, onMobileAddClick }: AppLayoutProps) => {
 
   // Desktop/Tablet layout with sidebar - h-screen + overflow-hidden so Chat header/input stay fixed
   return (
-    <InviteDrawerProvider>
       <div className="h-screen overflow-hidden bg-background flex">
         {/* Sidebar */}
         <aside
