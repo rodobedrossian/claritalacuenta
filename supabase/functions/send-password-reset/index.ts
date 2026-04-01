@@ -101,10 +101,20 @@ Deno.serve(async (req) => {
       return safeSuccessResponse();
     }
 
-    const actionLink = linkData?.properties?.action_link ?? (linkData as { action_link?: string })?.action_link ?? "";
+    let actionLink = linkData?.properties?.action_link ?? (linkData as { action_link?: string })?.action_link ?? "";
 
     if (!actionLink) {
       return safeSuccessResponse();
+    }
+
+    // Force the redirect_to to point to the production domain
+    // Supabase may override redirectTo if it's not in the allowed list
+    try {
+      const linkUrl = new URL(actionLink);
+      linkUrl.searchParams.set("redirect_to", redirectTo);
+      actionLink = linkUrl.toString();
+    } catch (_) {
+      // If URL parsing fails, use the link as-is
     }
 
     const res = await fetch(RESEND_API_URL, {
